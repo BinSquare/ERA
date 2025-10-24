@@ -22,7 +22,7 @@ type BoltVMStore struct {
 
 func NewBoltVMStore(stateRoot string) (*BoltVMStore, error) {
 	dbPath := filepath.Join(stateRoot, stateDBFileName)
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
+	if err := ensureDir(filepath.Dir(dbPath)); err != nil {
 		return nil, err
 	}
 	db, err := bolt.Open(dbPath, boltFilePerms, nil)
