@@ -124,7 +124,95 @@ Claude should use the `era_execute_code` tool and show you the output.
 
 ## Available Tools
 
-Once configured, Claude has access to 9 ERA Agent tools:
+Once configured, Claude has access to 14 ERA Agent tools:
+
+### Language-Specific Quick Execution Tools
+
+These tools provide the easiest way to run code in a specific language without managing sessions:
+
+#### era_python
+Execute Python code with a single command.
+
+**Claude Usage:**
+```
+Run this Python FizzBuzz:
+for i in range(1, 16):
+    if i % 15 == 0:
+        print(f'{i}: FizzBuzz')
+    elif i % 3 == 0:
+        print(f'{i}: Fizz')
+    elif i % 5 == 0:
+        print(f'{i}: Buzz')
+    else:
+        print(f'{i}: {i}')
+```
+
+**Features:**
+- Automatic Python 3 execution
+- Handles complex code (f-strings, loops, classes)
+- Clean output capture
+- No manual language specification needed
+
+#### era_node
+Execute Node.js/JavaScript code.
+
+**Claude Usage:**
+```
+Run this in Node.js:
+const data = [1, 2, 3, 4, 5];
+console.log('Sum:', data.reduce((a, b) => a + b));
+console.log('Average:', data.reduce((a, b) => a + b) / data.length);
+```
+
+#### era_typescript
+Execute TypeScript with ts-node.
+
+**Claude Usage:**
+```
+Run this TypeScript code:
+interface User {
+  name: string;
+  age: number;
+}
+
+const user: User = { name: 'Alice', age: 30 };
+console.log(`${user.name} is ${user.age} years old`);
+```
+
+**Note:** Requires `ts-node` in the VM environment.
+
+#### era_deno
+Execute code with Deno runtime.
+
+**Claude Usage:**
+```
+Run this with Deno:
+const text = await Deno.readTextFile('/etc/hosts');
+console.log('First 5 lines:', text.split('\\n').slice(0, 5));
+```
+
+**Note:** Requires Deno in the VM environment.
+
+#### era_shell
+Execute shell commands for system operations.
+
+**Claude Usage:**
+```
+Run these shell commands:
+- Check Python version: python3 --version
+- Install packages: pip install pandas numpy
+- List directory: ls -la
+```
+
+**Common Uses:**
+- **Package installation:** `pip install requests`, `npm install lodash`
+- **Environment setup:** `apt-get update && apt-get install -y git`
+- **File operations:** `mkdir data && cd data && wget [url]`
+- **System info:** `uname -a`, `df -h`, `free -m`
+
+**Security Note:** Shell commands run with the same isolation as code execution.
+
+### Core Execution Tools
 
 ### 1. era_execute_code
 
@@ -237,54 +325,164 @@ What files are in session abc-123?
 
 ## Example Workflows
 
-### Simple Execution
+### Quick Python Execution
 
 **You:** "Run this Python code: `print([x**2 for x in range(10)])`"
 
-**Claude:** Uses `era_execute_code`
+**Claude:** Uses `era_python` (automatically)
 
 **Result:**
 ```
 [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 ```
 
-### Stateful Multi-Step
+**Why it works:** Language-specific tool makes execution straightforward.
 
-**You:** "Create a Python session and calculate the factorial of 10"
+### FizzBuzz with Logging
+
+**You:** "Write a FizzBuzz in Python and log each step"
+
+**Claude:** Uses `era_python` with:
+```python
+print("Starting FizzBuzz for numbers 1 to 15")
+print()
+
+for i in range(1, 16):
+    if i % 15 == 0:
+        print(f'{i}: FizzBuzz')
+    elif i % 3 == 0:
+        print(f'{i}: Fizz')
+    elif i % 5 == 0:
+        print(f'{i}: Buzz')
+    else:
+        print(f'{i}: {i}')
+
+print()
+print('FizzBuzz complete!')
+```
+
+**Result:** Full output with logging at each step.
+
+### Installing Packages
+
+**You:** "Create a Python session, install pandas, and analyze some data"
 
 **Claude:**
-1. Uses `era_create_session` → Gets session ID
-2. Uses `era_run_in_session`:
+1. Uses `era_create_session` → Gets session ID (e.g., `abc-123`)
+2. Uses `era_shell` with session: `pip install pandas`
+3. Uses `era_run_in_session`:
    ```python
-   def factorial(n):
-       return 1 if n <= 1 else n * factorial(n-1)
-   print(f"10! = {factorial(10)}")
+   import pandas as pd
+   data = {'name': ['Alice', 'Bob'], 'age': [30, 25]}
+   df = pd.DataFrame(data)
+   print(df.describe())
    ```
 
-**Result:** `10! = 3628800`
+**Result:** Statistics on the data.
 
-### Data Processing
+### Data Processing Pipeline
 
 **You:** "Create a Python session, upload this CSV, and analyze it"
 
 **Claude:**
 1. Uses `era_create_session`
 2. Uses `era_upload_file` with CSV data
-3. Uses `era_run_in_session` to:
+3. Uses `era_shell`: `pip install pandas`
+4. Uses `era_run_in_session`:
    ```python
    import pandas as pd
    df = pd.read_csv('data.csv')
    print(df.describe())
+   df['processed'] = df['value'] * 2
+   df.to_csv('output.csv', index=False)
    ```
+5. Uses `era_read_file` to read `output.csv`
+
+**Result:** Processed data returned.
 
 ### Multi-Language Testing
 
 **You:** "Test this algorithm in Python and Node.js"
 
 **Claude:**
-1. Uses `era_execute_code` with `language: "python"`
-2. Uses `era_execute_code` with `language: "node"`
+1. Uses `era_python`:
+   ```python
+   def quicksort(arr):
+       if len(arr) <= 1:
+           return arr
+       pivot = arr[len(arr) // 2]
+       left = [x for x in arr if x < pivot]
+       middle = [x for x in arr if x == pivot]
+       right = [x for x in arr if x > pivot]
+       return quicksort(left) + middle + quicksort(right)
+
+   print(quicksort([3,6,8,10,1,2,1]))
+   ```
+
+2. Uses `era_node`:
+   ```javascript
+   function quicksort(arr) {
+       if (arr.length <= 1) return arr;
+       const pivot = arr[Math.floor(arr.length / 2)];
+       const left = arr.filter(x => x < pivot);
+       const middle = arr.filter(x => x === pivot);
+       const right = arr.filter(x => x > pivot);
+       return [...quicksort(left), ...middle, ...quicksort(right)];
+   }
+
+   console.log(quicksort([3,6,8,10,1,2,1]));
+   ```
+
 3. Compares results
+
+**Result:** Both implementations produce `[1, 1, 2, 3, 6, 8, 10]`
+
+### TypeScript with Type Checking
+
+**You:** "Test this TypeScript interface"
+
+**Claude:** Uses `era_typescript`:
+```typescript
+interface User {
+    name: string;
+    age: number;
+    email?: string;
+}
+
+const user: User = {
+    name: 'Alice',
+    age: 30
+};
+
+console.log(`User: ${user.name}, Age: ${user.age}`);
+
+// Type error would be caught:
+// const badUser: User = { name: 'Bob' }; // Missing 'age'
+```
+
+**Result:** Type-safe execution with TypeScript compiler.
+
+### Web Scraping with Packages
+
+**You:** "Scrape the top stories from Hacker News"
+
+**Claude:**
+1. Uses `era_create_session` with network access
+2. Uses `era_shell`: `pip install requests beautifulsoup4`
+3. Uses `era_run_in_session`:
+   ```python
+   import requests
+   from bs4 import BeautifulSoup
+
+   response = requests.get('https://news.ycombinator.com')
+   soup = BeautifulSoup(response.text, 'html.parser')
+
+   stories = soup.find_all('span', class_='titleline')
+   for i, story in enumerate(stories[:5], 1):
+       print(f"{i}. {story.get_text()}")
+   ```
+
+**Result:** Top 5 Hacker News stories.
 
 ## Configuration Options
 
@@ -491,6 +689,294 @@ Create a Python session with a 120 second default timeout
     }
   }
 }
+```
+
+### Historical Issues (Now Fixed)
+
+#### "Shell Escaping Errors" (Fixed in Latest Version)
+
+**Previous Problem:** Python code with f-strings or complex syntax failed with errors like:
+```
+sh: -c: line 0: syntax error near unexpected token '('
+nprint("Starting...")  # Literal 'n' instead of newline
+```
+
+**Cause:** Double-escaping bug—JSON newlines were being escaped twice by shell commands.
+
+**Fix:** Code is now written directly to files using `os.WriteFile()` in Go, completely bypassing shell escaping. Update to the latest version if you're experiencing this.
+
+**How to Check:** Run FizzBuzz with f-strings. If it works, you have the fix:
+```python
+for i in range(1, 16):
+    print(f'{i}: FizzBuzz' if i % 15 == 0 else f'{i}: Fizz' if i % 3 == 0 else i)
+```
+
+## Code Execution Gotchas & Best Practices
+
+### ✅ What Works Well
+
+#### Complex Python Code
+The system handles complex Python features correctly:
+
+```python
+# F-strings, loops, and formatting all work perfectly
+for i in range(1, 16):
+    if i % 15 == 0:
+        print(f'{i}: FizzBuzz')
+    elif i % 3 == 0:
+        print(f'{i}: Fizz')
+```
+
+**Why it works:** Code is written directly to files by the Go process, bypassing all shell escaping issues.
+
+#### Multi-line Code
+Newlines and indentation are preserved exactly:
+
+```python
+def factorial(n):
+    """Calculate factorial recursively"""
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+print(f"10! = {factorial(10)}")
+```
+
+#### Special Characters
+Single quotes, double quotes, backticks, and other special characters work:
+
+```javascript
+const message = `He said, "It's working!"`;
+console.log(message);
+```
+
+### ⚠️ Common Pitfalls
+
+#### Pitfall 1: Using `era_execute_code` Without Language
+
+**Problem:**
+```
+Execute this code: print("Hello")
+```
+
+Claude might not know which language to use.
+
+**Solution:** Use language-specific tools:
+```
+Use era_python to run: print("Hello")
+```
+
+Or be explicit:
+```
+Execute this Python code: print("Hello")
+```
+
+#### Pitfall 2: Installing Packages Mid-Session
+
+**Problem:**
+```python
+# This will fail if pandas isn't installed
+import pandas as pd
+df = pd.read_csv('data.csv')
+```
+
+**Solution:** Install packages first with `era_shell`:
+```
+1. Create a Python session
+2. Use era_shell: pip install pandas
+3. Then run your pandas code
+```
+
+Or create session with packages parameter:
+```
+Create a Python session and install pandas and numpy
+```
+
+#### Pitfall 3: Assuming Persistent State in Ephemeral Execution
+
+**Problem:**
+```
+Run: x = 42
+Then run: print(x)  # This will fail!
+```
+
+**Solution:** Use sessions for stateful execution:
+```
+1. Create a Python session (remember the ID)
+2. In that session, run: x = 42
+3. In that same session, run: print(x)  # ✅ Works!
+```
+
+#### Pitfall 4: File Paths Outside Session
+
+**Problem:**
+```python
+# This might fail
+with open('/home/user/myfile.txt') as f:
+    data = f.read()
+```
+
+**Solution:** Use session workspace:
+```
+1. Upload file to session: era_upload_file
+2. Use relative path: with open('myfile.txt') as f:
+```
+
+### 🔧 Technical Details: How Code Execution Works
+
+Understanding the internals helps debug issues:
+
+#### Execution Flow
+
+1. **Code Submission:** Claude sends code to ERA Agent via MCP
+2. **File Writing:** ERA Agent writes code directly to a file (e.g., `era_script_123456789.py`)
+3. **VM Setup:** Creates or uses existing VM with proper runtime
+4. **Command Execution:** Runs simple command (e.g., `python3 era_script_123456789.py`)
+5. **Output Capture:** Stdout and stderr captured to files
+6. **Result Return:** Output returned to Claude via MCP
+
+**Key Insight:** No shell escaping is involved—files are written directly from Go using `os.WriteFile()`. This is why complex code with special characters works reliably.
+
+#### Why This Approach?
+
+**Previous Approach (Had Issues):**
+```bash
+# Used heredoc with shell escaping - caused double-escaping
+cat > script.py << 'EOF'
+print("Hello")
+EOF
+python3 script.py
+```
+
+**Problem:** JSON newlines (`\n`) → Go unescapes → Shell `%q` re-escapes → Syntax errors
+
+**Current Approach (Fixed):**
+```go
+// Write file directly in Go
+os.WriteFile("/vm/workdir/era_script_123.py", []byte(code), 0644)
+// Execute simple command
+exec.Command("python3", "era_script_123.py")
+```
+
+**Result:** No escaping issues, all special characters preserved.
+
+### 📋 Shell Execution Best Practices
+
+#### Use `era_shell` for System Operations
+
+**Good Use Cases:**
+```bash
+# Package management
+pip install requests beautifulsoup4
+npm install lodash axios
+
+# Environment setup
+apt-get update && apt-get install -y postgresql-client
+
+# File operations
+mkdir -p data/processed
+wget https://example.com/data.csv -O data/input.csv
+
+# System information
+python3 --version
+node --version
+df -h
+```
+
+**What NOT to Use `era_shell` For:**
+- Running Python/JavaScript code (use `era_python`, `era_node` instead)
+- Complex multi-line scripts (create a file and execute it)
+
+#### Chaining Commands
+
+**Good:**
+```bash
+# Use && for dependent commands
+pip install pandas && python -c "import pandas; print(pandas.__version__)"
+```
+
+**Bad:**
+```bash
+# Don't rely on shell state between calls
+cd /some/dir
+ls  # Won't be in /some/dir anymore!
+```
+
+#### Environment Variables
+
+Set them in the command:
+```bash
+PYTHONPATH=/custom/path python3 script.py
+```
+
+Or use session environment:
+```
+Create a Python session with environment variable PYTHONPATH=/custom/path
+```
+
+### 🎯 Performance Optimization
+
+#### Choose the Right Tool
+
+| Scenario | Tool | Reason |
+|----------|------|--------|
+| Single Python script | `era_python` | Fast, no session overhead |
+| Multiple related runs | Session + `era_run_in_session` | VM reuse, state persistence |
+| Package installation | `era_shell` | System-level operations |
+| Quick calculation | `era_python` / `era_node` | Minimal setup |
+| Long-running task | Session with higher timeout | Configurable limits |
+
+#### Session vs Ephemeral
+
+**Use Ephemeral (`era_python`, etc.) when:**
+- Single, independent execution
+- No package installation needed
+- Quick tests or calculations
+
+**Use Sessions when:**
+- Multiple related operations
+- Installing packages
+- Building on previous state
+- Large data loading (load once, use multiple times)
+
+### 🛡️ Security Considerations
+
+#### Network Isolation
+
+By default, **network is disabled**:
+```python
+import requests
+requests.get('https://example.com')  # Will fail!
+```
+
+**Enable when needed:**
+```
+Create a Python session with network access
+```
+
+**Only enable network for:**
+- API calls
+- Package downloads
+- Web scraping
+- External data fetching
+
+#### File System Isolation
+
+Each session has isolated filesystem:
+- Session A cannot access Session B's files
+- Ephemeral VMs cleaned up after execution
+- No access to host filesystem
+
+#### Resource Limits
+
+Default limits prevent resource exhaustion:
+- **CPU:** 1 core (prevents runaway processes)
+- **Memory:** 256 MiB (prevents OOM)
+- **Timeout:** 30 seconds (prevents infinite loops)
+
+**Request higher limits when needed:**
+```
+Create a Python session with 4 CPUs, 2GB memory, and 120 second timeout
 ```
 
 ## Usage Tips

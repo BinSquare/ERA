@@ -27,14 +27,30 @@ func run(ctx context.Context, args []string) error {
 
 	logger := NewLogger(opts.LogLevel)
 
+	// Check if we're running MCP mode first
+	isMCPMode := len(remaining) > 0 && remaining[0] == "mcp"
+
 	vmService, err := NewVMService(logger)
 	if err != nil {
-		logger.Error("failed to init vm service", map[string]any{"error": err.Error()})
-		return err
+		if isMCPMode {
+			// In MCP mode, warn but continue - allows testing tools without VM infrastructure
+			logger.Error("VM service init failed - MCP server will start but code execution won't work", map[string]any{
+				"error": err.Error(),
+				"help":  "To actually run code, ensure Docker/Firecracker is available",
+			})
+			// Use a stub VM service for MCP mode
+			vmService = nil
+		} else {
+			// For other modes, VM service is required
+			logger.Error("failed to init vm service", map[string]any{"error": err.Error()})
+			return err
+		}
 	}
 	defer func() {
-		if cerr := vmService.Close(); cerr != nil {
-			logger.Error("failed to close vm store", map[string]any{"error": cerr.Error()})
+		if vmService != nil {
+			if cerr := vmService.Close(); cerr != nil {
+				logger.Error("failed to close vm store", map[string]any{"error": cerr.Error()})
+			}
 		}
 	}()
 

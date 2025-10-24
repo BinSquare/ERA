@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"time"
 )
 
 // Tool represents an MCP tool definition
@@ -369,7 +369,7 @@ func (s *Server) handleExecuteCode(ctx context.Context, args map[string]interfac
 	}
 
 	// Build the execution command for the specific language
-	command, err := buildExecutionCommand(language, code)
+	scriptFile, command, err := buildExecutionCommand(language)
 	if err != nil {
 		return s.errorResponse(fmt.Sprintf("Failed to build command: %v", err)), nil
 	}
@@ -390,6 +390,17 @@ func (s *Server) handleExecuteCode(ctx context.Context, args map[string]interfac
 
 	vmMap := vm.(map[string]interface{})
 	vmID := vmMap["id"].(string)
+
+	// Get VM work directory and write code to file
+	workDir := s.vmSvc.GetVMWorkDir(vmID)
+	if workDir == "" {
+		return s.errorResponse("Failed to get VM work directory"), nil
+	}
+
+	scriptPath := filepath.Join(workDir, scriptFile)
+	if err := os.WriteFile(scriptPath, []byte(code), 0644); err != nil {
+		return s.errorResponse(fmt.Sprintf("Failed to write script file: %v", err)), nil
+	}
 
 	// Execute code with properly wrapped command
 	runOpts := map[string]interface{}{
@@ -485,9 +496,20 @@ func (s *Server) handleRunInSession(ctx context.Context, args map[string]interfa
 	language := sessionMap["language"].(string)
 
 	// Build the execution command for the specific language
-	command, err := buildExecutionCommand(language, code)
+	scriptFile, command, err := buildExecutionCommand(language)
 	if err != nil {
 		return s.errorResponse(fmt.Sprintf("Failed to build command: %v", err)), nil
+	}
+
+	// Get VM work directory and write code to file
+	workDir := s.vmSvc.GetVMWorkDir(sessionID)
+	if workDir == "" {
+		return s.errorResponse("Failed to get VM work directory"), nil
+	}
+
+	scriptPath := filepath.Join(workDir, scriptFile)
+	if err := os.WriteFile(scriptPath, []byte(code), 0644); err != nil {
+		return s.errorResponse(fmt.Sprintf("Failed to write script file: %v", err)), nil
 	}
 
 	// Execute code with properly wrapped command
@@ -774,31 +796,33 @@ func (s *Server) errorResponse(text string) interface{} {
 }
 
 // buildExecutionCommand wraps code in the appropriate runtime command
-func buildExecutionCommand(language, code string) (string, error) {
-	// Helper function to shell-escape a string using single quotes
-	// Replaces any single quotes with '\'' (end quote, escaped quote, start quote)
-	shellEscape := func(s string) string {
-		return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
-	}
+// Returns (scriptFilename, command, error) where scriptFilename is relative to workdir
+func buildExecutionCommand(language string) (string, string, error) {
+	// Generate a unique script filename (relative to VM work directory)
+	timestamp := time.Now().UnixNano()
 
 	switch language {
 	case "python":
-		// Use python3 with -c flag for inline code
-		// Use shell escaping to preserve newlines and special characters
-		return fmt.Sprintf("python3 -c %s", shellEscape(code)), nil
+		scriptFile := fmt.Sprintf("era_script_%d.py", timestamp)
+		command := fmt.Sprintf("python3 %s", scriptFile)
+		return scriptFile, command, nil
 	case "node", "javascript":
-		// Use node with -e flag for inline code
-		return fmt.Sprintf("node -e %s", shellEscape(code)), nil
+		scriptFile := fmt.Sprintf("era_script_%d.js", timestamp)
+		command := fmt.Sprintf("node %s", scriptFile)
+		return scriptFile, command, nil
 	case "typescript":
-		// Use ts-node for TypeScript
-		return fmt.Sprintf("ts-node -e %s", shellEscape(code)), nil
+		scriptFile := fmt.Sprintf("era_script_%d.ts", timestamp)
+		command := fmt.Sprintf("ts-node %s", scriptFile)
+		return scriptFile, command, nil
 	case "deno":
-		// Use deno eval for inline code
-		return fmt.Sprintf("deno eval %s", shellEscape(code)), nil
+		scriptFile := fmt.Sprintf("era_script_%d.ts", timestamp)
+		command := fmt.Sprintf("deno run %s", scriptFile)
+		return scriptFile, command, nil
 	case "go":
-		// For Go, we need to create a temporary file
-		return "", fmt.Errorf("Go execution requires file-based execution, not inline code")
+		scriptFile := fmt.Sprintf("era_script_%d.go", timestamp)
+		command := fmt.Sprintf("go run %s", scriptFile)
+		return scriptFile, command, nil
 	default:
-		return "", fmt.Errorf("unsupported language: %s", language)
+		return "", "", fmt.Errorf("unsupported language: %s", language)
 	}
 }

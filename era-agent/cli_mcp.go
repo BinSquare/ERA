@@ -62,6 +62,10 @@ type mcpVMServiceAdapter struct {
 }
 
 func (a *mcpVMServiceAdapter) Create(ctx context.Context, opts interface{}) (interface{}, error) {
+	if a.vmService == nil {
+		return nil, fmt.Errorf("VM service not available - Docker/Firecracker not running. Tools are visible for testing, but code execution requires VM infrastructure.")
+	}
+
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid options type")
@@ -87,6 +91,10 @@ func (a *mcpVMServiceAdapter) Create(ctx context.Context, opts interface{}) (int
 }
 
 func (a *mcpVMServiceAdapter) Run(ctx context.Context, opts interface{}) (interface{}, error) {
+	if a.vmService == nil {
+		return nil, fmt.Errorf("VM service not available - Docker/Firecracker not running")
+	}
+
 	optsMap, ok := opts.(map[string]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid options type")
@@ -110,6 +118,9 @@ func (a *mcpVMServiceAdapter) Run(ctx context.Context, opts interface{}) (interf
 }
 
 func (a *mcpVMServiceAdapter) Get(vmID string) (interface{}, bool) {
+	if a.vmService == nil {
+		return nil, false
+	}
 	record, ok := a.vmService.Get(vmID)
 	if !ok {
 		return nil, false
@@ -118,6 +129,9 @@ func (a *mcpVMServiceAdapter) Get(vmID string) (interface{}, bool) {
 }
 
 func (a *mcpVMServiceAdapter) List() []interface{} {
+	if a.vmService == nil {
+		return []interface{}{}
+	}
 	records := a.vmService.List()
 	result := make([]interface{}, len(records))
 	for i, record := range records {
@@ -127,10 +141,16 @@ func (a *mcpVMServiceAdapter) List() []interface{} {
 }
 
 func (a *mcpVMServiceAdapter) Clean(ctx context.Context, vmID string, keepPersist bool) error {
+	if a.vmService == nil {
+		return fmt.Errorf("VM service not available")
+	}
 	return a.vmService.Clean(ctx, vmID, keepPersist)
 }
 
 func (a *mcpVMServiceAdapter) GetVMWorkDir(vmID string) string {
+	if a.vmService == nil {
+		return ""
+	}
 	return a.vmService.GetVMWorkDir(vmID)
 }
 
