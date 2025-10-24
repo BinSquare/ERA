@@ -1,0 +1,7 @@
+langchain
+langchain-anthropic
+langchain-openai
+langchain-core
+langchain-community
+pyyaml
+python-dotenv
