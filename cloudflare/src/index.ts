@@ -116,6 +116,16 @@ export default {
       if (subPath === '' && request.method === 'DELETE') {
         return handleDeleteSession(sessionId, env);
       }
+
+      // GET /api/sessions/{id}/host - Get public URL for port
+      if (subPath.startsWith('/host') && request.method === 'GET') {
+        return handleGetHost(sessionId, url.searchParams.get('port'), env, request);
+      }
+    }
+
+    // Proxy requests to containers: /proxy/{session_id}/{port}/*
+    if (url.pathname.startsWith('/proxy/')) {
+      return handleProxyRequest(request, env);
     }
 
     // For /api/* routes not handled above, pass to Go agent
@@ -295,13 +305,24 @@ async function handleExecute(request: Request, agentStub: any): Promise<Response
  */
 
 async function handleCreateSession(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const { session_id, language, persistent = true, metadata = {}, data = {}, setup } = await request.json() as {
+  const {
+    session_id,
+    language,
+    persistent = true,
+    metadata = {},
+    data = {},
+    setup,
+    allowInternetAccess = true,
+    allowPublicAccess = true
+  } = await request.json() as {
     session_id?: string;
     language: string;
     persistent?: boolean;
     metadata?: Record<string, any>;
     data?: Record<string, any>;
     setup?: SessionSetup;
+    allowInternetAccess?: boolean;
+    allowPublicAccess?: boolean;
   };
 
   // Validate language
@@ -354,6 +375,8 @@ async function handleCreateSession(request: Request, env: Env, ctx: ExecutionCon
     data,
     setup,
     setup_status: setup ? 'pending' : undefined,
+    allowInternetAccess,
+    allowPublicAccess,
   };
 
   await stub.fetch(new Request('http://session/update', {
@@ -417,24 +440,45 @@ async function handleSessionRun(sessionId: string, request: Request, env: Env): 
   const requestBody = await request.text();
   let runConfig = requestBody ? JSON.parse(requestBody) : {};
 
+  // Get session metadata
+  const metadataRes = await stub.fetch(new Request('http://session/metadata', { method: 'GET' }));
+  let metadata: SessionMetadata | null = null;
+  if (metadataRes.ok) {
+    metadata = await metadataRes.json() as SessionMetadata;
+  }
+
   // If no code provided, use stored code from session.data.code
   if (!runConfig.code) {
-    const metadataRes = await stub.fetch(new Request('http://session/metadata', { method: 'GET' }));
-    if (metadataRes.ok) {
-      const metadata = await metadataRes.json() as SessionMetadata;
-      if (metadata.data?.code) {
-        runConfig.code = metadata.data.code;
-      } else {
-        return new Response(JSON.stringify({
-          error: 'no code provided and no stored code found',
-          hint: 'Use PUT /api/sessions/{id}/code to store default code'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
+    if (metadata?.data?.code) {
+      runConfig.code = metadata.data.code;
+    } else {
+      return new Response(JSON.stringify({
+        error: 'no code provided and no stored code found',
+        hint: 'Use PUT /api/sessions/{id}/code to store default code'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
   }
+
+  // Inject ERA environment variables
+  const requestUrl = new URL(request.url);
+  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+
+  const eraEnvVars = {
+    ERA_SESSION: 'true',
+    ERA_SESSION_ID: sessionId,
+    ERA_LANGUAGE: metadata?.language || 'unknown',
+    ERA_BASE_URL: baseUrl,
+    ERA_PROXY_URL: `${baseUrl}/proxy/${sessionId}`,
+  };
+
+  // Merge user env vars with ERA env vars (ERA vars take precedence)
+  runConfig.env = {
+    ...runConfig.env,
+    ...eraEnvVars,
+  };
 
   // Forward to Durable Object which handles inject/run/extract
   return stub.fetch(new Request('http://session/run', {
@@ -727,6 +771,133 @@ async function handleDuplicateSession(sessionId: string, request: Request, env: 
 
   return new Response(JSON.stringify(newMetadata), {
     status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/**
+ * Proxy Handler - Forward requests to containers
+ * Route: /proxy/{session_id}/{port}/*
+ */
+async function handleProxyRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+
+  // Parse route: /proxy/{session_id}/{port}/{path}
+  const match = url.pathname.match(/^\/proxy\/([^\/]+)\/(\d+)(\/.*)?$/);
+  if (!match) {
+    return new Response(JSON.stringify({
+      error: 'invalid proxy path',
+      format: '/proxy/{session_id}/{port}/{path}'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const [, sessionId, port, path = '/'] = match;
+
+  // Check if session exists and allows public access
+  const id = env.SESSIONS.idFromName(sessionId);
+  const stub = env.SESSIONS.get(id);
+  const metadataRes = await stub.fetch(new Request('http://session/metadata', { method: 'GET' }));
+
+  if (!metadataRes.ok) {
+    return new Response(JSON.stringify({ error: 'session not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const metadata = await metadataRes.json() as SessionMetadata;
+
+  // Check if public access is allowed
+  if (metadata.allowPublicAccess === false) {
+    return new Response(JSON.stringify({
+      error: 'public access disabled for this session',
+      hint: 'Set allowPublicAccess: true when creating the session'
+    }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Forward request to container through Session DO
+  // The Session DO has access to the container and can forward the request
+  try {
+    // Construct the proxy path that the container's server should see
+    const containerUrl = `http://localhost:${port}${path}${url.search}`;
+
+    // Forward through the Session DO's proxy endpoint
+    const proxyResponse = await stub.fetch(new Request(`http://session/proxy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: containerUrl,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body: request.body ? await request.text() : undefined,
+      }),
+    }));
+
+    return proxyResponse;
+  } catch (error) {
+    return new Response(JSON.stringify({
+      error: 'failed to connect to container',
+      details: error instanceof Error ? error.message : String(error),
+      hint: 'Make sure a server is running on this port inside the session'
+    }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
+ * Get Host URL Handler
+ * Returns the public URL for accessing a port inside the session
+ */
+async function handleGetHost(sessionId: string, port: string | null, env: Env, request: Request): Promise<Response> {
+  if (!port) {
+    return new Response(JSON.stringify({
+      error: 'port parameter required',
+      usage: 'GET /api/sessions/{id}/host?port=3000'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Validate port number
+  const portNum = parseInt(port, 10);
+  if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+    return new Response(JSON.stringify({ error: 'invalid port number' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Check if session exists
+  const id = env.SESSIONS.idFromName(sessionId);
+  const stub = env.SESSIONS.get(id);
+  const metadataRes = await stub.fetch(new Request('http://session/metadata', { method: 'GET' }));
+
+  if (!metadataRes.ok) {
+    return new Response(JSON.stringify({ error: 'session not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Get request host to build absolute URL
+  const requestUrl = new URL(request.url);
+  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+
+  return new Response(JSON.stringify({
+    url: `${baseUrl}/proxy/${sessionId}/${port}`,
+    base_url: `${baseUrl}/proxy/${sessionId}/${port}`,
+    session_id: sessionId,
+    port: portNum,
+  }), {
     headers: { 'Content-Type': 'application/json' },
   });
 }

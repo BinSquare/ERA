@@ -260,6 +260,11 @@ See [HTTP_API.md](era-agent/HTTP_API.md) for complete API documentation.
   - JavaScript: Modern ES6+, async/await, classes
   - TypeScript: Full type support via tsx
   - See [examples/](examples/) for code samples
+- **Bidirectional Callbacks & Public URLs**: Make your code accessible from the internet
+  - Receive HTTP requests from external services (webhooks, APIs, AJAX)
+  - Code knows its own public URL via environment variables
+  - Enable/disable internet and public access per session
+  - Perfect for webhooks, callbacks, and interactive applications
 - **Simplified Execute API**: Run code with a single API call (`/api/execute`)
 - **Isolated Execution**: Each VM runs in a sandboxed environment
 - **Resource Control**: Configurable CPU and memory
@@ -276,6 +281,9 @@ See [HTTP_API.md](era-agent/HTTP_API.md) for complete API documentation.
 - Multi-tenant code sandboxing
 - Educational coding platforms
 - CI/CD code testing
+- Webhook receivers and callback handlers
+- Interactive coding environments with public URLs
+- Real-time code demonstrations accessible via browser
 
 ## 🤝 Contributing
 

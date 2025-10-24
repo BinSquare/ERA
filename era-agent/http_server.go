@@ -208,9 +208,10 @@ func (s *HTTPServer) handleVMGet(w http.ResponseWriter, r *http.Request, vmID st
 // POST /api/vm/{id}/run - Run code in VM
 func (s *HTTPServer) handleVMRun(w http.ResponseWriter, r *http.Request, vmID string) {
 	var req struct {
-		Command string `json:"command"`
-		File    string `json:"file"`
-		Timeout int    `json:"timeout"`
+		Command string            `json:"command"`
+		File    string            `json:"file"`
+		Timeout int               `json:"timeout"`
+		Envs    map[string]string `json:"envs"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -231,6 +232,7 @@ func (s *HTTPServer) handleVMRun(w http.ResponseWriter, r *http.Request, vmID st
 		Command: req.Command,
 		File:    req.File,
 		Timeout: req.Timeout,
+		Envs:    req.Envs,
 	}
 
 	result, err := s.vmService.Run(r.Context(), opts)

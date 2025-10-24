@@ -43,6 +43,7 @@ type VMRunOptions struct {
 	Command string
 	File    string
 	Timeout int
+	Envs    map[string]string
 }
 
 type VMRunResult struct {
@@ -218,7 +219,7 @@ func (s *VMService) Run(ctx context.Context, opts VMRunOptions) (VMRunResult, er
 	}
 
 	// Execute the command
-	result, err := s.executeCommand(ctx, opts.Command, opts.Timeout, stdoutPath, stderrPath, workDir)
+	result, err := s.executeCommand(ctx, opts.Command, opts.Timeout, stdoutPath, stderrPath, workDir, opts.Envs)
 	if err != nil {
 		return VMRunResult{}, err
 	}
@@ -238,7 +239,7 @@ func (s *VMService) Run(ctx context.Context, opts VMRunOptions) (VMRunResult, er
 	return result, nil
 }
 
-func (s *VMService) executeCommand(ctx context.Context, command string, timeoutSecs int, stdoutPath, stderrPath, workDir string) (VMRunResult, error) {
+func (s *VMService) executeCommand(ctx context.Context, command string, timeoutSecs int, stdoutPath, stderrPath, workDir string, envs map[string]string) (VMRunResult, error) {
 	// Create a context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
@@ -254,6 +255,16 @@ func (s *VMService) executeCommand(ctx context.Context, command string, timeoutS
 
 	// Set working directory for command execution
 	cmd.Dir = workDir
+
+	// Set environment variables
+	if len(envs) > 0 {
+		// Start with the current environment
+		cmd.Env = os.Environ()
+		// Add custom environment variables
+		for key, value := range envs {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
 
 	// Capture stdout and stderr
 	var stdoutBuf, stderrBuf bytes.Buffer

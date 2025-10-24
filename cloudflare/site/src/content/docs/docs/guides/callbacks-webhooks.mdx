@@ -1,0 +1,428 @@
+---
+title: Callbacks & Webhooks
+description: Make your code accessible from the internet with public URLs and bidirectional communication
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+# Callbacks & Webhooks
+
+ERA Agent supports **bidirectional communication**, allowing your code to both make outbound HTTP requests AND receive inbound requests from the internet. This enables webhooks, callbacks, APIs, and even browser-based AJAX requests.
+
+<Aside type="tip">
+  **No persistent containers required!** ERA uses a "Worker as Relay" pattern where the Cloudflare Worker packages incoming HTTP requests and passes them to ephemeral containers as environment variables.
+</Aside>
+
+## How It Works
+
+```
+External Request (Webhook, AJAX, API call)
+  ↓
+Worker Proxy Handler (/proxy/{session_id}/{port}/*)
+  ↓
+Session Durable Object
+  ↓
+Creates Ephemeral Container
+  ↓
+Runs Stored Code with HTTP Request Details as ENV VARS
+  ↓
+Code Outputs JSON Response
+  ↓
+Returns through Worker to Requester
+```
+
+## Quick Start
+
+### 1. Create a Session with Public Access
+
+```bash
+curl -X POST https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "webhook-handler",
+    "persistent": true,
+    "allowInternetAccess": true,
+    "allowPublicAccess": true
+  }'
+```
+
+### 2. Store HTTP Request Handler Code
+
+```bash
+curl -X PUT https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/sessions/webhook-handler/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    print(json.dumps({\"message\": \"Hello from webhook!\", \"method\": os.getenv(\"ERA_HTTP_METHOD\")}))"
+  }'
+```
+
+### 3. Get Your Public URL
+
+```bash
+curl https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/sessions/webhook-handler/host?port=8000
+```
+
+**Response:**
+```json
+{
+  "url": "https://era-agent.YOUR_SUBDOMAIN.workers.dev/proxy/webhook-handler/8000",
+  "session_id": "webhook-handler",
+  "port": 8000
+}
+```
+
+### 4. Test Your Webhook
+
+```bash
+curl https://era-agent.YOUR_SUBDOMAIN.workers.dev/proxy/webhook-handler/8000/test
+```
+
+## Configuration Options
+
+When creating a session, you can control network access:
+
+```typescript
+{
+  "language": "python",
+  "session_id": "my-session",
+  "persistent": true,
+
+  // Network Access Controls
+  "allowInternetAccess": true,    // Allow outbound HTTP requests (default: true)
+  "allowPublicAccess": true       // Allow inbound requests via proxy (default: true)
+}
+```
+
+<Aside type="caution">
+  Setting `allowPublicAccess: false` will block all proxy requests to this session, returning a 403 error.
+</Aside>
+
+## Environment Variables
+
+When a request comes through the proxy, your code receives these environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ERA_REQUEST_MODE` | Set to `"proxy"` for proxied requests | `"proxy"` |
+| `ERA_HTTP_METHOD` | HTTP method | `"GET"`, `"POST"`, `"PUT"`, etc. |
+| `ERA_HTTP_PATH` | Request path | `"/webhook"`, `"/api/data"` |
+| `ERA_HTTP_QUERY` | Query string | `"?id=123&type=event"` |
+| `ERA_HTTP_HEADERS` | JSON-encoded request headers | `{"content-type": "application/json"}` |
+| `ERA_HTTP_BODY` | Request body | Raw body text or JSON |
+| `ERA_SESSION_ID` | Your session ID | `"webhook-handler"` |
+| `ERA_PROXY_URL` | Your proxy base URL | `"https://...workers.dev/proxy/webhook-handler"` |
+
+## Complete Examples
+
+### Python Webhook Handler
+
+<Code code={`import os
+import json
+
+# Check if this is a proxied request
+if os.getenv("ERA_REQUEST_MODE") == "proxy":
+    method = os.getenv("ERA_HTTP_METHOD")
+    path = os.getenv("ERA_HTTP_PATH")
+    body = os.getenv("ERA_HTTP_BODY")
+
+    # Handle different routes
+    if path == "/webhook" and method == "POST":
+        try:
+            data = json.loads(body) if body else {}
+            response = {
+                "status": "success",
+                "received": data,
+                "session_id": os.getenv("ERA_SESSION_ID")
+            }
+        except Exception as e:
+            response = {"error": str(e)}
+
+    elif path == "/status":
+        response = {
+            "status": "online",
+            "session": os.getenv("ERA_SESSION_ID")
+        }
+
+    else:
+        response = {
+            "error": "Route not found",
+            "path": path,
+            "available": ["/webhook", "/status"]
+        }
+
+    # Output JSON response (Worker will parse this)
+    print(json.dumps(response))
+else:
+    print("Not a proxied request")
+`} lang="python" title="webhook_handler.py" />
+
+### JavaScript/Node.js Handler
+
+<Code code={`const os = require('os');
+
+// Check if this is a proxied request
+if (process.env.ERA_REQUEST_MODE === 'proxy') {
+    const method = process.env.ERA_HTTP_METHOD;
+    const path = process.env.ERA_HTTP_PATH;
+    const body = process.env.ERA_HTTP_BODY;
+
+    let response;
+
+    // Handle different routes
+    if (path === '/api/data' && method === 'GET') {
+        response = {
+            data: [1, 2, 3, 4, 5],
+            timestamp: new Date().toISOString()
+        };
+    } else if (path === '/api/echo' && method === 'POST') {
+        try {
+            const data = JSON.parse(body || '{}');
+            response = {
+                echo: data,
+                received_at: process.env.ERA_SESSION_ID
+            };
+        } catch (err) {
+            response = { error: err.message };
+        }
+    } else {
+        response = {
+            error: 'Not found',
+            path: path
+        };
+    }
+
+    // Output JSON response
+    console.log(JSON.stringify(response));
+} else {
+    console.log('Not a proxied request');
+}
+`} lang="javascript" title="handler.js" />
+
+### TypeScript Handler
+
+<Code code={`interface RequestData {
+    event: string;
+    payload: any;
+}
+
+interface Response {
+    status: string;
+    data?: any;
+    error?: string;
+}
+
+// Check if this is a proxied request
+if (process.env.ERA_REQUEST_MODE === 'proxy') {
+    const method = process.env.ERA_HTTP_METHOD as string;
+    const path = process.env.ERA_HTTP_PATH as string;
+    const body = process.env.ERA_HTTP_BODY as string;
+
+    let response: Response;
+
+    try {
+        const requestData: RequestData = JSON.parse(body || '{}');
+
+        switch (path) {
+            case '/event':
+                response = {
+                    status: 'processed',
+                    data: {
+                        event: requestData.event,
+                        processed_at: new Date().toISOString()
+                    }
+                };
+                break;
+
+            default:
+                response = {
+                    status: 'error',
+                    error: \`Unknown path: \${path}\`
+                };
+        }
+    } catch (err) {
+        response = {
+            status: 'error',
+            error: (err as Error).message
+        };
+    }
+
+    console.log(JSON.stringify(response));
+}
+`} lang="typescript" title="handler.ts" />
+
+## Use Cases
+
+### 1. Webhook Receivers
+
+Accept webhooks from external services (Stripe, GitHub, etc.):
+
+```python
+import os
+import json
+
+if os.getenv("ERA_REQUEST_MODE") == "proxy":
+    body = json.loads(os.getenv("ERA_HTTP_BODY") or "{}")
+
+    # Process GitHub webhook
+    if body.get("action") == "opened":
+        print(json.dumps({
+            "status": "PR received",
+            "pr_number": body.get("number")
+        }))
+```
+
+### 2. REST API Endpoints
+
+Create simple REST APIs:
+
+```javascript
+const path = process.env.ERA_HTTP_PATH;
+const method = process.env.ERA_HTTP_METHOD;
+
+const routes = {
+    'GET /users': () => ({ users: ['alice', 'bob'] }),
+    'POST /users': () => ({ created: true }),
+    'GET /status': () => ({ status: 'ok' })
+};
+
+const handler = routes[\`\${method} \${path}\`];
+if (handler) {
+    console.log(JSON.stringify(handler()));
+} else {
+    console.log(JSON.stringify({ error: '404 Not Found' }));
+}
+```
+
+### 3. AJAX-Accessible Endpoints
+
+Make your code accessible from web browsers:
+
+```python
+import os
+import json
+
+if os.getenv("ERA_REQUEST_MODE") == "proxy":
+    # Add CORS headers in response
+    response = {
+        "message": "Hello from ERA!",
+        "data": [1, 2, 3],
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST"
+        }
+    }
+    print(json.dumps(response))
+```
+
+Then in your web app:
+
+```html
+<script>
+fetch('https://era-agent.workers.dev/proxy/my-session/8000/data')
+  .then(r => r.json())
+  .then(data => console.log(data));
+</script>
+```
+
+### 4. Interactive Coding Demonstrations
+
+Create live, shareable code demonstrations:
+
+```typescript
+// Store this code in a session
+const demo = process.env.ERA_HTTP_QUERY?.includes('demo=fibonacci');
+
+if (demo) {
+    const fib = (n: number): number => n <= 1 ? n : fib(n-1) + fib(n-2);
+    console.log(JSON.stringify({
+        demo: 'fibonacci',
+        result: fib(10)
+    }));
+}
+```
+
+Share the URL: `https://era-agent.workers.dev/proxy/demo/8000?demo=fibonacci`
+
+## Response Format
+
+Your code should output JSON to stdout. The Worker will parse it and return it as the HTTP response:
+
+```python
+import json
+
+response = {
+    "status": 200,                          # Optional: HTTP status code
+    "contentType": "application/json",       # Optional: Content-Type header
+    "headers": {"X-Custom": "value"},        # Optional: Additional headers
+    "data": {"key": "value"}                 # Your response data
+}
+
+print(json.dumps(response))
+```
+
+<Aside type="note">
+  If your code doesn't output valid JSON, the raw stdout will be returned as `text/plain` with a 200 status (or 500 if the exit code is non-zero).
+</Aside>
+
+## API Reference
+
+### Get Public URL
+
+**Endpoint:** `GET /api/sessions/{session_id}/host?port={port}`
+
+**Example:**
+```bash
+curl "https://era-agent.workers.dev/api/sessions/my-session/host?port=8000"
+```
+
+**Response:**
+```json
+{
+  "url": "https://era-agent.workers.dev/proxy/my-session/8000",
+  "base_url": "https://era-agent.workers.dev/proxy/my-session/8000",
+  "session_id": "my-session",
+  "port": 8000
+}
+```
+
+### Proxy Request
+
+**Endpoint:** `/proxy/{session_id}/{port}/{path}`
+
+**Example:**
+```bash
+# GET request
+curl "https://era-agent.workers.dev/proxy/my-session/8000/api/data"
+
+# POST request
+curl -X POST "https://era-agent.workers.dev/proxy/my-session/8000/webhook" \
+  -H "Content-Type: application/json" \
+  -d '{"event": "test"}'
+```
+
+## Limitations
+
+<Aside type="caution">
+  **Ephemeral Execution:** Each request creates a new container, runs your stored code, and destroys the container. There is no persistent server process.
+</Aside>
+
+- **Cold Start Latency:** Each proxy request incurs container startup time (~2-5 seconds)
+- **No WebSockets:** Only HTTP request/response supported
+- **Stateless:** Each request is independent (use session data persistence for state)
+- **Timeout:** Requests are subject to the session timeout (default 30s)
+- **No Streaming:** Responses must complete before being returned
+
+## Security Considerations
+
+1. **Access Control:** Use `allowPublicAccess: false` to disable proxy access
+2. **Input Validation:** Always validate and sanitize inputs from `ERA_HTTP_BODY` and `ERA_HTTP_HEADERS`
+3. **Rate Limiting:** Consider implementing your own rate limiting logic
+4. **Authentication:** Implement token-based auth by checking headers
+5. **Session IDs:** Use non-guessable session IDs to prevent unauthorized access
+
+## Next Steps
+
+- See [Environment Variables](/docs/guides/environment-variables) for more details on all available variables
+- Learn about [Sessions](/docs/guides/sessions) for session management
+- Check out [File Management](/docs/guides/files) for persisting data between requests
