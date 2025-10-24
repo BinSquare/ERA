@@ -1,0 +1,348 @@
+---
+title: Environment Variables
+description: How to set and use environment variables in sessions
+---
+
+This page covers how to set and use environment variables in sessions, and default environment variables inside each session.
+
+## Default Environment Variables
+
+### Knowing if you are inside a session
+
+Upon creating a session, useful metadata is set as environment variables:
+
+- `ERA_SESSION` is set to `true` to know if code is running inside an ERA session
+- `ERA_SESSION_ID` contains the session ID
+- `ERA_LANGUAGE` contains the language runtime (python, node, typescript, go, deno)
+
+You can try it out by running code in a session:
+
+```bash
+# Create a session
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "my-session",
+    "persistent": true
+  }'
+
+# Check environment variables
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(f\"Session ID: {os.environ.get('\''ERA_SESSION_ID'\'')}\"); print(f\"Language: {os.environ.get('\''ERA_LANGUAGE'\'')}\")"
+  }'
+```
+
+---
+
+## Setting Environment Variables
+
+**⚠️ Important: Environment variables are NEVER persisted.**
+
+You must pass them every time you run code. This is for security - no secrets are stored anywhere.
+
+There are 2 ways to set environment variables:
+
+1. [Per-run environment variables](/docs/guides/environment-variables#1-per-run-environment-variables) (recommended for secrets)
+2. [Setup environment variables](/docs/guides/environment-variables#2-setup-environment-variables) (for package installation only)
+
+### 1. Per-Run Environment Variables
+
+**Recommended for secrets and dynamic values.**
+
+Set environment variables for a specific code execution. Works with all languages.
+
+#### Python
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\\napi_key = os.environ.get(\"API_KEY\")\\nprint(f\"API Key: {api_key}\")",
+    "env": {
+      "API_KEY": "secret123",
+      "DATABASE_URL": "postgresql://localhost:5432/mydb"
+    }
+  }'
+```
+
+#### Node.js
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "const apiKey = process.env.API_KEY;\\nconsole.log(\"API Key:\", apiKey);",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+#### TypeScript
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "const apiKey: string = process.env.API_KEY || \"default\";\\nconsole.log(\"API Key:\", apiKey);",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+#### Go
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "package main\\nimport (\\n\\t\"fmt\"\\n\\t\"os\"\\n)\\nfunc main() {\\n\\tapiKey := os.Getenv(\"API_KEY\")\\n\\tfmt.Println(\"API Key:\", apiKey)\\n}",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+#### Deno
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "const apiKey = Deno.env.get(\"API_KEY\");\\nconsole.log(\"API Key:\", apiKey);",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+**Important Notes:**
+
+- These environment variables are scoped to **this execution only**
+- They are **NOT persisted** - you must pass them again on the next run
+- Perfect for secrets like API keys, database passwords, tokens
+- If you come back to the session later, you must provide them again
+
+### 2. Setup Environment Variables
+
+**Only for package installation commands.**
+
+Set environment variables during session setup (package installation phase):
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "setup": {
+      "pip": ["requests"],
+      "commands": [
+        "mkdir -p /tmp/config"
+      ],
+      "envs": {
+        "SETUP_ENV": "production",
+        "BUILD_TARGET": "linux"
+      }
+    }
+  }'
+```
+
+**⚠️ Warning:**
+- Setup `envs` are **only available during setup commands**
+- They are **NOT available during runtime**
+- **Do NOT use for secrets** - use per-run `env` instead
+
+---
+
+## Environment Variables Are NOT Persisted
+
+**This is critical for security:**
+
+```bash
+# Day 1: Create session and run code with API key
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(os.environ.get(\"API_KEY\"))",
+    "env": {"API_KEY": "secret123"}
+  }'
+# Output: secret123
+
+# Days later: Come back to same session - API_KEY is gone!
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(os.environ.get(\"API_KEY\"))"
+  }'
+# Output: None
+
+# You must pass it again:
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(os.environ.get(\"API_KEY\"))",
+    "env": {"API_KEY": "secret123"}
+  }'
+# Output: secret123
+```
+
+**Why this matters:**
+
+- ✅ Secrets never stored in R2
+- ✅ No risk of accidental secret exposure
+- ✅ You control secrets on every execution
+- ✅ Different secrets per run if needed
+
+---
+
+## Common Patterns
+
+### 1. API Keys for External Services
+
+```bash
+# Make API call with secret key
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import requests\\nimport os\\napi_key = os.environ.get(\"OPENAI_API_KEY\")\\nresponse = requests.get(\"https://api.openai.com/v1/models\", headers={\"Authorization\": f\"Bearer {api_key}\"})\\nprint(response.json())",
+    "env": {
+      "OPENAI_API_KEY": "sk-..."
+    }
+  }'
+```
+
+### 2. Database Credentials
+
+```bash
+# Connect to database with credentials
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\\ndb_url = os.environ.get(\"DATABASE_URL\")\\nprint(f\"Connecting to: {db_url}\")",
+    "env": {
+      "DATABASE_URL": "postgresql://user:pass@host:5432/db"
+    }
+  }'
+```
+
+### 3. Multiple Environment Variables
+
+```bash
+# Pass multiple secrets at once
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\\nfor key in [\"API_KEY\", \"DB_PASSWORD\", \"JWT_SECRET\"]:\\n    print(f\"{key}: {os.environ.get(key)}\")",
+    "env": {
+      "API_KEY": "secret123",
+      "DB_PASSWORD": "dbpass456",
+      "JWT_SECRET": "jwt789"
+    }
+  }'
+```
+
+### 4. Dynamic Configuration
+
+```bash
+# Different env vars per execution
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\\nenv = os.environ.get(\"ENVIRONMENT\")\\nprint(f\"Running in: {env}\")",
+    "env": {
+      "ENVIRONMENT": "production",
+      "LOG_LEVEL": "info"
+    }
+  }'
+
+# Later: Use different values
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\\nenv = os.environ.get(\"ENVIRONMENT\")\\nprint(f\"Running in: {env}\")",
+    "env": {
+      "ENVIRONMENT": "development",
+      "LOG_LEVEL": "debug"
+    }
+  }'
+```
+
+---
+
+## All Languages Support
+
+Environment variables work identically across all languages:
+
+| Language | Access Method | Example |
+|----------|--------------|---------|
+| **Python** | `os.environ.get("VAR")` | `import os; print(os.environ.get("API_KEY"))` |
+| **Node.js** | `process.env.VAR` | `console.log(process.env.API_KEY)` |
+| **TypeScript** | `process.env.VAR` | `const key = process.env.API_KEY` |
+| **Go** | `os.Getenv("VAR")` | `import "os"; key := os.Getenv("API_KEY")` |
+| **Deno** | `Deno.env.get("VAR")` | `const key = Deno.env.get("API_KEY")` |
+
+---
+
+## Best Practices
+
+### ✅ DO
+
+1. **Pass secrets at runtime**
+   ```bash
+   {"code": "...", "env": {"API_KEY": "secret"}}
+   ```
+
+2. **Pass env vars on every execution**
+   ```bash
+   # Every run that needs secrets must provide them
+   ```
+
+3. **Use different secrets for dev/prod**
+   ```bash
+   # Different env values per environment
+   ```
+
+### ❌ DON'T
+
+1. **Don't use setup `envs` for secrets**
+   ```bash
+   # BAD - Don't do this!
+   {"setup": {"envs": {"API_KEY": "secret"}}}
+   ```
+
+2. **Don't expect env vars to persist**
+   ```bash
+   # They won't be there on the next run!
+   ```
+
+3. **Don't store secrets in files**
+   ```bash
+   # Files like .env are excluded from persistence anyway
+   ```
+
+---
+
+## Security Features
+
+ERA Agent automatically protects your secrets:
+
+1. **No Persistence**
+   - Runtime `env` vars exist only for that execution
+   - Never saved to R2 storage
+
+2. **Automatic File Exclusion**
+   - `.env`, `credentials.json`, etc. never persisted
+   - Even if created during setup
+
+3. **Execution Isolation**
+   - Each run gets fresh environment
+   - No env var leakage between runs
+
+4. **Session Isolation**
+   - Env vars don't leak between sessions
+   - Each session is completely isolated

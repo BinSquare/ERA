@@ -1,0 +1,288 @@
+---
+title: Quickstart
+description: Get started with ERA Agent in minutes
+---
+
+ERA Agent is a secure, ephemeral code execution platform running on Cloudflare's edge. Execute Python, Node.js, and TypeScript in isolated VMs with persistent session support.
+
+:::tip[Using REST Clients (Postman, Insomnia, Restfox)]
+When copying JSON examples to paste into REST clients, look for the **"JSON Body for REST clients"** sections. These provide single-line JSON that's ready to paste. Make sure newlines appear as `\n` (backslash-n) in your REST client, not as actual line breaks.
+
+**Example that works:**
+```json
+{"language":"python","code":"print('Hello')\nprint('World')"}
+```
+The `\n` should be two characters (backslash + n), not an actual newline.
+:::
+
+## Quick Example: One-Shot Execution
+
+The simplest way to use ERA Agent is with one-shot execution - send your code and get results immediately.
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","code":"print(\"Hello from ERA Agent!\")\nprint(2 + 2)"}'
+```
+
+**JSON Body for REST clients (copy this):**
+```json
+{"language":"python","code":"print(\"Hello from ERA Agent!\")\nprint(2 + 2)"}
+```
+
+**Response:**
+```json
+{
+  "session_id": "sess_1234567890_abc123",
+  "stdout": "Hello from ERA Agent!\n4\n",
+  "stderr": "",
+  "exit_code": 0,
+  "execution_time_ms": 145
+}
+```
+
+### Supported Languages
+
+- **Python** - Full Python 3.x environment
+- **Node.js** - JavaScript runtime with Node APIs
+- **TypeScript** - TypeScript with automatic transpilation
+- **Go** - Go 1.21+ with standard library
+- **Deno** - Deno 1.40+ with native TypeScript support
+
+**Node.js:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"node","code":"console.log(\"Hello from Node.js!\"); console.log(Math.PI);"}'
+```
+
+**JSON Body for REST clients:**
+```json
+{"language":"node","code":"console.log(\"Hello from Node.js!\"); console.log(Math.PI);"}
+```
+
+**Go:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}'
+```
+
+**JSON Body for REST clients:**
+```json
+{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}
+```
+
+## Session-Based Execution
+
+For more complex workflows, create a persistent session that maintains state between executions.
+
+### 1. Create a Session
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","persistent":true,"session_id":"my-python-env","data":{"project":"data-analysis","user":"developer"}}'
+```
+
+**JSON Body for REST clients:**
+```json
+{"language":"python","persistent":true,"session_id":"my-python-env","data":{"project":"data-analysis","user":"developer"}}
+```
+
+**Response:**
+```json
+{
+  "id": "my-python-env",
+  "created_at": "2024-10-23T10:30:00Z",
+  "language": "python",
+  "persistent": true,
+  "file_count": 0,
+  "total_size_bytes": 0,
+  "metadata": {},
+  "data": {
+    "project": "data-analysis",
+    "user": "developer"
+  }
+}
+```
+
+### 2. Execute Code in Session
+
+Run code multiple times in the same session - variables and state persist between runs.
+
+**First execution - define a variable:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter = 0\nprint(f\"Counter initialized: {counter}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter = 0\nprint(f\"Counter initialized: {counter}\")"}
+```
+
+**Second execution - variable persists:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}
+```
+
+**Third execution - still persists:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}
+```
+
+**Outputs:**
+```
+Counter initialized: 0
+Counter value: 1
+Counter value: 2
+```
+
+### 3. Clean Up
+
+Delete the session when you're done:
+
+```bash
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env
+```
+
+## Persistent Sessions with Files
+
+Sessions can store files that persist between executions. Perfect for data processing, configuration files, or multi-step workflows.
+
+### Creating Files
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"data.txt\", \"w\") as f:\n    f.write(\"Line 1\\nLine 2\\nLine 3\")\nprint(\"File created!\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"with open(\"data.txt\", \"w\") as f:\n    f.write(\"Line 1\\nLine 2\\nLine 3\")\nprint(\"File created!\")"}
+```
+
+### Reading Files
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"data.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"File contents: {content}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"with open(\"data.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"File contents: {content}\")"}
+```
+
+### Processing Files
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"data.txt\", \"r\") as f:\n    lines = f.readlines()\nprint(f\"Line count: {len(lines)}\")\nfor i, line in enumerate(lines, 1):\n    print(f\"  {i}: {line.strip()}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"with open(\"data.txt\", \"r\") as f:\n    lines = f.readlines()\nprint(f\"Line count: {len(lines)}\")\nfor i, line in enumerate(lines, 1):\n    print(f\"  {i}: {line.strip()}\")"}
+```
+
+**Output:**
+```
+Line count: 3
+  1: Line 1
+  2: Line 2
+  3: Line 3
+```
+
+## Full Lifecycle Example
+
+Here's a complete workflow showing session creation, multiple operations, and cleanup:
+
+```bash
+# 1. Create a persistent session
+SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","persistent":true,"session_id":"data-analysis-'$(date +%s)'","data":{"project":"temperature-analysis"}}' \
+  | jq -r '.id')
+
+echo "Created session: $SESSION_ID"
+
+# 2. Initialize data
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"temperatures = [72, 75, 68, 71, 73, 70, 74]\nprint(f\"Loaded {len(temperatures)} temperature readings\")"}'
+
+# 3. Calculate statistics
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"avg = sum(temperatures) / len(temperatures)\nmin_temp = min(temperatures)\nmax_temp = max(temperatures)\nprint(f\"Average: {avg:.1f}°F\")\nprint(f\"Range: {min_temp}°F - {max_temp}°F\")"}'
+
+# 4. Save results to file
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"results.txt\", \"w\") as f:\n    f.write(f\"Temperature Analysis\\n\")\n    f.write(f\"Average: {avg:.1f}°F\\n\")\n    f.write(f\"Range: {min_temp}°F - {max_temp}°F\\n\")\nprint(\"Results saved to results.txt\")"}'
+
+# 5. Get session info
+curl -s https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID | jq
+
+# 6. Clean up
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+echo "Session deleted"
+```
+
+**JSON Bodies for REST clients:**
+
+**1. Create session:**
+```json
+{"language":"python","persistent":true,"session_id":"data-analysis-123","data":{"project":"temperature-analysis"}}
+```
+
+**2. Initialize data:**
+```json
+{"code":"temperatures = [72, 75, 68, 71, 73, 70, 74]\nprint(f\"Loaded {len(temperatures)} temperature readings\")"}
+```
+
+**3. Calculate statistics:**
+```json
+{"code":"avg = sum(temperatures) / len(temperatures)\nmin_temp = min(temperatures)\nmax_temp = max(temperatures)\nprint(f\"Average: {avg:.1f}°F\")\nprint(f\"Range: {min_temp}°F - {max_temp}°F\")"}
+```
+
+**4. Save results:**
+```json
+{"code":"with open(\"results.txt\", \"w\") as f:\n    f.write(f\"Temperature Analysis\\n\")\n    f.write(f\"Average: {avg:.1f}°F\\n\")\n    f.write(f\"Range: {min_temp}°F - {max_temp}°F\\n\")\nprint(\"Results saved to results.txt\")"}
+```
+
+## What's Next?
+
+- [API Reference](/docs/api-reference/) - Complete API documentation
+- [Session Management](/docs/guides/sessions/) - Advanced session features
+- [Persistence](/docs/guides/persistence/) - Data and file storage
+- [File Operations](/docs/guides/files/) - Working with files
+
+## Key Features
+
+- **🔒 Secure Isolation** - Each execution runs in an isolated VM with network disabled
+- **💾 Persistent Storage** - Sessions maintain state, files, and custom data
+- **⚡ Fast Execution** - Sub-second cold starts, instant warm execution
+- **🌍 Edge Deployed** - Running on Cloudflare's global network
+- **🎯 Multiple Languages** - Python, Node.js, TypeScript, and Go support
+- **📦 Custom Sessions** - Use custom IDs for easy session management

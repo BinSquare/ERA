@@ -1,0 +1,60 @@
+# Cloudflare Worker Configuration for ERA Agent
+# NOTE: Cloudflare Containers is in BETA - API may change
+# Last updated: October 2024
+
+name = "era-agent"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets (Astro site)
+[assets]
+directory = "./dist-astro"
+binding = "ASSETS"
+
+# Container configuration
+[[containers]]
+name = "era-agent-container"
+class_name = "EraAgent"
+image = "../era-agent/Dockerfile"
+instance_type = "standard"
+max_instances = 10
+
+# Durable Object binding (required for Containers)
+# This connects the Container to a Durable Object
+[[durable_objects.bindings]]
+name = "ERA_AGENT"
+class_name = "EraAgent"
+
+# Session Durable Object binding
+# This handles session state and orchestration
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "SessionDO"
+
+# Migration (required for Durable Objects with Containers)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["EraAgent"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["SessionDO"]
+
+# R2 bucket for session file storage
+[[r2_buckets]]
+binding = "SESSIONS_BUCKET"
+bucket_name = "era-sessions"
+
+# Optional: Environment variables passed to your container
+[vars]
+AGENT_LOG_LEVEL = "info"
+
+# Optional: Custom domains (configure after deployment)
+# routes = [
+#   { pattern = "api.yourdomain.com", zone_name = "yourdomain.com" }
+# ]
+
+# Workers settings
+# [limits]
+# cpu_ms = 10000  # Adjust based on your needs

@@ -1,0 +1,462 @@
+---
+title: API Reference
+description: Complete ERA Agent API documentation
+---
+
+Complete reference for all ERA Agent API endpoints.
+
+## Base URL
+
+```
+https://era-agent.yawnxyz.workers.dev
+```
+
+## Endpoints
+
+### POST /api/execute
+
+Execute code in a one-shot session (non-persistent).
+
+**Request Body:**
+```json
+{
+  "language": "python" | "node" | "typescript" | "go" | "deno",
+  "code": "string",
+  "timeout_ms": 30000  // optional, default 30000
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "string",
+  "stdout": "string",
+  "stderr": "string",
+  "exit_code": number,
+  "execution_time_ms": number
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "code": "print(\"Hello World\")"
+  }'
+```
+
+---
+
+### POST /api/sessions
+
+Create a new persistent session.
+
+**Request Body:**
+```json
+{
+  "language": "python" | "node" | "typescript" | "go" | "deno",
+  "persistent": boolean,           // optional, default true
+  "session_id": "string",          // optional, custom session ID
+  "data": object,                  // optional, custom metadata
+  "metadata": object               // optional, additional metadata
+}
+```
+
+**Response:**
+```json
+{
+  "id": "string",
+  "created_at": "ISO 8601 datetime",
+  "last_run_at": "ISO 8601 datetime",
+  "language": "string",
+  "persistent": boolean,
+  "file_count": number,
+  "total_size_bytes": number,
+  "metadata": object,
+  "data": object
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "session_id": "my-session",
+    "data": {"user": "developer"}
+  }'
+```
+
+---
+
+### GET /api/sessions
+
+List all active sessions.
+
+**Response:**
+```json
+{
+  "sessions": [
+    {
+      "id": "string",
+      "created_at": "ISO 8601 datetime",
+      "last_run_at": "ISO 8601 datetime",
+      "language": "string",
+      "persistent": boolean,
+      "file_count": number,
+      "total_size_bytes": number
+    }
+  ],
+  "count": number
+}
+```
+
+**Example:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions
+```
+
+---
+
+### GET /api/sessions/\{id\}
+
+Get session metadata and status.
+
+**Response:**
+```json
+{
+  "id": "string",
+  "created_at": "ISO 8601 datetime",
+  "last_run_at": "ISO 8601 datetime",
+  "language": "string",
+  "persistent": boolean,
+  "file_count": number,
+  "total_size_bytes": number,
+  "metadata": object,
+  "data": object,
+  "files": [
+    {
+      "path": "string",
+      "size": number,
+      "modified_at": "ISO 8601 datetime"
+    }
+  ]
+}
+```
+
+**Example:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+```
+
+---
+
+### POST /api/sessions/\{id\}/run
+
+Execute code in an existing session.
+
+**Request Body:**
+```json
+{
+  "code": "string",
+  "timeout_ms": 30000,     // optional, execution timeout
+  "update_data": object,   // optional, merge into session data
+  "env": {                 // optional, environment variables (NOT persisted)
+    "API_KEY": "string",
+    "DATABASE_URL": "string"
+  }
+}
+```
+
+**Default Environment Variables:**
+
+ERA Agent automatically provides these environment variables:
+- `ERA_SESSION`: Always set to `"true"`
+- `ERA_SESSION_ID`: The session ID
+- `ERA_LANGUAGE`: The language runtime (python, node, typescript, go, deno)
+
+**Response:**
+```json
+{
+  "stdout": "string",
+  "stderr": "string",
+  "exit_code": number,
+  "execution_time_ms": number,
+  "files_modified": number
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(f\"Session: {os.environ.get('\''ERA_SESSION_ID'\'')}\"); print(f\"API Key: {os.environ.get('\''API_KEY'\'')}\")",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+**⚠️ Important:** Environment variables are NOT persisted. You must pass them with every `/run` request.
+
+**→ See [Environment Variables Guide](/docs/guides/environment-variables) for complete documentation**
+
+---
+
+### POST /api/sessions/\{id\}/duplicate
+
+Clone an existing session with all its files and state.
+
+**Request Body:**
+```json
+{
+  "new_id": "string",      // optional, custom ID for clone
+  "data": object           // optional, override data
+}
+```
+
+**Response:**
+```json
+{
+  "id": "string",
+  "created_at": "ISO 8601 datetime",
+  "language": "string",
+  "persistent": boolean,
+  "file_count": number,
+  "total_size_bytes": number,
+  "source_session_id": "string"
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/duplicate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "new_id": "my-session-backup"
+  }'
+```
+
+---
+
+### GET /api/sessions/\{id\}/files
+
+List all files in a session.
+
+**Response:**
+```json
+{
+  "files": [
+    {
+      "path": "string",
+      "size": number,
+      "modified_at": "ISO 8601 datetime"
+    }
+  ],
+  "total_count": number,
+  "total_size_bytes": number
+}
+```
+
+**Example:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+```
+
+---
+
+### GET /api/sessions/\{id\}/files/\{path\}
+
+Download a specific file from a session.
+
+**Response:** File contents (binary or text)
+
+**Example:**
+```bash
+# Download a file
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/data.json -o data.json
+
+# View text file content
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/output.txt
+```
+
+---
+
+### PUT /api/sessions/\{id\}/files/\{path\}
+
+Upload a file to a session. File will be available on next code execution.
+
+**Request Body:** File contents (binary or text)
+
+**Response:**
+```json
+{
+  "path": "string",
+  "size": number
+}
+```
+
+**Example:**
+```bash
+# Upload JSON file
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/data.json \
+  -H "Content-Type: application/json" \
+  --data-binary @data.json
+
+# Upload text file
+echo "Hello World" | curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/hello.txt \
+  --data-binary @-
+
+# Upload binary file
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/image.png \
+  -H "Content-Type: image/png" \
+  --data-binary @image.png
+```
+
+---
+
+### DELETE /api/sessions/\{id\}
+
+Delete a session and all its data.
+
+**Response:**
+```json
+{
+  "success": true,
+  "id": "string",
+  "deleted_at": "ISO 8601 datetime"
+}
+```
+
+**Example:**
+```bash
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+```
+
+---
+
+### DELETE /api/sessions
+
+Delete all sessions and their data (bulk cleanup).
+
+**⚠️ Warning:** This permanently deletes ALL sessions and their files. Use with caution!
+
+**Response:**
+```json
+{
+  "success": true,
+  "deleted_count": number,
+  "deleted_sessions": ["string"],
+  "deleted_at": "ISO 8601 datetime"
+}
+```
+
+**Example:**
+```bash
+# Delete all sessions
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions
+
+# Response
+{
+  "success": true,
+  "deleted_count": 3,
+  "deleted_sessions": ["session-1", "session-2", "session-3"],
+  "deleted_at": "2025-01-15T10:30:00Z"
+}
+```
+
+**Use Cases:**
+- Development/testing cleanup
+- Batch operations cleanup
+- Server maintenance
+
+**⚠️ Timeout Limitation:**
+- Worker CPU time limits apply (30 seconds on paid plans)
+- With 50+ sessions, the request may timeout
+- If timeout occurs, simply retry - it will delete the remaining sessions
+- For very large cleanups, call this endpoint multiple times
+
+---
+
+### GET /health
+
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "ISO 8601 datetime",
+  "version": "string"
+}
+```
+
+**Example:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/health
+```
+
+## Error Responses
+
+All endpoints return standard error responses:
+
+```json
+{
+  "error": "string",
+  "message": "string",
+  "code": "ERROR_CODE"
+}
+```
+
+**Common HTTP Status Codes:**
+- `200` - Success
+- `201` - Created (new session)
+- `400` - Bad Request (invalid input)
+- `404` - Not Found (session doesn't exist)
+- `408` - Request Timeout (execution timeout)
+- `500` - Internal Server Error
+
+## Rate Limits
+
+Currently no rate limits are enforced, but sessions are subject to:
+- **Execution timeout:** 30 seconds (default, configurable)
+- **File storage:** No hard limit (reasonable use)
+- **Session lifetime:** Persistent until explicitly deleted
+
+## Language Runtimes
+
+### Python
+- Version: Python 3.x
+- Standard library available
+- No network access
+- File I/O to session directory
+
+### Node.js
+- Version: Node.js 18+
+- Core modules available
+- No network access
+- File I/O to session directory
+
+### TypeScript
+- Automatic transpilation to JavaScript
+- Runs on Node.js runtime
+- All Node.js features available
+
+### Go
+- Version: Go 1.21+
+- Standard library available
+- No network access
+- File I/O to session directory
+
+### Deno
+- Version: Deno 1.40+
+- Native TypeScript and JavaScript support
+- Standard library and Web APIs available
+- Permissions: `--allow-read --allow-write` for file operations
+- No network access
+- File I/O to session directory

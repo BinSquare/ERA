@@ -1,0 +1,293 @@
+---
+title: Session Management
+description: Working with persistent sessions in ERA Agent
+---
+
+Sessions are the core of ERA Agent's persistent execution model. Each session provides an isolated environment where variables, files, and state persist across multiple code executions.
+
+## Creating Sessions
+
+### Basic Session
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true
+  }'
+```
+
+This creates a session with an auto-generated ID like `sess_1234567890_abc123`.
+
+### Custom Session ID
+
+Use custom IDs for easier session management:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "session_id": "my-data-processor"
+  }'
+```
+
+Now you can reference the session by your custom ID: `my-data-processor`.
+
+### Session with Metadata
+
+Store custom data with your session:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "session_id": "user-123-workspace",
+    "data": {
+      "user_id": "123",
+      "project": "data-analysis",
+      "created_by": "api-client-v1"
+    },
+    "metadata": {
+      "version": "1.0",
+      "environment": "production"
+    }
+  }'
+```
+
+## Session Lifecycle
+
+### 1. Initialize Session
+
+```bash
+SESSION_ID="data-processor"
+
+# Create session
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"language\": \"python\",
+    \"persistent\": true,
+    \"session_id\": \"$SESSION_ID\"
+  }"
+```
+
+### 2. Run Code Multiple Times
+
+```bash
+# First run - setup
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "data = []\nprint(\"Data initialized\")"
+  }'
+
+# Second run - append data
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "data.append({\"value\": 42})\nprint(f\"Data length: {len(data)}\")"
+  }'
+
+# Third run - data persists
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "data.append({\"value\": 99})\nprint(f\"Data: {data}\")"
+  }'
+```
+
+### 3. Check Session Status
+
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+```
+
+### 4. Clean Up
+
+```bash
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+```
+
+## Listing Sessions
+
+Get all active sessions:
+
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions
+```
+
+**Response:**
+```json
+{
+  "sessions": [
+    {
+      "id": "data-processor",
+      "created_at": "2024-10-23T10:00:00Z",
+      "last_run_at": "2024-10-23T10:05:30Z",
+      "language": "python",
+      "persistent": true,
+      "file_count": 3,
+      "total_size_bytes": 1024
+    }
+  ],
+  "count": 1
+}
+```
+
+## Cloning Sessions
+
+Duplicate a session with all its files and state:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/duplicate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "new_id": "data-processor-backup",
+    "data": {
+      "cloned_from": "data-processor",
+      "purpose": "backup"
+    }
+  }'
+```
+
+**Use cases:**
+- Create backups before risky operations
+- Template sessions for repeated workflows
+- A/B testing different code versions
+- Branching computational workflows
+
+## Session Isolation
+
+Each session is completely isolated:
+
+- **Memory:** Variables don't leak between sessions
+- **Files:** Each session has its own filesystem
+- **State:** No shared state across sessions
+- **Security:** Sessions can't access each other's data
+
+```bash
+# Session A
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-a/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "secret = \"password123\"\nprint(secret)"
+  }'
+
+# Session B - can't access session-a's variable
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-b/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(secret)"  # NameError: name \"secret\" is not defined
+  }'
+```
+
+## Best Practices
+
+### Use Custom IDs
+
+```bash
+# Good - descriptive session ID
+session_id="user-${USER_ID}-analysis-$(date +%s)"
+
+# Better - namespaced
+session_id="prod:user:${USER_ID}:analysis:$(date +%s)"
+```
+
+### Store Metadata
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "session-123",
+    "data": {
+      "user_id": "123",
+      "purpose": "data-analysis",
+      "created_at": "2024-10-23T10:00:00Z",
+      "tags": ["production", "analytics"]
+    }
+  }'
+```
+
+### Clean Up Sessions
+
+```bash
+# List sessions
+SESSIONS=$(curl -s https://era-agent.yawnxyz.workers.dev/api/sessions | jq -r '.sessions[].id')
+
+# Delete old sessions
+for session in $SESSIONS; do
+  echo "Deleting $session"
+  curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$session
+done
+```
+
+### Handle Errors
+
+```bash
+# Check if session exists before running
+SESSION_ID="my-session"
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID)
+
+if [ $STATUS -eq 200 ]; then
+  # Session exists, run code
+  curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+    -H "Content-Type: application/json" \
+    -d '{"code": "print(\"Hello\")"}'
+else
+  echo "Session not found, creating..."
+  curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+    -H "Content-Type: application/json" \
+    -d "{\"language\": \"python\", \"session_id\": \"$SESSION_ID\"}"
+fi
+```
+
+## Common Patterns
+
+### Template Sessions
+
+```bash
+# Create a template with common imports
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/template-python/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import json\nimport math\nimport re\nprint(\"Template initialized\")"
+  }'
+
+# Clone for each user
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/template-python/duplicate \
+  -H "Content-Type: application/json" \
+  -d '{"new_id": "user-123-workspace"}'
+```
+
+### Long-Running Workflows
+
+```bash
+# Stage 1: Data collection
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "data = [1, 2, 3, 4, 5]\nprint(f\"Collected {len(data)} items\")"
+  }'
+
+# Stage 2: Processing (minutes later)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "processed = [x * 2 for x in data]\nprint(f\"Processed: {processed}\")"
+  }'
+
+# Stage 3: Results (hours later)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "total = sum(processed)\nprint(f\"Total: {total}\")"
+  }'
+```

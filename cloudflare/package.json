@@ -1,0 +1,31 @@
+{
+  "name": "era-agent-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for ERA Agent - VM orchestration system",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "login": "wrangler login",
+    "whoami": "wrangler whoami"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "containers",
+    "vm",
+    "orchestration"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251014.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.44.0"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.28"
+  }
+}
