@@ -19,9 +19,18 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	logger := NewLogger(opts.LogLevel)
+	logger, err := NewLogger(opts.LogLevel, opts.LogFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return err
+	}
+	defer func() {
+		if cerr := logger.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "error closing logger: %v\n", cerr)
+		}
+	}()
 
-	vmService, err := NewVMService(logger)
+	vmService, err := NewVMService(logger, opts.VMRuntime)
 	if err != nil {
 		logger.Error("failed to init vm service", map[string]any{"error": err.Error()})
 		return err
