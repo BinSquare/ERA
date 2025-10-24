@@ -1,0 +1,418 @@
+---
+title: Code Management
+description: Store, update, and manage code in ERA Agent sessions
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+# Code Management
+
+ERA Agent allows you to **store code directly in a session** and update it at any time. This is perfect for iterative development, webhooks, APIs, and long-running services where you want to improve the code without changing the public URL.
+
+<Aside type="tip">
+  **Key Benefit:** Your public proxy URL stays the same even when you update the code! Perfect for webhooks and callbacks where the URL is registered with external services.
+</Aside>
+
+## Quick Start
+
+### 1. Create a Session
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "my-api",
+    "persistent": true,
+    "allowPublicAccess": true
+  }'
+```
+
+### 2. Store Initial Code
+
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello from ERA!\")",
+    "description": "Initial version"
+  }'
+```
+
+### 3. Run the Stored Code
+
+When you run without providing code, it automatically uses the stored code:
+
+```bash
+# No "code" field needed - uses stored code
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/run \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Or via proxy URL:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/proxy/my-api/8000/test
+```
+
+### 4. Update the Code
+
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Updated version 2!\")",
+    "description": "Added new features"
+  }'
+```
+
+<Aside type="note">
+  The next execution automatically uses the updated code. No redeployment needed!
+</Aside>
+
+## Iterative Development Workflow
+
+### Example: Building a Webhook Handler
+
+**Step 1: Start Simple**
+
+```bash
+# Create session
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "stripe-webhook",
+    "language": "python",
+    "persistent": true,
+    "allowPublicAccess": true
+  }'
+
+# Store basic handler (v1)
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    print(json.dumps({\"status\": \"received\", \"version\": 1}))",
+    "description": "v1: Basic webhook receiver"
+  }'
+
+# Get public URL
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/host?port=8000
+# URL: https://era-agent.yawnxyz.workers.dev/proxy/stripe-webhook/8000
+```
+
+**Step 2: Add Validation**
+
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    method = os.getenv(\"ERA_HTTP_METHOD\")\n    if method != \"POST\":\n        print(json.dumps({\"error\": \"Only POST allowed\"}))\n    else:\n        print(json.dumps({\"status\": \"received\", \"version\": 2}))",
+    "description": "v2: Added method validation"
+  }'
+```
+
+**Step 3: Process Payload**
+
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    body = os.getenv(\"ERA_HTTP_BODY\")\n    data = json.loads(body or \"{}\")\n    event_type = data.get(\"type\")\n    print(json.dumps({\"status\": \"processed\", \"event\": event_type, \"version\": 3}))",
+    "description": "v3: Processing webhook payload"
+  }'
+```
+
+<Aside type="tip">
+  **Same URL Throughout!** Your webhook URL never changed - you just kept improving the code behind it.
+</Aside>
+
+## API Reference
+
+### Store/Update Code
+
+**Endpoint:** `PUT /api/sessions/{session_id}/code`
+
+**Request Body:**
+```json
+{
+  "code": "string (required)",
+  "description": "string (optional)"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "code_length": 245,
+  "updated_at": "2025-10-24T06:43:17.661Z"
+}
+```
+
+**Example:**
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello World\")",
+    "description": "Initial implementation"
+  }'
+```
+
+### Get Stored Code
+
+**Endpoint:** `GET /api/sessions/{session_id}/code`
+
+**Response:**
+```json
+{
+  "code": "print(\"Hello World\")",
+  "description": "Initial implementation",
+  "updated_at": "2025-10-24T06:43:17.661Z",
+  "code_length": 19
+}
+```
+
+**Example:**
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code
+```
+
+## Complete Examples
+
+### Python: API with Multiple Routes
+
+<Code code={`import os
+import json
+
+if os.getenv("ERA_REQUEST_MODE") == "proxy":
+    method = os.getenv("ERA_HTTP_METHOD")
+    path = os.getenv("ERA_HTTP_PATH")
+
+    # Route handling
+    if path == "/users" and method == "GET":
+        response = {
+            "users": [
+                {"id": 1, "name": "Alice"},
+                {"id": 2, "name": "Bob"}
+            ],
+            "version": "1.0.0"
+        }
+    elif path == "/status":
+        response = {"status": "online", "version": "1.0.0"}
+    else:
+        response = {"error": "Not found", "path": path}
+
+    print(json.dumps(response))
+`} lang="python" title="api_handler.py" />
+
+**Store it:**
+```bash
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "code": "import os\nimport json\n\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    method = os.getenv(\"ERA_HTTP_METHOD\")\n    path = os.getenv(\"ERA_HTTP_PATH\")\n    \n    if path == \"/users\" and method == \"GET\":\n        response = {\"users\": [{\"id\": 1, \"name\": \"Alice\"}]}\n    elif path == \"/status\":\n        response = {\"status\": \"online\"}\n    else:\n        response = {\"error\": \"Not found\"}\n    \n    print(json.dumps(response))",
+  "description": "API with routes"
+}
+EOF
+```
+
+### JavaScript: Event Handler
+
+<Code code={`const os = require('os');
+
+if (process.env.ERA_REQUEST_MODE === 'proxy') {
+    const method = process.env.ERA_HTTP_METHOD;
+    const body = JSON.parse(process.env.ERA_HTTP_BODY || '{}');
+
+    // Process event
+    const response = {
+        received: body,
+        processed_at: new Date().toISOString(),
+        version: '2.0.0'
+    };
+
+    console.log(JSON.stringify(response));
+}
+`} lang="javascript" title="event_handler.js" />
+
+### TypeScript: Data Processor
+
+<Code code={`interface RequestData {
+    action: string;
+    payload: any;
+}
+
+if (process.env.ERA_REQUEST_MODE === 'proxy') {
+    const body: RequestData = JSON.parse(
+        process.env.ERA_HTTP_BODY || '{}'
+    );
+
+    let response: any;
+
+    switch (body.action) {
+        case 'process':
+            response = {
+                status: 'processed',
+                result: body.payload
+            };
+            break;
+        default:
+            response = {
+                error: 'Unknown action',
+                received: body.action
+            };
+    }
+
+    console.log(JSON.stringify(response));
+}
+`} lang="typescript" title="processor.ts" />
+
+## Run Behavior
+
+### With Stored Code
+
+If you have stored code and run without providing code:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**→ Uses stored code**
+
+### Override Stored Code
+
+You can override stored code for one-off executions:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"One-time test\")"
+  }'
+```
+
+**→ Uses provided code, stored code remains unchanged**
+
+### No Stored Code
+
+If there's no stored code and you don't provide code:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**→ Error: "code is required or must be stored"**
+
+## Best Practices
+
+### 1. Use Descriptive Session IDs
+
+```bash
+✅ Good: "stripe-webhook", "api-v2", "data-processor"
+❌ Bad: "test1", "temp", "abc123"
+```
+
+### 2. Add Version Numbers
+
+```python
+# Include version in your code responses
+response = {
+    "version": "2.1.0",
+    "data": result
+}
+```
+
+### 3. Document Changes
+
+```bash
+# Use descriptions to track what changed
+curl -X PUT .../code \
+  -d '{
+    "code": "...",
+    "description": "v2.1: Added error handling for edge cases"
+  }'
+```
+
+### 4. Test After Updates
+
+```bash
+# Always test after updating
+curl -X PUT .../code -d '{"code": "..."}'
+# Then immediately test
+curl .../proxy/my-session/8000/test
+```
+
+### 5. Keep Backups
+
+```bash
+# Download current code before major updates
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code > backup.json
+```
+
+## Use Cases
+
+### 1. Webhook Handlers
+
+Update your webhook processing logic without re-registering with external services:
+
+```bash
+# Register once with Stripe/GitHub/etc
+URL: https://era-agent.yawnxyz.workers.dev/proxy/webhook/8000
+
+# Update handler anytime
+curl -X PUT .../webhook/code -d '{"code": "new_logic"}'
+```
+
+### 2. API Endpoints
+
+Iterate on your API without changing URLs:
+
+```bash
+# Share API URL with clients
+URL: https://era-agent.yawnxyz.workers.dev/proxy/api-v1/8000
+
+# Add features, fix bugs, improve performance
+curl -X PUT .../api-v1/code -d '{"code": "improved_version"}'
+```
+
+### 3. Interactive Demos
+
+Create live coding demonstrations:
+
+```bash
+# Share demo URL in presentation
+URL: https://era-agent.yawnxyz.workers.dev/proxy/demo/8000
+
+# Update demo code during presentation
+curl -X PUT .../demo/code -d '{"code": "next_example"}'
+```
+
+### 4. Scheduled Jobs
+
+Store processing logic that runs on a schedule:
+
+```bash
+# Store data processing code
+curl -X PUT .../daily-report/code -d '{"code": "generate_report"}'
+
+# External scheduler hits endpoint daily
+URL: https://era-agent.yawnxyz.workers.dev/proxy/daily-report/8000
+```
+
+## Limitations
+
+- **Code Size:** Stored in Durable Object storage (limit: ~128KB per value)
+- **No Versioning:** Only current version is stored (implement your own versioning if needed)
+- **No Rollback:** Save backups externally if you need rollback capability
+
+## Next Steps
+
+- Learn about [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for receiving HTTP requests
+- See [File Operations](/docs/guides/files) for managing data
+- Check [Environment Variables](/docs/guides/environment-variables) for available runtime info

@@ -1,0 +1,411 @@
+---
+title: MCP Server (Hosted)
+description: Using the Model Context Protocol (MCP) server with Claude Desktop
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The ERA Agent provides a hosted MCP server that allows Claude Desktop and other MCP clients to execute code in secure, isolated environments. This is perfect for AI assistants that need to run code, analyze data, or perform computational tasks.
+
+## Quick Start
+
+### Connect with Claude Desktop
+
+Add the following configuration to your Claude Desktop settings:
+
+<Tabs>
+  <TabItem label="macOS">
+    ```json title="~/Library/Application Support/Claude/claude_desktop_config.json"
+    {
+      "mcpServers": {
+        "era-agent": {
+          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+        }
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Windows">
+    ```json title="%APPDATA%\Claude\claude_desktop_config.json"
+    {
+      "mcpServers": {
+        "era-agent": {
+          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+        }
+      }
+    }
+    ```
+  </TabItem>
+  <TabItem label="Linux">
+    ```json title="~/.config/Claude/claude_desktop_config.json"
+    {
+      "mcpServers": {
+        "era-agent": {
+          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+        }
+      }
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+:::tip[Using Your Own Deployment]
+Replace `https://era-agent.yawnxyz.workers.dev` with your own Cloudflare Worker URL after deploying.
+:::
+
+### Restart Claude Desktop
+
+After updating the configuration, restart Claude Desktop completely. The ERA Agent tools will now be available in your conversations.
+
+## Available Tools
+
+The MCP server provides 9 tools for code execution and session management:
+
+### 1. era_execute_code
+
+Execute code in an ephemeral environment. The environment is automatically cleaned up after execution.
+
+**Parameters:**
+- `code` (string, required): The code to execute
+- `language` (string, required): Programming language - `python`, `node`, `typescript`, `go`, or `deno`
+- `files` (object, optional): Files to create before execution (filename → content)
+- `envs` (object, optional): Environment variables
+- `timeout` (number, optional): Execution timeout in seconds (default: 30)
+- `allowInternetAccess` (boolean, optional): Allow internet access (default: true)
+
+**Example:**
+```
+Can you calculate the first 10 Fibonacci numbers using Python?
+```
+
+### 2. era_create_session
+
+Create a persistent execution session. Sessions maintain state across multiple code executions.
+
+**Parameters:**
+- `language` (string, required): Programming language for the session
+- `persistent` (boolean, optional): Enable file persistence (default: false)
+- `allowInternetAccess` (boolean, optional): Allow internet access (default: true)
+- `default_timeout` (number, optional): Default timeout for executions in this session
+
+**Example:**
+```
+Create a Python session so we can work on a data analysis project together.
+```
+
+### 3. era_run_in_session
+
+Execute code in an existing session. State is maintained between executions.
+
+**Parameters:**
+- `session_id` (string, required): Session ID from era_create_session
+- `code` (string, required): Code to execute
+- `timeout` (number, optional): Execution timeout in seconds
+- `env` (object, optional): Environment variables for this execution
+
+**Example:**
+```
+First, define x = 5. Then in the next execution, print x * 2.
+```
+
+### 4. era_list_sessions
+
+List all active sessions.
+
+**Example:**
+```
+Show me all my active coding sessions.
+```
+
+### 5. era_get_session
+
+Get details about a specific session.
+
+**Parameters:**
+- `session_id` (string, required): Session ID to query
+
+### 6. era_delete_session
+
+Delete a session and clean up its resources.
+
+**Parameters:**
+- `session_id` (string, required): Session ID to delete
+
+**Example:**
+```
+Delete the Python session we created earlier.
+```
+
+### 7. era_upload_file
+
+Upload a file to a session workspace.
+
+**Parameters:**
+- `session_id` (string, required): Target session ID
+- `path` (string, required): File path in the session workspace
+- `content` (string, required): File content
+
+**Example:**
+```
+Upload a CSV file with this data to the session.
+```
+
+### 8. era_read_file
+
+Read a file from a session workspace.
+
+**Parameters:**
+- `session_id` (string, required): Source session ID
+- `path` (string, required): File path to read
+
+**Example:**
+```
+Show me the contents of results.txt from the session.
+```
+
+### 9. era_list_files
+
+List all files in a session workspace.
+
+**Parameters:**
+- `session_id` (string, required): Session ID to query
+
+**Example:**
+```
+What files are in the session?
+```
+
+## Example Conversations
+
+### Quick Calculation
+
+```
+You: Can you calculate the sum of squares from 1 to 100 in Python?
+
+Claude: I'll use the era_execute_code tool to calculate that.
+[Executes Python code]
+The sum of squares from 1 to 100 is 338,350.
+```
+
+### Data Analysis Session
+
+```
+You: Let's analyze some data. Create a Python session with pandas.
+
+Claude: I'll create a persistent Python session for our analysis.
+[Creates session]
+
+You: Load this CSV data: [paste data]
+
+Claude: I'll upload the CSV to the session.
+[Uploads file]
+
+You: Now calculate the mean of column 'sales'
+
+Claude: I'll read the CSV and calculate the mean.
+[Runs code in session]
+The mean sales value is $45,230.
+```
+
+### Multi-Language Development
+
+```
+You: Test this JavaScript function and then write a Go version.
+
+Claude: I'll test the JavaScript first.
+[Executes Node.js code]
+
+Now let me write and test the Go version.
+[Executes Go code]
+
+Both versions produce the same output!
+```
+
+## Resources
+
+The MCP server also exposes session metadata and files as resources:
+
+### Session Metadata
+- URI: `session://{session_id}`
+- Returns: JSON with session details (language, creation time, etc.)
+
+### Session Files
+- URI: `session://{session_id}/files`
+- Returns: List of all files in the session workspace
+
+## Architecture
+
+The MCP server is built directly into the Cloudflare Worker alongside the REST API:
+
+```
+Cloudflare Worker
+├── /api/* → REST API (direct HTTP access)
+├── /mcp/v1 → MCP Server (JSON-RPC 2.0)
+└── Both share:
+    ├── Durable Objects (session state)
+    ├── R2 Storage (file persistence)
+    └── Container runtime (code execution)
+```
+
+**Key Benefits:**
+- **Zero latency**: MCP calls API functions directly (no HTTP overhead)
+- **Shared resources**: Sessions and files work across both MCP and REST API
+- **Global edge**: Runs on Cloudflare's global network
+- **Automatic scaling**: Handles any number of concurrent requests
+
+## Protocol Details
+
+The MCP server implements the [Model Context Protocol](https://modelcontextprotocol.io/) specification using JSON-RPC 2.0 over HTTP/HTTPS.
+
+### Endpoint
+
+```
+https://era-agent.yawnxyz.workers.dev/mcp/v1
+```
+
+### Request Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "era_execute_code",
+    "arguments": {
+      "code": "print('Hello, World!')",
+      "language": "python"
+    }
+  }
+}
+```
+
+### Response Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Exit Code: 0\n\nStdout:\nHello, World!\n\nDuration: 24ms"
+      }
+    ]
+  }
+}
+```
+
+## Differences from Local MCP
+
+| Feature | Hosted MCP | Local MCP |
+|---------|-----------|-----------|
+| **Transport** | HTTP/HTTPS | stdio |
+| **Authentication** | Optional (API keys) | None |
+| **Deployment** | Cloudflare Workers | Local binary |
+| **Scaling** | Automatic | Single process |
+| **State** | Durable Objects | BoltDB |
+| **Files** | R2 Storage | Local filesystem |
+| **Setup** | URL configuration | Binary + PATH |
+
+## Testing
+
+You can test the MCP server using the provided test script:
+
+```bash
+cd cloudflare
+./test-mcp.sh
+```
+
+This will test:
+- Protocol initialization
+- Tool discovery
+- Code execution
+- Session management
+- Resource listing
+
+## Troubleshooting
+
+### Tools Not Appearing in Claude Desktop
+
+1. **Check configuration file location**:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+   - Linux: `~/.config/Claude/claude_desktop_config.json`
+
+2. **Verify JSON syntax**:
+   ```bash
+   # On macOS/Linux
+   cat ~/Library/Application\ Support/Claude/claude_desktop_config.json | jq '.'
+   ```
+
+3. **Restart Claude Desktop completely**:
+   - Quit the application (not just close the window)
+   - Reopen Claude Desktop
+
+4. **Check the MCP server is running**:
+   ```bash
+   curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"0.1.0","clientInfo":{"name":"test","version":"1.0.0"}}}'
+   ```
+
+### Execution Timeouts
+
+If code execution times out:
+- Increase the `timeout` parameter (default: 30 seconds, max: 300 seconds)
+- Check if the code has infinite loops
+- Consider breaking long-running tasks into smaller chunks
+
+### Session Not Found
+
+Sessions are automatically cleaned up after inactivity:
+- Default timeout: 30 minutes
+- Save important results before ending the conversation
+- Use persistent sessions for longer-running work
+
+## Security
+
+### Sandboxing
+
+All code executes in isolated Firecracker microVMs:
+- No access to other sessions
+- Network isolation (unless `allowInternetAccess: true`)
+- Resource limits enforced
+- Automatic cleanup after execution
+
+### Best Practices
+
+1. **Don't store secrets**: Avoid putting API keys or passwords in code
+2. **Validate inputs**: Check data before processing
+3. **Use sessions wisely**: Delete sessions when done to free resources
+4. **Monitor usage**: Check execution logs if you deploy your own instance
+
+## Deploying Your Own
+
+To deploy your own MCP server:
+
+```bash
+cd cloudflare
+npx wrangler deploy
+```
+
+Then update your Claude Desktop configuration with your Worker URL:
+
+```json
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://your-worker.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+## Next Steps
+
+- Try the [REST API](/docs/hosted/api) for direct HTTP access
+- Learn about [session management](/docs/hosted/sessions)
+- Explore [multi-language support](/docs/features/languages)
+- Check out [example projects](/docs/examples)

@@ -1,0 +1,686 @@
+---
+title: Timeout Configuration
+description: Complete guide to configuring execution timeouts and container lifecycle
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+# Timeout Configuration
+
+ERA Agent provides flexible timeout configuration at multiple levels. This guide shows you how to control execution timeouts and container lifecycle for optimal performance.
+
+## Quick Reference
+
+| Timeout Type | Default | Scope | Can Change at Runtime? |
+|--------------|---------|-------|------------------------|
+| **Execution Timeout** | 30 seconds | Per-request | ✅ Yes |
+| **Session Default Timeout** | 30 seconds | Per-session | ✅ Yes (on create) |
+| **Container Sleep** | 5 minutes | Global | ❌ No (requires redeploy) |
+
+---
+
+## Execution Timeout
+
+The execution timeout controls how long a single code execution can run before being terminated.
+
+### Per-Request Timeout
+
+**Override timeout for a specific execution:**
+
+```bash
+# 60 second timeout
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time; time.sleep(45); print(\"Done!\")",
+    "timeout": 60
+  }'
+
+# 5 minute timeout for long operations
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "# Long-running data processing",
+    "timeout": 300
+  }'
+
+# 10 minute timeout
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "# Very long operation",
+    "timeout": 600
+  }'
+```
+
+<Aside type="tip">
+**No upper limit!** You can set any timeout value. Just ensure your Cloudflare plan supports long-running operations.
+</Aside>
+
+### Session Default Timeout
+
+**Set a default timeout for all executions in a session:**
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "long-runner",
+    "persistent": true,
+    "default_timeout": 120
+  }'
+```
+
+Now all executions in this session will use 120 seconds by default:
+
+```bash
+# Uses 120 second timeout (session default)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/long-runner/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time; time.sleep(90); print(\"Completed!\")"
+  }'
+
+# Override with 300 seconds for this specific run
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/long-runner/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time; time.sleep(250); print(\"Long task done!\")",
+    "timeout": 300
+  }'
+```
+
+### Timeout Priority
+
+Timeout values are applied in this order:
+
+1. **Per-request timeout** (highest priority)
+2. **Session default_timeout**
+3. **Global default** (30 seconds)
+
+```javascript
+// Priority example
+timeout = request.timeout || session.default_timeout || 30
+```
+
+---
+
+## Container Lifecycle
+
+### Container Sleep Duration
+
+Containers stay alive between requests to avoid cold starts. Configure how long they stay active:
+
+**Current setting:** `5 minutes`
+
+**Location:** `cloudflare/src/index.ts`
+
+```typescript
+export class EraAgent extends Container {
+  defaultPort = 8787;
+  sleepAfter = '5m';  // Container stops after 5 minutes of inactivity
+}
+```
+
+### Changing Container Sleep Duration
+
+Edit `cloudflare/src/index.ts` and redeploy:
+
+```typescript
+export class EraAgent extends Container {
+  defaultPort = 8787;
+  sleepAfter = '30m';  // Keep alive for 30 minutes
+  // or
+  sleepAfter = '1h';   // Keep alive for 1 hour
+  // or
+  sleepAfter = '2h';   // Keep alive for 2 hours
+}
+```
+
+**Then deploy:**
+
+```bash
+cd cloudflare
+npx wrangler deploy
+```
+
+<Aside type="caution">
+Longer container lifetimes use more resources and may affect billing. Balance performance needs with cost considerations.
+</Aside>
+
+### Benefits of Longer Container Lifetime
+
+- ✅ **Faster subsequent requests** - No cold start overhead
+- ✅ **Persistent in-memory caches** - Data survives between requests
+- ✅ **Reuse package installations** - Dependencies stay loaded
+- ✅ **Lower latency** - Instant response for frequent operations
+
+### Trade-offs
+
+- ⚠️ **Higher resource usage** - Containers kept in memory
+- ⚠️ **Billing implications** - Longer-running containers cost more
+- ⚠️ **Memory leaks** - Long-lived containers may accumulate memory issues
+
+---
+
+## Use Cases & Recommendations
+
+### Quick Scripts (< 30 seconds)
+
+**Default settings work great:**
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "quick-task",
+    "persistent": false
+  }'
+
+# Run with default 30s timeout
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/quick-task/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello World!\")"
+  }'
+```
+
+### Data Processing (1-5 minutes)
+
+**Set session default timeout:**
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "data-processor",
+    "persistent": true,
+    "default_timeout": 300,
+    "setup": {
+      "pip": {
+        "requirements": "pandas numpy"
+      }
+    }
+  }'
+
+# All runs use 5 minute timeout automatically
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import pandas as pd; df = pd.read_csv(\"large_file.csv\"); result = df.groupby(\"category\").sum(); print(result)"
+  }'
+```
+
+### Long-Running Operations (5+ minutes)
+
+**Use per-request timeout override:**
+
+```bash
+# Create session with reasonable default
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "ml-training",
+    "persistent": true,
+    "default_timeout": 120
+  }'
+
+# Most operations use 2 minute default
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/ml-training/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "# Data preprocessing"
+  }'
+
+# Override for long training runs
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/ml-training/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "# Train model for 15 minutes",
+    "timeout": 900
+  }'
+```
+
+### Web Scraping with Rate Limits
+
+**Balance timeout with API rate limits:**
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "scraper",
+    "persistent": true,
+    "default_timeout": 180,
+    "allowInternetAccess": true,
+    "setup": {
+      "pip": {
+        "requirements": "requests beautifulsoup4"
+      }
+    }
+  }'
+
+# Scrape with delays for rate limiting
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/scraper/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import requests; import time; urls = [...]; results = []; [results.append(requests.get(url).text) or time.sleep(2) for url in urls]; print(len(results))"
+  }'
+```
+
+### Batch Processing
+
+**Process items with progress tracking:**
+
+```python
+import json
+import time
+
+# Load session data
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+if 'processed' not in data:
+    data['processed'] = []
+    data['pending'] = list(range(100))  # 100 items to process
+
+# Process batch (within timeout)
+start_time = time.time()
+max_duration = 110  # Leave 10s buffer for 120s timeout
+
+while data['pending'] and (time.time() - start_time) < max_duration:
+    item = data['pending'].pop(0)
+
+    # Process item (simulate work)
+    time.sleep(1)
+    result = f"processed_{item}"
+
+    data['processed'].append(result)
+
+# Save progress
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+
+print(f"Processed: {len(data['processed'])}/{100}")
+print(f"Remaining: {len(data['pending'])}")
+```
+
+**Run repeatedly until complete:**
+
+```bash
+# Run multiple times until all items processed
+while true; do
+  RESULT=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/batch/run \
+    -H "Content-Type: application/json" \
+    -d '{"code": "..."}')
+
+  REMAINING=$(echo "$RESULT" | jq -r '.stdout' | grep "Remaining" | awk '{print $2}')
+
+  if [ "$REMAINING" = "0" ]; then
+    echo "Batch complete!"
+    break
+  fi
+
+  echo "Still processing... $REMAINING items remaining"
+  sleep 5
+done
+```
+
+---
+
+## Handling Timeouts
+
+### Detecting Timeout
+
+**Exit code 124 indicates timeout:**
+
+```bash
+RESULT=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time; time.sleep(60)",
+    "timeout": 10
+  }')
+
+EXIT_CODE=$(echo "$RESULT" | jq -r '.exit_code')
+
+if [ "$EXIT_CODE" = "124" ]; then
+  echo "Operation timed out!"
+else
+  echo "Operation completed"
+fi
+```
+
+### Graceful Timeout Handling
+
+**Save progress before timeout:**
+
+```python
+import json
+import time
+import signal
+
+# Load data
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+# Track progress
+if 'items_processed' not in data:
+    data['items_processed'] = 0
+
+# Setup timeout handler
+def save_and_exit(signum, frame):
+    with open('.session_data.json', 'w') as f:
+        json.dump(data, f)
+    print(f"Timeout! Saved progress: {data['items_processed']} items")
+    exit(124)
+
+# Register signal handler (optional, VM will kill anyway)
+signal.signal(signal.SIGTERM, save_and_exit)
+
+# Process items
+items = list(range(100))
+start_time = time.time()
+max_duration = 25  # Buffer for 30s timeout
+
+for item in items:
+    if time.time() - start_time > max_duration:
+        break
+
+    # Process
+    time.sleep(0.5)
+    data['items_processed'] += 1
+
+# Save progress
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+
+print(f"Completed: {data['items_processed']} items")
+```
+
+### Retry Logic
+
+```bash
+#!/bin/bash
+
+SESSION_ID="retry-demo"
+MAX_RETRIES=3
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  RESULT=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+    -H "Content-Type: application/json" \
+    -d '{
+      "code": "import time; time.sleep(40)",
+      "timeout": 30
+    }')
+
+  EXIT_CODE=$(echo "$RESULT" | jq -r '.exit_code')
+
+  if [ "$EXIT_CODE" = "0" ]; then
+    echo "Success!"
+    exit 0
+  elif [ "$EXIT_CODE" = "124" ]; then
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "Timeout! Retry $RETRY_COUNT/$MAX_RETRIES"
+    sleep 2
+  else
+    echo "Error: Exit code $EXIT_CODE"
+    exit 1
+  fi
+done
+
+echo "Failed after $MAX_RETRIES retries"
+exit 1
+```
+
+---
+
+## Best Practices
+
+### 1. Choose Appropriate Timeouts
+
+```bash
+# ✅ Good: Match timeout to expected duration
+"timeout": 60  # For 45-second operation
+
+# ❌ Bad: Excessive timeout
+"timeout": 3600  # For 10-second operation
+
+# ✅ Good: Session default for consistent workload
+"default_timeout": 120  # All operations take ~90s
+
+# ✅ Good: Override for exceptions
+"timeout": 600  # Special long-running operation
+```
+
+### 2. Add Progress Tracking
+
+```python
+import json
+import time
+
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+data['progress'] = {
+    'total': 100,
+    'completed': 0,
+    'started_at': time.time()
+}
+
+for i in range(100):
+    # Process item
+    time.sleep(0.5)
+
+    # Update progress
+    data['progress']['completed'] = i + 1
+
+    # Save every 10 items
+    if (i + 1) % 10 == 0:
+        with open('.session_data.json', 'w') as f:
+            json.dump(data, f)
+
+# Final save
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+
+print(f"Processed: {data['progress']['completed']}")
+```
+
+### 3. Use Callbacks for Long Operations
+
+For operations that exceed practical timeout limits, use callbacks:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "async-task",
+    "persistent": true,
+    "data": {
+      "callback_url": "https://your-app.com/webhook"
+    }
+  }'
+```
+
+**Code with callback:**
+
+```python
+import json
+import requests
+
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+callback_url = data.get('callback_url')
+
+# Do work
+result = process_long_task()
+
+# Notify completion
+if callback_url:
+    requests.post(callback_url, json={
+        'status': 'completed',
+        'result': result
+    })
+```
+
+See [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for more details.
+
+### 4. Break Down Large Tasks
+
+```bash
+# ❌ Bad: One giant operation
+curl ... -d '{"code": "process_all_100k_records()", "timeout": 3600}'
+
+# ✅ Good: Batched operations
+for batch in {1..100}; do
+  curl ... -d '{"code": "process_batch('$batch')", "timeout": 60}'
+done
+```
+
+### 5. Monitor Container Usage
+
+```bash
+# Check session info
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '{
+  id: .id,
+  language: .language,
+  default_timeout: .default_timeout,
+  last_run: .last_run_at
+}'
+```
+
+---
+
+## Monitoring & Debugging
+
+### Check Execution Duration
+
+```bash
+RESULT=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time; time.sleep(5); print(\"Done\")",
+    "timeout": 30
+  }')
+
+# Check duration
+echo "$RESULT" | jq '{
+  exit_code: .exit_code,
+  duration: .duration
+}'
+```
+
+**Output:**
+
+```json
+{
+  "exit_code": 0,
+  "duration": "5.123s"
+}
+```
+
+### Track Session Performance
+
+```python
+import json
+import time
+
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+if 'metrics' not in data:
+    data['metrics'] = {
+        'runs': 0,
+        'total_duration': 0,
+        'avg_duration': 0
+    }
+
+start = time.time()
+
+# Your code here
+time.sleep(2)
+
+duration = time.time() - start
+
+# Update metrics
+data['metrics']['runs'] += 1
+data['metrics']['total_duration'] += duration
+data['metrics']['avg_duration'] = data['metrics']['total_duration'] / data['metrics']['runs']
+
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+
+print(f"Runs: {data['metrics']['runs']}")
+print(f"Avg duration: {data['metrics']['avg_duration']:.2f}s")
+```
+
+---
+
+## Troubleshooting
+
+### Operation Always Times Out
+
+**Problem:** Code consistently hits timeout
+
+**Solutions:**
+
+1. **Increase timeout:**
+   ```bash
+   curl ... -d '{"code": "...", "timeout": 120}'
+   ```
+
+2. **Optimize code:**
+   ```python
+   # ❌ Slow
+   results = [heavy_function(x) for x in large_list]
+
+   # ✅ Faster
+   results = [optimized_function(x) for x in large_list[:100]]
+   ```
+
+3. **Break into smaller operations**
+
+### Container Cold Starts
+
+**Problem:** First request is always slow
+
+**Solution:** Increase `sleepAfter` duration:
+
+```typescript
+sleepAfter = '30m';  // Keep warm for 30 minutes
+```
+
+### Inconsistent Performance
+
+**Problem:** Some runs are fast, others slow
+
+**Causes:**
+
+1. Container cold start vs. warm
+2. Network latency (for HTTP requests)
+3. Variable data sizes
+
+**Solution:** Set appropriate timeouts and monitor:
+
+```bash
+# Use default_timeout for consistency
+"default_timeout": 90  # Handle both fast and slow cases
+```
+
+---
+
+## Next Steps
+
+- Learn about [Data & Communication](/docs/guides/data-communication) for state management
+- See [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for async operations
+- Explore [Multi-File Projects](/docs/guides/multi-file-projects) for complex workflows
+- Check [Code Management](/docs/guides/code-management) for reusable code patterns

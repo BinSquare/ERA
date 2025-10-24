@@ -1,0 +1,532 @@
+---
+title: Upload Scripts & Testing
+description: Helper scripts for uploading projects and testing deployments
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+# Upload Scripts & Testing
+
+ERA Agent includes helper scripts for uploading multi-file projects and comprehensive testing tools. All scripts are production-ready and fully tested.
+
+## Upload Scripts
+
+### Bash Upload Script
+
+Fast, simple bash script for uploading projects. Works on macOS and Linux.
+
+**Location:** `era-upload.sh`
+
+**Features:**
+- Sequential file uploads
+- Color-coded progress output
+- Automatic exclusion of build artifacts
+- Error tracking and logging
+- Works with all project types
+
+**Usage:**
+
+```bash
+# Basic usage
+./era-upload.sh <session_id> <project_directory>
+
+# With custom API URL
+./era-upload.sh my-session ./my-project https://era-agent.your-domain.workers.dev
+
+# Using environment variable for API
+export ERA_API_URL="https://era-agent.your-domain.workers.dev"
+./era-upload.sh my-session ./my-project
+```
+
+**Example Output:**
+
+```
+📦 ERA Agent Project Upload
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Session ID:  my-session
+Directory:   ./my-project
+API URL:     https://era-agent.yawnxyz.workers.dev
+
+🔍 Scanning for files...
+📁 Found 15 files to upload
+
+📤 Uploading files...
+✅ [1/15] src/index.js
+✅ [2/15] src/utils/helpers.js
+✅ [3/15] src/utils/validators.js
+...
+✅ [15/15] README.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ Upload complete!
+   ✅ Successfully uploaded: 15 files
+
+Next steps:
+  1. Check files: curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+  2. Run code:    curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run -d '{"code": "..."}'
+  3. View logs:   curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+```
+
+**Excluded Patterns:**
+
+The script automatically excludes:
+- `node_modules/`, `.git/`, `.venv/`, `venv/`
+- `__pycache__/`, `dist/`, `build/`, `.next/`
+- `.cache/`, `coverage/`, `.DS_Store`
+- `.env`, `.env.local`, `.env.production`, `.env.development`
+- `secrets.*`, `credentials.json`
+
+---
+
+### Python Upload Script
+
+Advanced Python script with parallel uploads for faster deployment of large projects.
+
+**Location:** `era_upload.py`
+
+**Features:**
+- **10 parallel uploads** for speed
+- Progress tracking with file sizes
+- Upload speed metrics (MB/s)
+- Comprehensive error reporting
+- Cross-platform (Windows, macOS, Linux)
+
+**Requirements:**
+
+```bash
+pip install requests
+```
+
+**Usage:**
+
+```bash
+# Basic usage
+python3 era_upload.py <session_id> <project_directory>
+
+# With custom API URL
+python3 era_upload.py my-session ./my-project https://era-agent.your-domain.workers.dev
+
+# Using environment variable
+export ERA_API_URL="https://era-agent.your-domain.workers.dev"
+python3 era_upload.py my-session ./my-project
+```
+
+**Example Output:**
+
+```
+📦 ERA Agent Project Upload
+============================================================
+Session ID:  my-session
+Directory:   ./my-project
+API URL:     https://era-agent.yawnxyz.workers.dev
+
+🔍 Scanning for files...
+📁 Found 47 files (2.3MB total)
+
+📤 Uploading files...
+✅ [1/47] src/index.js
+✅ [2/47] src/utils/helpers.js
+✅ [3/47] package.json
+...
+✅ [47/47] README.md
+
+============================================================
+✨ Upload complete!
+   ✅ Successfully uploaded: 47 files (2.3MB)
+
+⏱️  Duration: 12.3s
+📊 Average speed: 191.5KB/s
+
+Next steps:
+  1. Check files: curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+  2. Run code:    curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run -d '{"code": "..."}'
+  3. View logs:   curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+```
+
+**Performance:**
+
+For large projects, the Python script is significantly faster due to parallel uploads:
+- Small project (5-10 files): ~2-3 seconds
+- Medium project (20-50 files): ~5-10 seconds
+- Large project (100+ files): ~15-30 seconds
+
+<Aside type="tip">
+  **Use Python script for large projects!** The parallel uploads make a big difference when uploading 50+ files.
+</Aside>
+
+---
+
+## Testing Scripts
+
+### Upload Scripts Test
+
+Validates that both upload scripts work correctly with all supported languages.
+
+**Location:** `test-upload-scripts.sh`
+
+**What it tests:**
+- Bash script with JavaScript project
+- Python script with TypeScript project
+- Python script with Python project
+- Bash script with Deno project
+
+**Usage:**
+
+```bash
+chmod +x test-upload-scripts.sh
+./test-upload-scripts.sh
+```
+
+**Output:**
+
+```
+========================================
+ERA Upload Scripts Test
+========================================
+Test 1: Bash Upload Script (JS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Session created: test-bash-js-1234
+Uploading files...
+✅ Bash upload successful
+✅ Found 3 files uploaded
+
+Test 2: Python Upload Script (TS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Session created: test-py-ts-1234
+Uploading files...
+✅ Python upload successful
+✅ Found 3 files uploaded
+✅ Code executed successfully
+
+...
+
+========================================
+Test Results
+========================================
+✅ Passed: 4
+❌ Failed: 0
+🎉 All upload tests passed!
+```
+
+---
+
+### Multi-Language Test Suite
+
+Comprehensive test suite that validates complete workflows with dependencies for all languages.
+
+**Location:** `test-multi-lang.sh`
+
+**What it tests:**
+- JavaScript with npm dependencies (lodash)
+- TypeScript with npm dependencies (axios)
+- Python with pip dependencies (requests)
+- Deno with native TypeScript
+- Both bash and Python upload scripts
+
+**Usage:**
+
+```bash
+chmod +x test-multi-lang.sh
+./test-multi-lang.sh
+```
+
+<Aside type="caution">
+  **Setup takes time:** This test installs packages (npm/pip), which can take 1-2 minutes per language. Total test time: ~10-15 minutes.
+</Aside>
+
+---
+
+## Example Test Projects
+
+Test projects are created in `/tmp/era-tests/`:
+
+### JavaScript Project
+
+```
+/tmp/era-tests/js-project/
+├── package.json        # lodash dependency
+├── index.js           # Main entry point
+└── utils/
+    └── math.js        # Utility functions
+```
+
+### TypeScript Project
+
+```
+/tmp/era-tests/ts-project/
+├── package.json        # axios dependency
+├── index.ts           # Main entry point
+└── utils/
+    └── string.ts      # Type-safe utilities
+```
+
+### Python Project
+
+```
+/tmp/era-tests/py-project/
+├── requirements.txt   # requests dependency
+├── main.py           # Main entry point
+└── utils/
+    ├── __init__.py   # Package init
+    ├── math.py       # Math utilities
+    └── string.py     # String utilities
+```
+
+### Deno Project
+
+```
+/tmp/era-tests/deno-project/
+├── main.ts           # Main entry point
+└── utils/
+    └── helpers.ts    # Deno-style imports
+```
+
+---
+
+## Creating Your Own Tests
+
+### Simple Test Template
+
+<Code code={`#!/bin/bash
+# test-my-project.sh
+
+SESSION_ID="my-test-\$(date +%s)"
+API_URL="https://era-agent.yawnxyz.workers.dev"
+
+echo "Creating session..."
+curl -X POST "$API_URL/api/sessions" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "language": "node",
+    "session_id": "'$SESSION_ID'",
+    "persistent": true
+  }'
+
+echo "Uploading files..."
+./era-upload.sh "$SESSION_ID" ./my-project
+
+echo "Running code..."
+curl -X POST "$API_URL/api/sessions/$SESSION_ID/run" \\
+  -H "Content-Type: application/json" \\
+  -d '{"code": "require(\"./index.js\")"}' | jq '.'
+
+echo "Test complete!"
+`} lang="bash" title="test-my-project.sh" />
+
+### Test with Dependencies
+
+<Code code={`#!/bin/bash
+# test-with-deps.sh
+
+SESSION_ID="my-test-\$(date +%s)"
+API_URL="https://era-agent.yawnxyz.workers.dev"
+
+# Create with dependencies
+echo "Creating session with dependencies..."
+curl -X POST "$API_URL/api/sessions" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "language": "node",
+    "session_id": "'$SESSION_ID'",
+    "persistent": true,
+    "setup": {
+      "npm": ["express", "lodash"]
+    }
+  }'
+
+# Wait for setup
+echo "Waiting for package installation..."
+while true; do
+  STATUS=\$(curl -s "$API_URL/api/sessions/$SESSION_ID" | jq -r '.setup_status')
+  echo "  Status: $STATUS"
+
+  if [ "$STATUS" = "completed" ]; then
+    echo "✅ Setup complete!"
+    break
+  elif [ "$STATUS" = "failed" ]; then
+    echo "❌ Setup failed!"
+    curl -s "$API_URL/api/sessions/$SESSION_ID" | jq '.setup_result'
+    exit 1
+  fi
+
+  sleep 5
+done
+
+# Upload and run
+./era-upload.sh "$SESSION_ID" ./my-project
+curl -X POST "$API_URL/api/sessions/$SESSION_ID/run" \\
+  -H "Content-Type: application/json" \\
+  -d '{"code": "require(\"./server.js\")"}' | jq '.'
+`} lang="bash" title="test-with-deps.sh" />
+
+---
+
+## Continuous Integration
+
+### GitHub Actions Example
+
+<Code code={`name: Deploy to ERA Agent
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Download upload script
+        run: |
+          curl -O https://raw.githubusercontent.com/your-org/era-tools/main/era_upload.py
+          chmod +x era_upload.py
+
+      - name: Create session
+        run: |
+          curl -X POST ${{ secrets.ERA_API_URL }}/api/sessions \\
+            -H "Content-Type: application/json" \\
+            -d '{
+              "language": "node",
+              "session_id": "prod-\${{ github.sha }}",
+              "persistent": true,
+              "setup": {
+                "npm": ["express", "body-parser"]
+              }
+            }'
+
+      - name: Wait for setup
+        run: |
+          while true; do
+            STATUS=\$(curl -s ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }} | jq -r '.setup_status')
+            [ "$STATUS" = "completed" ] && break
+            sleep 5
+          done
+
+      - name: Upload project
+        run: python3 era_upload.py prod-\${{ github.sha }} .
+
+      - name: Update code
+        run: |
+          curl -X PUT ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/code \\
+            -H "Content-Type: application/json" \\
+            -d '{"code": "require(\"./server.js\")"}'
+
+      - name: Get deployment URL
+        run: |
+          curl ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/host?port=3000
+`} lang="yaml" title=".github/workflows/deploy.yml" />
+
+---
+
+## Troubleshooting
+
+### Upload Fails for Large Files
+
+**Problem:** Upload times out or fails for files > 10MB
+
+**Solution:**
+- Use Python script with parallel uploads
+- Exclude unnecessary large files (videos, images, datasets)
+- Upload large data files separately via API
+
+### Permission Denied
+
+**Problem:** `./era-upload.sh: Permission denied`
+
+**Solution:**
+```bash
+chmod +x era-upload.sh
+chmod +x era_upload.py
+```
+
+### Connection Refused
+
+**Problem:** Can't connect to API URL
+
+**Solution:**
+```bash
+# Test API connectivity
+curl https://era-agent.yawnxyz.workers.dev/health
+
+# Verify API URL is correct
+echo $ERA_API_URL
+```
+
+### Files Not Found After Upload
+
+**Problem:** Files uploaded but not visible in session
+
+**Solution:**
+```bash
+# List files to verify
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+
+# Check if session is persistent
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.persistent'
+```
+
+---
+
+## Best Practices
+
+### 1. Test Locally First
+
+Always test your project works locally before deploying:
+
+```bash
+cd my-project
+npm install  # or pip install -r requirements.txt
+node index.js  # Verify it runs
+```
+
+### 2. Use Version Control
+
+Tag deployments for easy rollback:
+
+```bash
+# Create session with git commit hash
+SESSION_ID="prod-$(git rev-parse --short HEAD)"
+./era-upload.sh "$SESSION_ID" .
+```
+
+### 3. Validate After Upload
+
+Always check files were uploaded correctly:
+
+```bash
+# Quick validation
+FILE_COUNT=$(curl -s "$API_URL/api/sessions/$SESSION_ID/files" | jq '.files | length')
+echo "Uploaded $FILE_COUNT files"
+
+# List all files
+curl -s "$API_URL/api/sessions/$SESSION_ID/files" | jq '.files[].path'
+```
+
+### 4. Use Python Script for Large Projects
+
+For projects with 50+ files, the Python script's parallel uploads are significantly faster:
+
+```bash
+# Small projects (< 20 files): Either script works
+./era-upload.sh my-session ./small-project
+
+# Large projects (50+ files): Use Python script
+python3 era_upload.py my-session ./large-project
+```
+
+---
+
+## Next Steps
+
+- See [Language Examples](/docs/examples/language-examples) for complete project examples
+- Learn about [Multi-File Projects](/docs/guides/multi-file-projects) for deployment workflows
+- Check [Code Management](/docs/guides/code-management) for updating deployed code

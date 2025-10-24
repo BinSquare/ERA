@@ -21,6 +21,7 @@ export interface SessionMetadata {
   setup_result?: SetupResult;  // Result of setup execution
   allowInternetAccess?: boolean;  // Allow outbound requests (default: true)
   allowPublicAccess?: boolean;    // Allow inbound requests via proxy (default: true)
+  default_timeout?: number;       // Default timeout in seconds for code execution (default: 30)
 }
 
 export class SessionDO {
@@ -158,7 +159,7 @@ export class SessionDO {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             command,
-            timeout: timeout || 30,
+            timeout: timeout || metadata.default_timeout || 30,
             envs: mergedEnvs,
           }),
         }));
@@ -417,7 +418,7 @@ export class SessionDO {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             command,
-            timeout: 30,
+            timeout: metadata.default_timeout || 30,
             envs: httpEnvs,
           }),
         }));

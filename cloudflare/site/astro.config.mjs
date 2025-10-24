@@ -34,6 +34,14 @@ export default defineConfig({
           label: 'Guides',
           autogenerate: { directory: 'docs/guides' },
         },
+        {
+          label: 'Hosted / Cloud',
+          autogenerate: { directory: 'docs/hosted' },
+        },
+        {
+          label: 'Local / Self-Hosted',
+          autogenerate: { directory: 'docs/local' },
+        },
       ],
     }),
   ],

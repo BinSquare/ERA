@@ -1,0 +1,416 @@
+---
+title: Local Deployment Overview
+description: Overview of running ERA Agent locally on your machine
+---
+
+ERA Agent can run locally on your machine in multiple modes, giving you full control over code execution in isolated sandboxes. This is ideal for development, testing, or self-hosted deployments.
+
+## Deployment Options
+
+ERA Agent supports several local deployment modes:
+
+### 1. **MCP Server for Claude Desktop**
+
+Connect Claude Desktop directly to ERA Agent for AI-powered code execution.
+
+```bash
+./agent mcp
+```
+
+**Use Cases:**
+- Execute code through Claude's natural language interface
+- Create and manage persistent sessions via Claude
+- Let Claude write and test code in multiple languages
+- File operations and multi-step workflows
+
+**Learn More:** [MCP Server Setup](/docs/local/mcp-server)
+
+### 2. **HTTP Server**
+
+Run ERA Agent as an HTTP API server.
+
+```bash
+./agent serve
+# or
+AGENT_MODE=http ./agent
+```
+
+**Use Cases:**
+- Integrate with your existing applications
+- Build custom frontends or automation tools
+- RESTful API access to all ERA Agent features
+- Self-hosted alternative to Cloudflare Workers deployment
+
+**Learn More:** [HTTP Server Mode](/docs/local/http-server)
+
+### 3. **CLI (Command Line)**
+
+Direct command-line execution for quick testing and automation.
+
+```bash
+./agent vm create --language python
+./agent vm run --vm <id> --cmd "python script.py"
+```
+
+**Use Cases:**
+- Quick code testing and debugging
+- Shell scripts and automation
+- CI/CD integration
+- Manual session management
+
+**Learn More:** [CLI Usage](/docs/local/cli-usage)
+
+### 4. **Docker Container**
+
+Package ERA Agent in a Docker container for easy deployment.
+
+```bash
+docker build -t era-agent .
+docker run -p 8787:8787 era-agent
+```
+
+**Use Cases:**
+- Consistent deployment across environments
+- Easy scaling and orchestration
+- Isolated runtime environment
+- Cloud deployment (AWS, GCP, Azure, etc.)
+
+**Learn More:** [Docker Deployment](/docs/local/docker-deployment)
+
+## Architecture
+
+### Sandbox Technology
+
+ERA Agent uses **Firecracker** microVMs for secure code execution:
+
+- **Linux:** Native Firecracker support
+- **macOS:** Firecracker runs inside Docker
+- **Windows:** Firecracker via WSL2 or Docker
+
+Each code execution runs in a completely isolated VM with:
+- Dedicated CPU and memory resources
+- Network isolation (disabled by default)
+- Filesystem isolation
+- Automatic cleanup after execution
+
+### Components
+
+```
+┌─────────────────────────────────────────┐
+│          ERA Agent (Go Binary)          │
+├─────────────────────────────────────────┤
+│  • CLI Interface                        │
+│  • HTTP Server                          │
+│  • MCP Server (stdio)                   │
+├─────────────────────────────────────────┤
+│          VM Service Layer               │
+│  • Session management                   │
+│  • VM lifecycle control                 │
+│  • State persistence                    │
+├─────────────────────────────────────────┤
+│         Firecracker VMs                 │
+│  Python │ Node.js │ Go │ TypeScript     │
+└─────────────────────────────────────────┘
+```
+
+## Prerequisites
+
+### Required
+
+- **Go 1.21+** - For building the agent binary
+- **Docker** (macOS/Windows) or **Firecracker** (Linux) - For running code sandboxes
+
+### Optional
+
+- **Claude Desktop** - For MCP server integration
+- **jq** - For JSON processing in examples
+- **Docker Compose** - For orchestrated deployments
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/era-agent
+cd era-agent
+```
+
+### 2. Build the Agent
+
+```bash
+go build -o agent
+```
+
+### 3. Verify Installation
+
+```bash
+./agent --help
+```
+
+You should see the help output with available commands.
+
+### 4. Set Up Sandbox Environment
+
+**macOS:**
+```bash
+# Install and start Docker Desktop
+brew install --cask docker
+# Start Docker Desktop from Applications
+```
+
+**Linux:**
+```bash
+# Install Firecracker
+# See: https://github.com/firecracker-microvm/firecracker/blob/main/docs/getting-started.md
+
+# Verify KVM access
+ls -l /dev/kvm
+# Should show: crw-rw---- 1 root kvm ...
+
+# Add your user to kvm group
+sudo usermod -aG kvm $USER
+```
+
+**Windows:**
+```bash
+# Install Docker Desktop with WSL2 backend
+# See: https://docs.docker.com/desktop/install/windows-install/
+```
+
+## Quick Start
+
+### Test Simple Execution
+
+Create a test Python script:
+
+```bash
+echo 'print("Hello from ERA Agent!")' > test.py
+```
+
+Execute it:
+
+```bash
+# Using CLI
+./agent vm create --language python
+./agent vm run --vm <vm-id> --file test.py
+
+# Using HTTP server
+./agent serve &
+curl -X POST http://localhost:8787/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello from ERA Agent!\")",
+    "language": "python"
+  }'
+```
+
+## Configuration
+
+### Environment Variables
+
+Control agent behavior with environment variables:
+
+```bash
+# Operation mode
+export AGENT_MODE=http        # Run as HTTP server
+
+# HTTP server settings
+export PORT=8787              # Server port (default: 8787)
+
+# Logging
+export AGENT_LOG_LEVEL=debug  # debug, info, warn, error
+
+# Storage
+export AGENT_STATE_DIR=/custom/path/to/state
+```
+
+### Configuration File
+
+For persistent configuration, create `.env`:
+
+```bash
+AGENT_MODE=http
+PORT=8787
+AGENT_LOG_LEVEL=info
+AGENT_STATE_DIR=/var/lib/era-agent
+```
+
+Then run:
+
+```bash
+source .env
+./agent
+```
+
+## Supported Languages
+
+All deployment modes support the same languages:
+
+| Language   | Version | Notes                          |
+|-----------|---------|--------------------------------|
+| Python    | 3.11+   | pip, venv support              |
+| Node.js   | 20+     | npm, package.json support      |
+| TypeScript| 5.0+    | Automatic transpilation        |
+| Go        | 1.21+   | go.mod support                 |
+| Deno      | 1.40+   | TypeScript, imports from URLs  |
+
+## Comparison: Hosted vs Local
+
+| Feature | Cloudflare Workers | Local Deployment |
+|---------|-------------------|------------------|
+| **Setup** | Zero config | Requires Go + Docker/Firecracker |
+| **Scaling** | Automatic | Manual |
+| **Cost** | Pay per use | Free (your hardware) |
+| **Latency** | Global edge | Local (fastest) |
+| **Privacy** | Data goes to Cloudflare | Everything stays local |
+| **Customization** | Limited | Full control |
+| **Integration** | HTTP API | HTTP API + CLI + MCP |
+| **Best For** | Production apps | Development, testing, self-hosted |
+
+## Security Considerations
+
+### Isolation
+
+- All code runs in isolated Firecracker VMs
+- Network access disabled by default
+- Filesystem isolation per session
+- Resource limits (CPU, memory, timeout)
+
+### Network Access
+
+By default, network access is **disabled**. Enable only when necessary:
+
+```bash
+# CLI
+./agent vm create --language python --network allow_all
+
+# HTTP API
+{
+  "language": "python",
+  "network_mode": "allow_all"
+}
+```
+
+### State Directory
+
+Session data and VM state stored in:
+- Linux: `/var/lib/era-agent`
+- macOS: `~/Library/Application Support/era-agent`
+- Custom: Set `AGENT_STATE_DIR`
+
+Ensure proper permissions:
+
+```bash
+chmod 700 $AGENT_STATE_DIR
+```
+
+## Performance Tuning
+
+### VM Resources
+
+Adjust CPU and memory per session:
+
+```bash
+./agent vm create \
+  --language python \
+  --cpu 2 \
+  --mem 512
+```
+
+### Concurrent Sessions
+
+ERA Agent can handle multiple concurrent sessions. Monitor with:
+
+```bash
+./agent vm list
+```
+
+### Container Lifecycle
+
+Containers sleep after inactivity to save resources:
+
+```json
+{
+  "sleepAfter": 5,  // seconds of inactivity
+  "language": "python"
+}
+```
+
+## Monitoring
+
+### Logs
+
+Enable debug logging:
+
+```bash
+AGENT_LOG_LEVEL=debug ./agent serve
+```
+
+Log output includes:
+- Request/response details
+- VM lifecycle events
+- Execution timing
+- Error stack traces
+
+### Metrics
+
+Monitor agent health:
+
+```bash
+# List active sessions
+./agent vm list
+
+# Check specific session
+./agent vm get --vm <id>
+```
+
+## Troubleshooting
+
+### "Failed to start VM"
+
+**Problem:** Docker or Firecracker not running
+
+**Solution:**
+- macOS: Start Docker Desktop
+- Linux: Check Firecracker installation and KVM access
+
+### "Context deadline exceeded"
+
+**Problem:** Execution timeout
+
+**Solution:**
+```bash
+# Increase timeout
+./agent vm run --vm <id> --cmd "..." --timeout 60
+
+# Or set default for session
+{
+  "language": "python",
+  "default_timeout": 60
+}
+```
+
+### Port already in use
+
+**Problem:** Port 8787 in use
+
+**Solution:**
+```bash
+PORT=9000 ./agent serve
+```
+
+## Next Steps
+
+Choose your deployment mode:
+
+- **For Claude Desktop Integration:** [MCP Server Setup](/docs/local/mcp-server)
+- **For API Integration:** [HTTP Server Mode](/docs/local/http-server)
+- **For CLI Usage:** [CLI Usage Guide](/docs/local/cli-usage)
+- **For Docker Deployment:** [Docker Guide](/docs/local/docker-deployment)
+
+## Additional Resources
+
+- [GitHub Repository](https://github.com/yourusername/era-agent)
+- [API Reference](/docs/api-reference)
+- [Language Examples](/docs/examples/language-examples)
+- [Troubleshooting Guide](#troubleshooting)

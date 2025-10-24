@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -25,7 +26,12 @@ func NewBoltVMStore(stateRoot string) (*BoltVMStore, error) {
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
 		return nil, err
 	}
-	db, err := bolt.Open(dbPath, boltFilePerms, nil)
+
+	// Set a timeout to avoid hanging if the database is locked
+	opts := &bolt.Options{
+		Timeout: 1 * time.Second,
+	}
+	db, err := bolt.Open(dbPath, boltFilePerms, opts)
 	if err != nil {
 		return nil, err
 	}

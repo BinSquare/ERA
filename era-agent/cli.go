@@ -59,6 +59,8 @@ func (c *CLI) Execute(ctx context.Context, args []string) error {
 	switch args[0] {
 	case "vm":
 		return c.executeVM(ctx, args[1:])
+	case "mcp":
+		return runMCPServer(ctx, c.vmService, c.logger)
 	case "-h", "--help", "help":
 		c.printUsage()
 		return nil
@@ -73,6 +75,7 @@ func (c *CLI) printUsage() {
 		"",
 		"Usage:",
 		"  agent serve                                                                          # Start HTTP server (or set AGENT_MODE=http)",
+		"  agent mcp                                                                            # Start MCP server for Claude Desktop",
 		"  agent vm create --language <python|node> [--image <override>] --cpu <n> --mem <MiB> --network <none|allow_all> [--persist]",
 		`  agent vm run    --vm <id> --cmd "python main.py" [--file ./main.py] --timeout <seconds>`,
 		"  agent vm stop   --vm <id>",

@@ -68,7 +68,9 @@ func (l *Logger) log(level LogLevel, msg string, fields map[string]any) {
 		entry[k] = v
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	// Always write logs to stderr to avoid interfering with stdout
+	// (especially important for MCP mode where stdout is used for JSON-RPC protocol)
+	enc := json.NewEncoder(os.Stderr)
 	if err := enc.Encode(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to encode log: %v\n", err)
 	}

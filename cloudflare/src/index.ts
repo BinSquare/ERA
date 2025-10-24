@@ -2,6 +2,7 @@ import { Container, loadBalance } from '@cloudflare/containers';
 import { SessionDO, SessionMetadata } from './session';
 import { SessionSetup } from './plugins/types';
 import { runSessionSetup } from './plugins/session_setup';
+import { handleMCPRequest } from './mcp/server';
 
 // Re-export SessionDO for Durable Objects
 export { SessionDO };
@@ -34,6 +35,11 @@ export class EraAgent extends Container {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Handle MCP protocol endpoints
+    if (url.pathname.startsWith('/mcp/')) {
+      return handleMCPRequest(request, env, ctx);
+    }
 
     // Use a fixed ID to get the same container instance every time
     // This ensures BoltDB state is consistent across requests
@@ -149,7 +155,7 @@ export default {
  * Execute Code Orchestration
  * Handles the complete lifecycle: create VM -> run code -> cleanup
  */
-async function handleExecute(request: Request, agentStub: any): Promise<Response> {
+export async function handleExecute(request: Request, agentStub: any): Promise<Response> {
   try {
     const body = await request.json() as {
       code: string;
@@ -304,7 +310,7 @@ async function handleExecute(request: Request, agentStub: any): Promise<Response
  * Session Management Handlers
  */
 
-async function handleCreateSession(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+export async function handleCreateSession(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const {
     session_id,
     language,
@@ -313,7 +319,8 @@ async function handleCreateSession(request: Request, env: Env, ctx: ExecutionCon
     data = {},
     setup,
     allowInternetAccess = true,
-    allowPublicAccess = true
+    allowPublicAccess = true,
+    default_timeout
   } = await request.json() as {
     session_id?: string;
     language: string;
@@ -323,6 +330,7 @@ async function handleCreateSession(request: Request, env: Env, ctx: ExecutionCon
     setup?: SessionSetup;
     allowInternetAccess?: boolean;
     allowPublicAccess?: boolean;
+    default_timeout?: number;
   };
 
   // Validate language
@@ -377,6 +385,7 @@ async function handleCreateSession(request: Request, env: Env, ctx: ExecutionCon
     setup_status: setup ? 'pending' : undefined,
     allowInternetAccess,
     allowPublicAccess,
+    default_timeout,
   };
 
   await stub.fetch(new Request('http://session/update', {
@@ -423,7 +432,7 @@ async function handleCreateSession(request: Request, env: Env, ctx: ExecutionCon
   });
 }
 
-async function handleGetSession(sessionId: string, env: Env): Promise<Response> {
+export async function handleGetSession(sessionId: string, env: Env): Promise<Response> {
   const id = env.SESSIONS.idFromName(sessionId);
   const stub = env.SESSIONS.get(id);
 
@@ -432,7 +441,7 @@ async function handleGetSession(sessionId: string, env: Env): Promise<Response> 
   }));
 }
 
-async function handleSessionRun(sessionId: string, request: Request, env: Env): Promise<Response> {
+export async function handleSessionRun(sessionId: string, request: Request, env: Env): Promise<Response> {
   const id = env.SESSIONS.idFromName(sessionId);
   const stub = env.SESSIONS.get(id);
 
@@ -487,7 +496,7 @@ async function handleSessionRun(sessionId: string, request: Request, env: Env): 
   }));
 }
 
-async function handleListSessionFiles(sessionId: string, env: Env): Promise<Response> {
+export async function handleListSessionFiles(sessionId: string, env: Env): Promise<Response> {
   const prefix = `sessions/${sessionId}/`;
   const listed = await env.SESSIONS_BUCKET.list({ prefix });
 
@@ -502,7 +511,7 @@ async function handleListSessionFiles(sessionId: string, env: Env): Promise<Resp
   });
 }
 
-async function handleDownloadSessionFile(sessionId: string, filePath: string, env: Env): Promise<Response> {
+export async function handleDownloadSessionFile(sessionId: string, filePath: string, env: Env): Promise<Response> {
   const key = `sessions/${sessionId}/${filePath}`;
   const obj = await env.SESSIONS_BUCKET.get(key);
 
@@ -518,7 +527,7 @@ async function handleDownloadSessionFile(sessionId: string, filePath: string, en
   });
 }
 
-async function handleUploadSessionFile(sessionId: string, filePath: string, request: Request, env: Env): Promise<Response> {
+export async function handleUploadSessionFile(sessionId: string, filePath: string, request: Request, env: Env): Promise<Response> {
   const key = `sessions/${sessionId}/${filePath}`;
   const content = await request.arrayBuffer();
 
@@ -614,7 +623,7 @@ async function handleGetSessionCode(sessionId: string, env: Env): Promise<Respon
   });
 }
 
-async function handleDeleteSession(sessionId: string, env: Env): Promise<Response> {
+export async function handleDeleteSession(sessionId: string, env: Env): Promise<Response> {
   // Delete all files from R2
   const prefix = `sessions/${sessionId}/`;
   const listed = await env.SESSIONS_BUCKET.list({ prefix });
@@ -673,7 +682,7 @@ async function handleDeleteAllSessions(env: Env): Promise<Response> {
   });
 }
 
-async function handleListSessions(env: Env): Promise<Response> {
+export async function handleListSessions(env: Env): Promise<Response> {
   // List all sessions from registry
   const prefix = '_registry/';
   const listed = await env.SESSIONS_BUCKET.list({ prefix });
