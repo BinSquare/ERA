@@ -1,101 +1,222 @@
-# 🧠 Python AI Agent Frameworks — Comparison & Recommendations
+# 🧠 ERA Python Skill Agent
 
-This README gives a short overview of major AI/agent frameworks for Python — what each does, pros/cons, and which one to pick for different goals.
+## TL;DR
 
----
-
-## 📋 Framework Comparison Table
-
-| Framework                       | Core Strength                                                    | Pros                                                                       | Trade-offs                                                                                   |
-| ------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **LangChain**                   | General-purpose LLM-agent apps: chaining prompts, tools, memory. | ✅ Huge community<br>✅ Many integrations<br>✅ Tons of tutorials/examples | ❌ Can feel heavy for small agents<br>❌ Over-engineered if you don’t need memory/toolchains |
-| **AutoGen (Microsoft)**         | Multi-agent orchestration — agents that collaborate & use tools. | ✅ Ideal for multi-agent systems<br>✅ Enterprise-grade orchestration      | ❌ Complex setup<br>❌ Overkill for one simple agent                                         |
-| **CrewAI**                      | Lightweight “crew of agents” with roles and shared context.      | ✅ Beginner-friendly<br>✅ Less boilerplate<br>✅ Easy multi-role setup    | ❌ Limited integrations<br>❌ Not as mature as LangChain                                     |
-| **Semantic Kernel (Microsoft)** | Enterprise-oriented framework: skills, planners, and connectors. | ✅ Structured architecture<br>✅ Good for enterprise integration           | ❌ Steeper learning curve<br>❌ More setup required                                          |
-| **Pydantic AI**                 | Type-safe agent logic using structured schemas.                  | ✅ Clean, predictable outputs<br>✅ Strong typing, production-ready        | ❌ Small ecosystem<br>❌ Few tutorials/examples                                              |
-| **Haystack (deepset)**          | Specialized for Retrieval-Augmented Generation (RAG).            | ✅ Perfect for doc search, Q&A, KB agents<br>✅ Great RAG pipelines        | ❌ Too specialized for general agents                                                        |
-| **LangGraph**                   | State-machine/workflow-oriented orchestration for agents.        | ✅ Excellent for complex agent logic<br>✅ Works well with LangChain       | ❌ Learning curve<br>❌ Overkill for single-task bots                                        |
-| **SmolAgents**                  | Minimalist agent framework — fast prototypes, small agents.      | ✅ Lightweight<br>✅ Great for quick experiments                           | ❌ Lacks advanced features (memory, tools)                                                   |
+**What it is:** A LangChain-based agent that discovers and executes skills from SKILL.md files  
+**How to run:** `python agentSmith.py ./storage` (after setting `ANTHROPIC_API_KEY`)  
+**What it does:** Automatically finds skills, loads their instructions, and executes them via LLM
 
 ---
 
-## ⚙️ Feature Matrix (1–10 Ratings)
+## 🚀 Quick Start
 
-| Framework       | Ease of Use | Scalability | Community | Docs | Cost (LLM/API) | Best For                           |
-| --------------- | ----------- | ----------- | --------- | ---- | -------------- | ---------------------------------- |
-| LangChain       | 8           | 9           | 10        | 9    | $$             | General LLM agents                 |
-| AutoGen         | 5           | 10          | 8         | 7    | $$$            | Multi-agent orchestration          |
-| CrewAI          | 9           | 7           | 7         | 7    | $$             | Simple role-based agents           |
-| Semantic Kernel | 6           | 9           | 7         | 8    | $$$            | Enterprise-grade agents            |
-| Pydantic AI     | 7           | 8           | 5         | 6    | $$             | Type-safe, structured outputs      |
-| Haystack        | 7           | 9           | 8         | 9    | $$             | RAG/document-based agents          |
-| LangGraph       | 6           | 10          | 6         | 7    | $$             | Complex workflows, branching logic |
-| SmolAgents      | 10          | 5           | 5         | 6    | $              | Tiny/simple agents                 |
+1. **Install dependencies:**
 
----
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## 🎯 Recommendations by Use Case
+2. **Set API key:**
 
-| Goal                                     | Best Framework          | Why                                                          |
-| ---------------------------------------- | ----------------------- | ------------------------------------------------------------ |
-| **Simple single agent (LLM + 1 tool)**   | LangChain or SmolAgents | LangChain has built-ins; SmolAgents is barebones and fast.   |
-| **Multi-agent collaboration**            | AutoGen or CrewAI       | Designed for agent-to-agent communication and teamwork.      |
-| **Enterprise-grade integration**         | Semantic Kernel         | Fits corporate workflows, API management, and task planners. |
-| **Type-safe structured reasoning**       | Pydantic AI             | Ensures model outputs match schemas (great for production).  |
-| **Retrieval-Augmented Generation (RAG)** | Haystack                | Optimized for search + retrieval-based reasoning.            |
-| **Complex workflows / branching logic**  | LangGraph               | Builds stateful or branching agent systems.                  |
-| **Ultra-light experimentation**          | SmolAgents              | Minimal setup, fast iteration.                               |
+   ```bash
+   export ANTHROPIC_API_KEY="your-api-key"
+   # or create .env file with: ANTHROPIC_API_KEY=your-api-key
+   ```
+
+3. **Run the agent:**
+
+   ```bash
+   python agentSmith.py ./storage
+   ```
+
+4. **Use it:** Type requests like "Find papers about RAG" and press Enter
 
 ---
 
-## 🚀 KISS Recommendation (Keep It Simple, Stupid)
+## 📁 Folder Structure
 
-If you’re building your **first or simple Python agent**, do this:
-
-1. **Start with LangChain.** It’s well-documented, widely used, and gives you everything (tools, memory, APIs, etc.) to get going.
-2. **If you want simpler** (no frameworks, no chains): use SmolAgents or just a simple Python script that calls OpenAI API + your custom logic.
-3. **Scale later** — if you add more agents or want them to collaborate, move to AutoGen or CrewAI.
-4. **For enterprise integration**, Semantic Kernel is the right direction.
-
----
-
-## 🧩 Simple LangChain Agent Example (Minimal)
-
-```python
-from langchain.chat_models import ChatOpenAI
-from langchain.agents import initialize_agent, load_tools
-
-llm = ChatOpenAI(model="gpt-4o-mini")
-tools = load_tools(["serpapi", "llm-math"], llm=llm)
-
-agent = initialize_agent(tools, llm, agent="zero-shot-react-description", verbose=True)
-
-response = agent.run("What is the square root of 245, and search for a nearby coffee shop?")
-print(response)
+```
+python/
+├── agentSmith.py          # Main agent script
+├── requirements.txt       # Dependencies
+├── README.md              # This file
+└── storage/               # Skills directory
+    └── skills/
+        └── skill-name/
+            ├── SKILL.md     # Required: Skill definition
+            ├── reference.md # Optional: Additional docs
+            ├── forms.md     # Optional: Forms docs
+            ├── README.md    # Optional: Extra readme
+            ├── LICENSE.txt  # Optional: License
+            └── scripts/     # Optional: Helper scripts
+                └── script.py
 ```
 
-This gives you a minimal yet functional **agent** with reasoning, external tools, and LLM-powered steps — no extra clutter.
+---
+
+## 🎯 How It Works
+
+1. **Discovery:** Scans directories for `SKILL.md` files
+2. **Parsing:** Extracts YAML frontmatter (name, description) + instructions
+3. **Loading:** Finds additional resources (docs, scripts) for each skill
+4. **Execution:** Creates LangChain agent with skill context as system prompt
+5. **Streaming:** Real-time response with automatic code execution
 
 ---
 
-## 🔮 Final Notes
+## 📝 Skill Format
 
-- Most of these frameworks are LLM-oriented. If you’re building rule-based or classical AI agents (not LLM), frameworks like **Mesa** (multi-agent simulation) or **spade** (multi-agent systems) might fit better.
-- Don’t over-engineer. The goal: get something working, then modularize later.
-- Once your prototype works, **add memory, retrieval, or orchestration only when necessary.**
+Skills use the Claude Skills format with YAML frontmatter:
+
+```markdown
+---
+name: skill-name
+description: When to use this skill
+---
+
+# Skill Title
+
+## Instructions
+
+Step-by-step instructions for executing the skill...
+```
+
+**Required:** `SKILL.md` with YAML frontmatter  
+**Optional:** `reference.md`, `forms.md`, `README.md`, `LICENSE.txt`, `scripts/` folder
 
 ---
 
-### 🧭 TL;DR — Quick Picks
+## 🔧 Usage Options
 
-- 🏁 **Just start:** LangChain
-- 🧩 **Keep it tiny:** SmolAgents
-- 🤝 **Team of agents:** AutoGen / CrewAI
-- 🏢 **Enterprise:** Semantic Kernel
-- 📚 **Knowledge agents:** Haystack
-- ⚙️ **Structured reasoning:** Pydantic AI
-- 🔀 **Workflows:** LangGraph
+**Basic (default Anthropic Claude):**
+
+```bash
+python agentSmith.py ./storage
+```
+
+**With different provider:**
+
+```bash
+python agentSmith.py ./storage openai
+python agentSmith.py ./storage anthropic claude-sonnet-4-5-20250929
+```
+
+**Persistent CLI mode:**
+
+- Runs continuously until Ctrl+C or 'exit'
+- Maintains conversation context
+- Automatically executes Python code from responses
 
 ---
 
-© 2025 — Agent Framework Comparison by GPT‑5 (KISS Edition)
+## 🛠️ Adding Skills
+
+1. **Create skill directory:**
+
+   ```bash
+   mkdir storage/skills/my-skill
+   ```
+
+2. **Add SKILL.md:**
+
+   ```markdown
+   ---
+   name: my-skill
+   description: What this skill does
+   ---
+
+   # My Skill
+
+   ## Instructions
+
+   Detailed instructions for the skill...
+   ```
+
+3. **Add optional resources:**
+
+   - `reference.md` - Additional documentation
+   - `scripts/` - Helper Python scripts
+   - `forms.md` - Form-related docs
+
+4. **Test it:**
+   ```bash
+   python agentSmith.py ./storage
+   ```
+
+---
+
+## 🎨 Features
+
+- **Auto-discovery:** Finds all skills recursively
+- **Rich context:** Loads all skill resources into LLM context
+- **Multiple providers:** Anthropic Claude, OpenAI
+- **Code execution:** Automatically runs Python code from responses
+- **Streaming:** Real-time responses
+- **Error handling:** Clear error messages with helpful hints
+
+---
+
+## 🔍 Example Session
+
+```bash
+$ python agentSmith.py ./storage
+
+🔍 Discovering skills in: ./storage
+Found 1 skill(s):
+1. research-papers: Find academic papers on topics
+
+🤖 You: Find papers about machine learning
+[Agent executes skill and returns formatted results]
+
+🤖 You: exit
+👋 Goodbye!
+```
+
+---
+
+## 🚨 Troubleshooting
+
+**"ANTHROPIC_API_KEY not found":**
+
+- Set environment variable: `export ANTHROPIC_API_KEY='your-key'`
+- Or create `.env` file with the key
+
+**"No skills found":**
+
+- Ensure `SKILL.md` files exist in subdirectories
+- Check YAML frontmatter format
+
+**Import errors:**
+
+- Run `pip install -r requirements.txt`
+- Install missing packages as needed
+
+---
+
+## 🏗️ Framework Choice
+
+This agent uses **LangChain** because it provides:
+
+- ✅ Huge community and documentation
+- ✅ Built-in LLM integrations
+- ✅ Tool chaining and memory
+- ✅ Streaming and async support
+
+**Alternative frameworks** for different needs:
+
+- **SmolAgents:** Ultra-lightweight for simple agents
+- **AutoGen:** Multi-agent collaboration
+- **CrewAI:** Role-based agent teams
+- **Haystack:** RAG/document-based agents
+
+---
+
+## 📚 Resources
+
+- [LangChain Agents Documentation](https://docs.langchain.com/oss/python/langchain/overview)
+- [Claude Skills Format](https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview)
+- [Anthropic API Keys](https://console.anthropic.com/)
+
+---
+
+© 2025 — ERA Python Skill Agent (KISS Edition)
