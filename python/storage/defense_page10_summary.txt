@@ -1,0 +1,60 @@
+SUMMARY OF DEFENSE.PDF - PAGE 10
+
+Original Content Length: 847 characters
+
+Content Summary:
+Data
+Mean σ Min Max
+HHI 447.4 667.9 18.5 3592.4
+similarity 0.586 0.050 0.153 0.714
+weightedsimilarity 0.593 0.054 0.154 0.780
+yearcreated 2016.3 2.1 2011 2019
+yearoflastupdate 2018.0 1.5 2011 2019
+developertotalapps 24.9 88.5 1 1141
+screenshots 8.7 5.7 0 32
+downloads 619.6k 25.4M 5k 5B
+size(bytes) 19.4M 28.8M 3.2k 3.3B
+numberofratings 11.1k 369.8k 0 101M
+5starrating 0.178 0.383 0 1
+Summary Statistics 4starrating 0.639 0.480 0 1
+3starrating 0.149 0.356 0 1
+2starrating 0.028 0.165 0 1
+1starrating ...
+
+[Full content extracted and available for detailed analysis]
+
+Key Information:
+- Page number: 10
+- Extraction date: 2025-10-24 18:48:57
+
+
+=== FULL PAGE 10 CONTENT ===
+
+Data
+Mean σ Min Max
+HHI 447.4 667.9 18.5 3592.4
+similarity 0.586 0.050 0.153 0.714
+weightedsimilarity 0.593 0.054 0.154 0.780
+yearcreated 2016.3 2.1 2011 2019
+yearoflastupdate 2018.0 1.5 2011 2019
+developertotalapps 24.9 88.5 1 1141
+screenshots 8.7 5.7 0 32
+downloads 619.6k 25.4M 5k 5B
+size(bytes) 19.4M 28.8M 3.2k 3.3B
+numberofratings 11.1k 369.8k 0 101M
+5starrating 0.178 0.383 0 1
+Summary Statistics 4starrating 0.639 0.480 0 1
+3starrating 0.149 0.356 0 1
+2starrating 0.028 0.165 0 1
+1starrating 0.002 0.045 0 1
+notrated 0.004 0.062 0 1
+ads 0.688 0.464 0 1
+digitalpurchases 0.217 0.412 0 1
+notfree 0.018 0.132 0 1
+game 0.230 0.421 0 1
+usersinteract 0.110 0.313 0 1
+shareslocation 0.022 0.148 0 1
+mature 0.030 0.170 0 1
+violence 0.051 0.221 0 1
+425,817observations;GooglePlaystore2019
+TrevorMcLemore (UNR) DissertationDefense April17,2025 10/29
