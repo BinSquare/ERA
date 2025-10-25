@@ -181,6 +181,8 @@ func (s *HTTPServer) handleVMByID(w http.ResponseWriter, r *http.Request) {
 			switch parts[1] {
 			case "run":
 				s.handleVMRun(w, r, vmID)
+			case "stream":
+				s.handleVMRunStream(w, r, vmID)
 			case "stop":
 				s.handleVMStop(w, r, vmID)
 			default:
@@ -189,6 +191,8 @@ func (s *HTTPServer) handleVMByID(w http.ResponseWriter, r *http.Request) {
 		} else {
 			http.Error(w, "action required", http.StatusBadRequest)
 		}
+	case http.MethodPatch:
+		s.handleVMUpdate(w, r, vmID)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -254,6 +258,71 @@ func (s *HTTPServer) handleVMRun(w http.ResponseWriter, r *http.Request, vmID st
 	})
 }
 
+// POST /api/vm/{id}/stream - Run code with streaming output (SSE)
+func (s *HTTPServer) handleVMRunStream(w http.ResponseWriter, r *http.Request, vmID string) {
+	var req struct {
+		Command string            `json:"command"`
+		File    string            `json:"file"`
+		Timeout int               `json:"timeout"`
+		Envs    map[string]string `json:"envs"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "invalid request body", err)
+		return
+	}
+
+	if req.Command == "" {
+		s.writeError(w, http.StatusBadRequest, "command is required", nil)
+		return
+	}
+	if req.Timeout <= 0 {
+		req.Timeout = 30
+	}
+
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Create event channel
+	eventChan := make(chan StreamEvent, 100)
+
+	// Start streaming execution in goroutine
+	opts := VMRunOptions{
+		VMID:    vmID,
+		Command: req.Command,
+		File:    req.File,
+		Timeout: req.Timeout,
+		Envs:    req.Envs,
+	}
+
+	go s.vmService.RunStreaming(r.Context(), opts, eventChan)
+
+	// Flush initial response
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
+	// Stream events as they arrive
+	for event := range eventChan {
+		eventJSON, err := json.Marshal(event)
+		if err != nil {
+			s.logger.Error("failed to marshal event", map[string]any{"error": err.Error()})
+			continue
+		}
+
+		// Write SSE format: "event: message\ndata: {json}\n\n"
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Type, string(eventJSON))
+
+		// Flush after each event
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}
+}
+
 // POST /api/vm/{id}/stop - Stop VM
 func (s *HTTPServer) handleVMStop(w http.ResponseWriter, r *http.Request, vmID string) {
 	if err := s.vmService.Stop(r.Context(), vmID); err != nil {
@@ -284,6 +353,53 @@ func (s *HTTPServer) handleVMDelete(w http.ResponseWriter, r *http.Request, vmID
 		"vm_id":   vmID,
 		"message": "VM cleaned successfully",
 	})
+}
+
+// PATCH /api/vm/{id} - Update VM metadata
+func (s *HTTPServer) handleVMUpdate(w http.ResponseWriter, r *http.Request, vmID string) {
+	var req struct {
+		NetworkMode *string `json:"network_mode"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "invalid request body", err)
+		return
+	}
+
+	// Get existing record
+	record, ok := s.vmService.Get(vmID)
+	if !ok {
+		s.writeError(w, http.StatusNotFound, "vm not found", nil)
+		return
+	}
+
+	// Apply updates
+	updated := false
+	if req.NetworkMode != nil {
+		// Validate network mode
+		validModes := map[string]bool{"none": true, "host": true, "bridge": true}
+		if !validModes[*req.NetworkMode] {
+			s.writeError(w, http.StatusBadRequest, "invalid network_mode, must be 'none', 'host', or 'bridge'", nil)
+			return
+		}
+		record.NetworkMode = *req.NetworkMode
+		updated = true
+	}
+
+	if !updated {
+		s.writeError(w, http.StatusBadRequest, "no valid fields to update", nil)
+		return
+	}
+
+	// Save updated record
+	if err := s.vmService.Update(record); err != nil {
+		s.logger.Error("vm update failed", map[string]any{"vm": vmID, "error": err.Error()})
+		s.writeError(w, http.StatusInternalServerError, "failed to update vm", err)
+		return
+	}
+
+	s.logger.Info("vm updated via http", map[string]any{"id": vmID})
+	s.writeJSON(w, http.StatusOK, s.vmRecordToResponse(record))
 }
 
 // GET /api/vms - List all VMs

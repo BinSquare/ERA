@@ -1,0 +1,631 @@
+---
+title: Quickstart - Local / Self-Hosted (Go/CLI)
+description: Get started with ERA Agent locally using Go and CLI
+---
+
+This guide will help you build and run ERA Agent locally on your machine. Perfect for development, testing, or self-hosted deployments with complete control and privacy.
+
+## Prerequisites
+
+### Required
+
+- **Go 1.21+** - [Install Go](https://go.dev/doc/install)
+- **Docker** (macOS/Windows) or **Firecracker** (Linux) - For running code sandboxes
+
+### Optional
+
+- **Claude Desktop** - For MCP integration
+- **jq** - For JSON processing in CLI examples
+- **git** - For cloning the repository
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/era-agent
+cd era-agent
+```
+
+### 2. Build the Agent
+
+```bash
+# Build the Go binary
+go build -o agent
+
+# Make it executable
+chmod +x agent
+
+# Verify installation
+./agent --help
+```
+
+You should see output showing available commands:
+```
+ERA Agent - Ephemeral Runtime Agent
+
+Usage:
+  agent [command]
+
+Available Commands:
+  vm          Manage VM sessions
+  serve       Start HTTP server
+  mcp         Start MCP server
+  version     Show version info
+  help        Help about any command
+
+Flags:
+  --log-level string   Log level (debug, info, warn, error) (default "info")
+```
+
+### 3. Set Up Sandbox Environment
+
+The sandbox environment depends on your operating system:
+
+**macOS:**
+```bash
+# Install Docker Desktop
+brew install --cask docker
+
+# Start Docker Desktop from Applications
+# Wait for Docker to fully start
+```
+
+**Linux:**
+```bash
+# Install Firecracker
+# See: https://github.com/firecracker-microvm/firecracker/blob/main/docs/getting-started.md
+
+# Verify KVM access
+ls -l /dev/kvm
+# Should show: crw-rw---- 1 root kvm ...
+
+# Add your user to kvm group
+sudo usermod -aG kvm $USER
+newgrp kvm  # Or log out and back in
+```
+
+**Windows:**
+```bash
+# Install Docker Desktop with WSL2 backend
+# Download from: https://docs.docker.com/desktop/install/windows-install/
+
+# Ensure WSL2 is enabled and Docker is using WSL2 backend
+```
+
+## Quick Start: CLI Usage
+
+The CLI is the fastest way to test ERA Agent locally.
+
+### Example 1: Simple Python Execution
+
+```bash
+# Create a Python session
+VM_ID=$(./agent vm create --language python | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+echo "Session ID: $VM_ID"
+
+# Run Python code
+./agent vm run --vm $VM_ID --cmd 'python3 -c "print(\"Hello from ERA Agent!\"); print(2 + 2)"'
+
+# Clean up
+./agent vm clean --vm $VM_ID
+```
+
+### Example 2: Multi-Step Workflow
+
+```bash
+# Create persistent Python session
+VM_ID=$(./agent vm create --language python --persist | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+
+# Step 1: Define variables
+./agent vm run --vm $VM_ID --cmd 'python3 -c "
+x = 42
+y = 100
+print(f\"Initialized: x={x}, y={y}\")
+"'
+
+# Step 2: Use variables (they persist!)
+./agent vm run --vm $VM_ID --cmd 'python3 -c "
+result = x + y
+print(f\"Result: {x} + {y} = {result}\")
+"'
+
+# Get session info
+./agent vm get --vm $VM_ID
+
+# Clean up when done
+./agent vm clean --vm $VM_ID
+```
+
+### Example 3: Multiple Languages
+
+**Node.js:**
+```bash
+VM_ID=$(./agent vm create --language node | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+./agent vm run --vm $VM_ID --cmd 'node -e "console.log(\"Hello from Node.js!\"); console.log(Math.PI)"'
+./agent vm clean --vm $VM_ID
+```
+
+**Go:**
+```bash
+VM_ID=$(./agent vm create --language go | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+echo 'package main
+import "fmt"
+func main() { fmt.Println("Hello from Go!") }' > /tmp/hello.go
+
+./agent vm run --vm $VM_ID --file /tmp/hello.go
+./agent vm clean --vm $VM_ID
+```
+
+**TypeScript:**
+```bash
+VM_ID=$(./agent vm create --language typescript | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+./agent vm run --vm $VM_ID --cmd 'ts-node -e "const msg: string = \"Hello from TypeScript!\"; console.log(msg)"'
+./agent vm clean --vm $VM_ID
+```
+
+## Quick Start: HTTP Server
+
+For REST API access, run ERA Agent as an HTTP server.
+
+### Start the Server
+
+```bash
+# Start on default port (8787)
+./agent serve
+
+# Or specify custom port
+PORT=9000 ./agent serve
+
+# Or use environment variable
+AGENT_MODE=http PORT=8787 ./agent
+```
+
+### Test the Server
+
+```bash
+# Execute Python code
+curl -X POST http://localhost:8787/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "code": "print(\"Hello from HTTP API!\")\nprint([x**2 for x in range(10)])"
+  }'
+
+# Create a session
+curl -X POST http://localhost:8787/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "session_id": "my-session"
+  }'
+
+# Run code in session
+curl -X POST http://localhost:8787/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "x = 42\nprint(f\"x = {x}\")"}'
+
+# Run more code (state persists)
+curl -X POST http://localhost:8787/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "y = x * 2\nprint(f\"y = {y}\")"}'
+
+# List all sessions
+curl http://localhost:8787/api/sessions
+
+# Get session info
+curl http://localhost:8787/api/sessions/my-session
+
+# Delete session
+curl -X DELETE http://localhost:8787/api/sessions/my-session
+```
+
+## Quick Start: MCP Server for Claude Desktop
+
+ERA Agent can run as an MCP (Model Context Protocol) server for Claude Desktop.
+
+### 1. Configure Claude Desktop
+
+Create or edit your Claude Desktop config:
+
+**macOS:**
+```bash
+mkdir -p ~/Library/Application\ Support/Claude
+cat > ~/Library/Application\ Support/Claude/claude_desktop_config.json << 'EOF'
+{
+  "mcpServers": {
+    "era-agent-local": {
+      "command": "/absolute/path/to/agent",
+      "args": ["mcp"]
+    }
+  }
+}
+EOF
+```
+
+**Linux:**
+```bash
+mkdir -p ~/.config/Claude
+cat > ~/.config/Claude/claude_desktop_config.json << 'EOF'
+{
+  "mcpServers": {
+    "era-agent-local": {
+      "command": "/absolute/path/to/agent",
+      "args": ["mcp"]
+    }
+  }
+}
+EOF
+```
+
+**Windows:**
+```powershell
+# Edit: %APPDATA%\Claude\claude_desktop_config.json
+{
+  "mcpServers": {
+    "era-agent-local": {
+      "command": "C:\\path\\to\\agent.exe",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+**Important:** Replace `/absolute/path/to/agent` with the full path to your agent binary:
+```bash
+# Get the full path
+pwd  # Shows current directory
+# If agent is in current directory: /Users/yourname/era-agent/agent
+```
+
+### 2. Restart Claude Desktop
+
+Quit Claude Desktop completely (Cmd+Q on macOS, not just close) and reopen it.
+
+### 3. Test with Claude
+
+In a new conversation, try:
+```
+Run this Python code:
+print("Hello from Claude + ERA Agent!")
+print([x**2 for x in range(10)])
+```
+
+Claude should execute the code using ERA Agent and show you the results!
+
+## Configuration
+
+### Environment Variables
+
+Control agent behavior with environment variables:
+
+```bash
+# Operation mode
+export AGENT_MODE=http              # Run as HTTP server
+
+# Server settings
+export PORT=8787                    # HTTP server port
+
+# Logging
+export AGENT_LOG_LEVEL=debug        # Log level: debug, info, warn, error
+
+# State directory
+export AGENT_STATE_DIR=/custom/path # Custom state storage path
+```
+
+### Configuration File
+
+Create a `.env` file for persistent configuration:
+
+```bash
+# .env
+AGENT_MODE=http
+PORT=8787
+AGENT_LOG_LEVEL=info
+AGENT_STATE_DIR=/var/lib/era-agent
+```
+
+Load it:
+```bash
+source .env
+./agent
+```
+
+### CLI Flags
+
+Most settings can also be set via CLI flags:
+
+```bash
+# Global log level
+./agent --log-level debug vm create --language python
+
+# VM-specific settings
+./agent vm create \
+  --language python \
+  --cpu 2 \
+  --mem 512 \
+  --network allow_all \
+  --persist
+```
+
+## Common Workflows
+
+### Development Workflow
+
+```bash
+# 1. Start HTTP server in background
+./agent serve &
+SERVER_PID=$!
+
+# 2. Test your code
+curl -X POST http://localhost:8787/api/execute \
+  -H "Content-Type: application/json" \
+  -d @test-payload.json
+
+# 3. View logs
+tail -f /var/log/era-agent.log
+
+# 4. Stop server
+kill $SERVER_PID
+```
+
+### Testing Workflow
+
+```bash
+# Create test session
+VM_ID=$(./agent vm create --language python --persist | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+
+# Run test suite
+for test in tests/*.py; do
+  echo "Running $test..."
+  ./agent vm run --vm $VM_ID --file "$test"
+done
+
+# Clean up
+./agent vm clean --vm $VM_ID
+```
+
+### Automation Workflow
+
+```bash
+#!/bin/bash
+# process-data.sh - Automated data processing
+
+# Create session
+SESSION_ID=$(./agent vm create --language python --persist | ...)
+
+# Install dependencies
+./agent vm run --vm $SESSION_ID --cmd "pip install pandas numpy"
+
+# Process data files
+for file in data/*.csv; do
+  ./agent vm run --vm $SESSION_ID --file "process.py" --env "INPUT_FILE=$file"
+done
+
+# Clean up
+./agent vm clean --vm $SESSION_ID
+```
+
+## CLI Command Reference
+
+### VM Management
+
+```bash
+# Create session
+./agent vm create --language <lang> [options]
+
+# Run code
+./agent vm run --vm <id> --cmd <command>
+./agent vm run --vm <id> --file <path>
+
+# List sessions
+./agent vm list
+
+# Get session info
+./agent vm get --vm <id>
+
+# Clean up session
+./agent vm clean --vm <id>
+```
+
+### Server Modes
+
+```bash
+# HTTP server
+./agent serve
+PORT=9000 ./agent serve
+
+# MCP server (for Claude Desktop)
+./agent mcp
+```
+
+### Options
+
+```bash
+# Global
+--log-level <level>    # debug, info, warn, error
+
+# VM Create
+--language <lang>      # python, node, typescript, go, deno
+--cpu <count>          # CPU cores (default: 1)
+--mem <mib>           # Memory in MiB (default: 256)
+--network <mode>       # none (default), allow_all
+--persist              # Enable persistence
+
+# VM Run
+--vm <id>             # Session ID
+--cmd <command>        # Command to execute
+--file <path>          # File to execute
+--timeout <seconds>    # Execution timeout
+--env KEY=VALUE        # Environment variable
+```
+
+## Troubleshooting
+
+### "Failed to start VM"
+
+**Problem:** Docker or Firecracker not running
+
+**Solutions:**
+- **macOS:** Start Docker Desktop and wait for it to fully initialize
+- **Linux:** Check Firecracker installation and KVM access: `ls -l /dev/kvm`
+- **Windows:** Ensure Docker Desktop is running with WSL2 backend
+
+### "Context deadline exceeded"
+
+**Problem:** Execution timeout
+
+**Solution:**
+```bash
+# Increase timeout
+./agent vm run --vm <id> --cmd "..." --timeout 120
+
+# Or set longer default when creating session
+./agent vm create --language python --timeout 60
+```
+
+### "Command not found: agent"
+
+**Problem:** Agent binary not in PATH
+
+**Solutions:**
+```bash
+# Use relative path
+./agent vm create --language python
+
+# Or add to PATH
+sudo cp agent /usr/local/bin/
+agent vm create --language python
+
+# Or create alias
+echo 'alias agent=/path/to/agent' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### "Port already in use"
+
+**Problem:** Port 8787 is occupied
+
+**Solution:**
+```bash
+# Use different port
+PORT=9000 ./agent serve
+
+# Or kill existing process
+lsof -ti:8787 | xargs kill
+./agent serve
+```
+
+### Verbose Logging
+
+Enable debug logging for troubleshooting:
+
+```bash
+# CLI
+./agent --log-level debug vm create --language python
+
+# HTTP Server
+AGENT_LOG_LEVEL=debug ./agent serve
+
+# MCP Server
+AGENT_LOG_LEVEL=debug ./agent mcp
+```
+
+## Performance Tips
+
+### Resource Allocation
+
+```bash
+# High-memory tasks
+./agent vm create --language python --mem 1024
+
+# Multi-core processing
+./agent vm create --language python --cpu 4
+
+# Faster sessions (non-persistent)
+./agent vm create --language python  # Omit --persist flag
+```
+
+### Session Reuse
+
+```bash
+# Reuse sessions instead of creating new ones
+VM_ID=$(./agent vm create --language python --persist | ...)
+
+# Run multiple operations
+./agent vm run --vm $VM_ID --cmd "pip install pandas"
+./agent vm run --vm $VM_ID --file script1.py
+./agent vm run --vm $VM_ID --file script2.py
+
+# Clean up once at the end
+./agent vm clean --vm $VM_ID
+```
+
+## Security Considerations
+
+### Network Access
+
+Network is **disabled by default**. Enable only when needed:
+
+```bash
+# Enable network access
+./agent vm create --language python --network allow_all
+
+# Or via HTTP API
+{
+  "language": "python",
+  "network_mode": "allow_all"
+}
+```
+
+### Resource Limits
+
+Always set appropriate limits:
+
+```bash
+# Limit resources
+./agent vm create \
+  --language python \
+  --cpu 1 \
+  --mem 256 \
+  --timeout 30
+```
+
+### State Directory Permissions
+
+Secure your state directory:
+
+```bash
+# Set restrictive permissions
+chmod 700 ~/.local/share/era-agent
+
+# Or custom location with proper permissions
+export AGENT_STATE_DIR=/secure/path
+chmod 700 $AGENT_STATE_DIR
+```
+
+## Next Steps
+
+Now that you have ERA Agent running locally, explore:
+
+- **[CLI Usage Guide](/docs/local/cli-usage)** - Complete CLI reference
+- **[HTTP Server Mode](/docs/local/http-server)** - REST API documentation
+- **[MCP Server Setup](/docs/local/mcp-server)** - Claude Desktop integration
+- **[Docker Deployment](/docs/local/docker-deployment)** - Containerized deployment
+- **[API Reference](/docs/api-reference)** - Complete API documentation
+
+## Comparison with Hosted
+
+| Feature | Local (This Guide) | Hosted (Cloudflare) |
+|---------|-------------------|---------------------|
+| **Setup** | Build from source | Zero config |
+| **Infrastructure** | Docker/Firecracker | Managed |
+| **Privacy** | Complete (all local) | Data goes to Cloudflare |
+| **Cost** | Free (your hardware) | Pay per use |
+| **Latency** | ~10ms | ~50-200ms |
+| **Customization** | Full control | Limited |
+| **Network Access** | Disabled by default | Enabled by default |
+| **Best For** | Development, sensitive data | Production, AI tools |
+
+Want to try the hosted version instead? → [Hosted Quickstart](/docs/quickstart-hosted)

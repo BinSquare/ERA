@@ -3,9 +3,13 @@ import { SessionDO, SessionMetadata } from './session';
 import { SessionSetup } from './plugins/types';
 import { runSessionSetup } from './plugins/session_setup';
 import { handleMCPRequest } from './mcp/server';
+import { handleKVOperation, handleD1Operation, handleR2Operation } from './storage-proxy';
+import { StorageRegistry } from './storage-registry';
+import { Env } from './types';
 
-// Re-export SessionDO for Durable Objects
-export { SessionDO };
+// Re-export for Durable Objects
+export { SessionDO, StorageRegistry };
+export type { Env };
 
 /**
  * ERA Agent Container Class
@@ -86,6 +90,11 @@ export default {
         return handleSessionRun(sessionId, request, env);
       }
 
+      // POST /api/sessions/{id}/stream - Run code with streaming output (SSE)
+      if (subPath === '/stream' && request.method === 'POST') {
+        return handleSessionRunStream(sessionId, request, env);
+      }
+
       // POST /api/sessions/{id}/duplicate - Duplicate session
       if (subPath === '/duplicate' && request.method === 'POST') {
         return handleDuplicateSession(sessionId, request, env);
@@ -123,10 +132,25 @@ export default {
         return handleDeleteSession(sessionId, env);
       }
 
+      // PATCH /api/sessions/{id} - Update session metadata
+      if (subPath === '' && request.method === 'PATCH') {
+        return handleUpdateSession(sessionId, request, env);
+      }
+
       // GET /api/sessions/{id}/host - Get public URL for port
       if (subPath.startsWith('/host') && request.method === 'GET') {
         return handleGetHost(sessionId, url.searchParams.get('port'), env, request);
       }
+    }
+
+    // Storage Proxy API - KV, D1, R2 access from sandboxed code
+    if (url.pathname.startsWith('/api/storage/')) {
+      return handleStorageProxyRequest(request, env);
+    }
+
+    // Storage Registry API - List/manage all resources
+    if (url.pathname.startsWith('/api/resources')) {
+      return handleStorageRegistryRequest(request, env);
     }
 
     // Proxy requests to containers: /proxy/{session_id}/{port}/*
@@ -496,6 +520,61 @@ export async function handleSessionRun(sessionId: string, request: Request, env:
   }));
 }
 
+export async function handleSessionRunStream(sessionId: string, request: Request, env: Env): Promise<Response> {
+  const id = env.SESSIONS.idFromName(sessionId);
+  const stub = env.SESSIONS.get(id);
+
+  // Parse request body
+  const requestBody = await request.text();
+  let runConfig = requestBody ? JSON.parse(requestBody) : {};
+
+  // Get session metadata
+  const metadataRes = await stub.fetch(new Request('http://session/metadata', { method: 'GET' }));
+  let metadata: SessionMetadata | null = null;
+  if (metadataRes.ok) {
+    metadata = await metadataRes.json() as SessionMetadata;
+  }
+
+  // If no code provided, use stored code from session.data.code
+  if (!runConfig.code) {
+    if (metadata?.data?.code) {
+      runConfig.code = metadata.data.code;
+    } else {
+      return new Response(JSON.stringify({
+        error: 'no code provided and no stored code found',
+        hint: 'Use PUT /api/sessions/{id}/code to store code that handles HTTP requests'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // Inject ERA environment variables
+  const requestUrl = new URL(request.url);
+  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+
+  const eraEnvVars = {
+    ERA_SESSION: 'true',
+    ERA_SESSION_ID: sessionId,
+    ERA_LANGUAGE: metadata?.language || 'unknown',
+    ERA_BASE_URL: baseUrl,
+    ERA_PROXY_URL: `${baseUrl}/proxy/${sessionId}`,
+  };
+
+  // Merge user env vars with ERA env vars (ERA vars take precedence)
+  runConfig.env = {
+    ...runConfig.env,
+    ...eraEnvVars,
+  };
+
+  // Forward to Durable Object which handles inject/stream/extract
+  return stub.fetch(new Request('http://session/stream', {
+    method: 'POST',
+    body: JSON.stringify(runConfig),
+  }));
+}
+
 export async function handleListSessionFiles(sessionId: string, env: Env): Promise<Response> {
   const prefix = `sessions/${sessionId}/`;
   const listed = await env.SESSIONS_BUCKET.list({ prefix });
@@ -642,6 +721,78 @@ export async function handleDeleteSession(sessionId: string, env: Env): Promise<
     success: true,
     id: sessionId,
     deleted_at: new Date().toISOString()
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+export async function handleUpdateSession(sessionId: string, request: Request, env: Env): Promise<Response> {
+  const updates = await request.json() as {
+    default_timeout?: number;
+    allowInternetAccess?: boolean;
+    allowPublicAccess?: boolean;
+    metadata?: Record<string, any>;
+  };
+
+  // Validate updates
+  if (updates.default_timeout !== undefined) {
+    if (typeof updates.default_timeout !== 'number' || updates.default_timeout <= 0) {
+      return new Response(JSON.stringify({
+        error: 'invalid default_timeout',
+        message: 'default_timeout must be a positive number'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // Get session stub
+  const stub = env.SESSIONS.get(env.SESSIONS.idFromName(sessionId));
+
+  // Update session metadata
+  const res = await stub.fetch(new Request('http://session/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  }));
+
+  if (!res.ok) {
+    const error = await res.text();
+    return new Response(JSON.stringify({
+      error: 'failed to update session',
+      details: error
+    }), {
+      status: res.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const metadata = await res.json();
+
+  // Update registry if it exists
+  try {
+    const registryKey = `_registry/${sessionId}`;
+    const existing = await env.SESSIONS_BUCKET.get(registryKey);
+    if (existing) {
+      const registryData = JSON.parse(await existing.text());
+      const updated = {
+        ...registryData,
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      await env.SESSIONS_BUCKET.put(registryKey, JSON.stringify(updated));
+    }
+  } catch (error) {
+    // Registry update failed but session was updated - log warning but don't fail
+    console.warn('Failed to update registry:', error);
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
+    id: sessionId,
+    metadata,
+    updated_at: new Date().toISOString()
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -859,6 +1010,61 @@ async function handleProxyRequest(request: Request, env: Env): Promise<Response>
       headers: { 'Content-Type': 'application/json' },
     });
   }
+}
+
+/**
+ * Storage Proxy Request Handler
+ * Routes to appropriate storage handler (KV, D1, R2)
+ */
+async function handleStorageProxyRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+
+  // Parse route: /api/storage/{type}/{namespace}[/{key}]
+  const match = url.pathname.match(/^\/api\/storage\/(kv|d1|r2)\/([^\/]+)(?:\/(.+))?$/);
+  if (!match) {
+    return new Response(JSON.stringify({
+      error: 'invalid storage path',
+      format: '/api/storage/{kv|d1|r2}/{namespace}[/{key}]'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const [, type, namespace, key] = match;
+
+  try {
+    if (type === 'kv') {
+      return await handleKVOperation(namespace, key || null, request, env);
+    } else if (type === 'd1') {
+      // For D1, the "key" is actually the operation (query/exec)
+      return await handleD1Operation(namespace, key || 'query', request, env);
+    } else if (type === 'r2') {
+      return await handleR2Operation(namespace, key || null, request, env);
+    }
+
+    return new Response(JSON.stringify({ error: 'Unknown storage type' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({
+      error: 'Storage operation failed',
+      details: error instanceof Error ? error.message : String(error),
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
+/**
+ * Storage Registry Request Handler
+ * List and manage all resources across KV, D1, R2
+ */
+async function handleStorageRegistryRequest(request: Request, env: Env): Promise<Response> {
+  const registryStub = env.STORAGE_REGISTRY.get(env.STORAGE_REGISTRY.idFromName('primary'));
+  return await registryStub.fetch(request);
 }
 
 /**

@@ -1,0 +1,777 @@
+---
+title: Remote MCP Server Guide
+description: Using ERA Agent as a remote MCP server via HTTP/HTTPS
+---
+
+ERA Agent provides a **remote MCP server** that works over HTTP/HTTPS, allowing any MCP client (Claude Desktop, custom tools, etc.) to execute code remotely without local infrastructure.
+
+## What is a Remote MCP Server?
+
+Unlike local MCP servers that run on your machine via stdio, remote MCP servers:
+- Run in the cloud and accept HTTP/HTTPS requests
+- Use JSON-RPC 2.0 protocol over HTTP
+- Can be accessed from anywhere with internet
+- No local Docker or Firecracker required
+- Share sessions and state in the cloud
+
+## Quick Start with Claude Desktop
+
+### 1. Configure Claude Desktop
+
+Add the ERA Agent remote server to your Claude Desktop configuration:
+
+**macOS:**
+```json title="~/Library/Application Support/Claude/claude_desktop_config.json"
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+**Windows:**
+```json title="%APPDATA%\Claude\claude_desktop_config.json"
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+**Linux:**
+```json title="~/.config/Claude/claude_desktop_config.json"
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+### 2. Restart Claude Desktop
+
+Completely quit Claude Desktop (Cmd+Q on macOS, not just close the window) and reopen it.
+
+### 3. Verify Tools Are Available
+
+In a new conversation with Claude, the ERA Agent tools should now be available. Try:
+
+```
+Run this Python code:
+print("Hello from ERA Agent!")
+print([x**2 for x in range(10)])
+```
+
+## Using Your Own Deployment
+
+Deploy your own instance and use it as a remote MCP server:
+
+```bash
+# Deploy to Cloudflare Workers
+cd cloudflare
+npx wrangler deploy
+```
+
+Then update your Claude Desktop config with your Worker URL:
+
+```json
+{
+  "mcpServers": {
+    "my-era-agent": {
+      "url": "https://your-worker-name.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+## Protocol Details
+
+ERA Agent implements the [Model Context Protocol](https://modelcontextprotocol.io/) specification using JSON-RPC 2.0 over HTTP.
+
+### Endpoint
+
+```
+https://era-agent.yawnxyz.workers.dev/mcp/v1
+```
+
+### Transport
+
+- **Protocol:** JSON-RPC 2.0
+- **Method:** HTTP POST
+- **Content-Type:** application/json
+- **CORS:** Enabled (allows cross-origin requests)
+
+### Request Format
+
+All requests follow the JSON-RPC 2.0 specification:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "method_name",
+  "params": {
+    // method-specific parameters
+  }
+}
+```
+
+### Response Format
+
+Success response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    // method-specific result
+  }
+}
+```
+
+Error response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32600,
+    "message": "Error description",
+    "data": "Additional error details"
+  }
+}
+```
+
+## MCP Methods
+
+The remote server supports all standard MCP methods:
+
+### Protocol Methods
+
+#### initialize
+
+Initialize the MCP connection and discover capabilities.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "0.1.0",
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    },
+    "capabilities": {}
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "0.1.0",
+    "capabilities": {
+      "tools": {},
+      "resources": {
+        "subscribe": false,
+        "listChanged": false
+      }
+    },
+    "serverInfo": {
+      "name": "era-agent-mcp",
+      "version": "1.0.0"
+    }
+  }
+}
+```
+
+### Tool Methods
+
+#### tools/list
+
+List all available tools.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "era_python",
+        "description": "Execute Python code...",
+        "inputSchema": { /* JSON Schema */ }
+      },
+      // ... 13 more tools
+    ]
+  }
+}
+```
+
+#### tools/call
+
+Execute a specific tool.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "era_python",
+    "arguments": {
+      "code": "print('Hello, World!')"
+    }
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Exit Code: 0\n\nStdout:\nHello, World!\n\nDuration: 24ms"
+      }
+    ]
+  }
+}
+```
+
+### Resource Methods
+
+#### resources/list
+
+List all available resources (sessions).
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "resources/list",
+  "params": {}
+}
+```
+
+#### resources/read
+
+Read a specific resource.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "resources/read",
+  "params": {
+    "uri": "session://abc123"
+  }
+}
+```
+
+## Testing with cURL
+
+### Test Connection
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "0.1.0",
+      "clientInfo": {
+        "name": "curl-test",
+        "version": "1.0.0"
+      },
+      "capabilities": {}
+    }
+  }' | jq '.'
+```
+
+### List Available Tools
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }' | jq '.result.tools[] | {name, description}'
+```
+
+### Execute Python Code
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "era_python",
+      "arguments": {
+        "code": "print(\"Hello from cURL!\")\nprint([x**2 for x in range(10)])"
+      }
+    }
+  }' | jq '.result.content[0].text'
+```
+
+### Create and Use a Session
+
+```bash
+# 1. Create session
+SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "era_create_session",
+      "arguments": {
+        "language": "python",
+        "persistent": true
+      }
+    }
+  }' | jq -r '.result.content[0].text' | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+
+echo "Created session: $SESSION_ID"
+
+# 2. Run code in session
+curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"jsonrpc\": \"2.0\",
+    \"id\": 5,
+    \"method\": \"tools/call\",
+    \"params\": {
+      \"name\": \"era_run_in_session\",
+      \"arguments\": {
+        \"session_id\": \"$SESSION_ID\",
+        \"code\": \"x = 42\"
+      }
+    }
+  }"
+
+# 3. Access variable from previous execution
+curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"jsonrpc\": \"2.0\",
+    \"id\": 6,
+    \"method\": \"tools/call\",
+    \"params\": {
+      \"name\": \"era_run_in_session\",
+      \"arguments\": {
+        \"session_id\": \"$SESSION_ID\",
+        \"code\": \"print(f'x = {x}')\"
+      }
+    }
+  }" | jq '.result.content[0].text'
+```
+
+## Using with Custom MCP Clients
+
+### Python Client Example
+
+```python
+import requests
+import json
+
+class ERAMCPClient:
+    def __init__(self, url="https://era-agent.yawnxyz.workers.dev/mcp/v1"):
+        self.url = url
+        self.request_id = 0
+
+    def _call(self, method, params=None):
+        self.request_id += 1
+        payload = {
+            "jsonrpc": "2.0",
+            "id": self.request_id,
+            "method": method,
+            "params": params or {}
+        }
+
+        response = requests.post(
+            self.url,
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        response.raise_for_status()
+
+        result = response.json()
+        if "error" in result:
+            raise Exception(f"MCP Error: {result['error']}")
+
+        return result.get("result")
+
+    def initialize(self):
+        return self._call("initialize", {
+            "protocolVersion": "0.1.0",
+            "clientInfo": {"name": "python-client", "version": "1.0.0"},
+            "capabilities": {}
+        })
+
+    def list_tools(self):
+        return self._call("tools/list")
+
+    def execute_python(self, code, timeout=30):
+        return self._call("tools/call", {
+            "name": "era_python",
+            "arguments": {"code": code, "timeout": timeout}
+        })
+
+    def create_session(self, language="python", persistent=True):
+        return self._call("tools/call", {
+            "name": "era_create_session",
+            "arguments": {"language": language, "persistent": persistent}
+        })
+
+    def run_in_session(self, session_id, code):
+        return self._call("tools/call", {
+            "name": "era_run_in_session",
+            "arguments": {"session_id": session_id, "code": code}
+        })
+
+# Usage
+client = ERAMCPClient()
+
+# Initialize
+info = client.initialize()
+print(f"Connected to: {info['serverInfo']['name']}")
+
+# List tools
+tools = client.list_tools()
+print(f"Available tools: {len(tools['tools'])}")
+
+# Execute code
+result = client.execute_python("print('Hello from Python client!')")
+print(result["content"][0]["text"])
+
+# Use sessions
+session = client.create_session()
+session_id = json.loads(session["content"][0]["text"])["id"]
+
+client.run_in_session(session_id, "x = 100")
+result = client.run_in_session(session_id, "print(f'x = {x}')")
+print(result["content"][0]["text"])
+```
+
+### JavaScript/Node.js Client Example
+
+```javascript
+class ERAMCPClient {
+  constructor(url = "https://era-agent.yawnxyz.workers.dev/mcp/v1") {
+    this.url = url;
+    this.requestId = 0;
+  }
+
+  async call(method, params = {}) {
+    this.requestId++;
+
+    const response = await fetch(this.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: this.requestId,
+        method,
+        params
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.error) {
+      throw new Error(`MCP Error: ${JSON.stringify(result.error)}`);
+    }
+
+    return result.result;
+  }
+
+  async initialize() {
+    return this.call("initialize", {
+      protocolVersion: "0.1.0",
+      clientInfo: { name: "js-client", version: "1.0.0" },
+      capabilities: {}
+    });
+  }
+
+  async listTools() {
+    return this.call("tools/list");
+  }
+
+  async executePython(code, timeout = 30) {
+    return this.call("tools/call", {
+      name: "era_python",
+      arguments: { code, timeout }
+    });
+  }
+
+  async createSession(language = "python", persistent = true) {
+    return this.call("tools/call", {
+      name: "era_create_session",
+      arguments: { language, persistent }
+    });
+  }
+
+  async runInSession(sessionId, code) {
+    return this.call("tools/call", {
+      name: "era_run_in_session",
+      arguments: { session_id: sessionId, code }
+    });
+  }
+}
+
+// Usage
+const client = new ERAMCPClient();
+
+const info = await client.initialize();
+console.log(`Connected to: ${info.serverInfo.name}`);
+
+const tools = await client.listTools();
+console.log(`Available tools: ${tools.tools.length}`);
+
+const result = await client.executePython("print('Hello from JS!')");
+console.log(result.content[0].text);
+```
+
+## Available Tools
+
+The remote MCP server exposes **14 tools**:
+
+### Language-Specific Quick Execution (5 tools)
+- `era_python` - Execute Python code
+- `era_node` - Execute Node.js/JavaScript
+- `era_typescript` - Execute TypeScript
+- `era_deno` - Execute Deno code
+- `era_shell` - Execute shell commands
+
+### Core Execution (3 tools)
+- `era_execute_code` - Execute code with custom config
+- `era_create_session` - Create persistent session
+- `era_run_in_session` - Run code in existing session
+
+### Session Management (3 tools)
+- `era_list_sessions` - List all sessions
+- `era_get_session` - Get session details
+- `era_delete_session` - Delete a session
+
+### File Operations (3 tools)
+- `era_upload_file` - Upload file to session
+- `era_read_file` - Read file from session
+- `era_list_files` - List files in session
+
+See the [MCP Server documentation](/docs/hosted/mcp-server) for detailed tool descriptions.
+
+## Remote vs Local Comparison
+
+| Feature | Remote (This Guide) | Local (stdio) |
+|---------|-------------------|---------------|
+| **Transport** | HTTP/HTTPS | stdio (stdin/stdout) |
+| **Deployment** | Cloudflare Workers (cloud) | Local binary |
+| **Setup** | URL configuration only | Binary path + args |
+| **Infrastructure** | Zero (managed) | Docker/Firecracker required |
+| **Network Access** | Enabled by default ✅ | Disabled by default |
+| **State Storage** | Durable Objects (cloud) | Local BoltDB |
+| **File Storage** | R2 Storage (cloud) | Local filesystem |
+| **Scaling** | Automatic | Single process |
+| **Access** | From anywhere | Local machine only |
+| **Latency** | ~50-200ms (global edge) | ~10ms (local) |
+| **Security** | HTTPS, optional auth | Local trust |
+
+## Security Considerations
+
+### Public Deployment
+
+The default deployment at `https://era-agent.yawnxyz.workers.dev` is **public** and has no authentication. This is fine for:
+- Testing and experimentation
+- Non-sensitive code execution
+- Learning MCP protocol
+- Public demos
+
+### Private Deployment
+
+For production use, deploy your own instance with authentication:
+
+#### Option 1: Cloudflare Access
+
+Use Cloudflare Access to protect your Worker:
+
+```bash
+# Install wrangler if not already installed
+npm install -g wrangler
+
+# Enable Access for your Worker
+wrangler pages deployment tail
+```
+
+Then configure Access policies in the Cloudflare dashboard.
+
+#### Option 2: API Key Authentication
+
+Add API key verification to your Worker (requires code modification):
+
+```typescript
+// Add to src/index.ts
+const API_KEY = env.API_KEY; // Set via wrangler secret
+
+if (request.headers.get('Authorization') !== `Bearer ${API_KEY}`) {
+  return new Response('Unauthorized', { status: 401 });
+}
+```
+
+Then use it:
+
+```json
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://your-worker.workers.dev/mcp/v1",
+      "headers": {
+        "Authorization": "Bearer your-api-key"
+      }
+    }
+  }
+}
+```
+
+#### Option 3: Private Network
+
+Deploy to a private network or VPN:
+- Use Cloudflare Tunnel
+- Deploy behind firewall
+- Use VPN access
+
+### Best Practices
+
+1. **Don't store secrets in code** - Avoid putting API keys or passwords in executed code
+2. **Use your own deployment** - Deploy your own Worker for production use
+3. **Enable authentication** - Add API keys or Cloudflare Access for private use
+4. **Monitor usage** - Check logs for unexpected activity
+5. **Set resource limits** - Configure timeouts and memory limits appropriately
+6. **Clean up sessions** - Delete sessions when done to free resources
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem:** Cannot connect to remote server
+
+**Solutions:**
+1. Check internet connectivity
+2. Verify URL is correct: `https://era-agent.yawnxyz.workers.dev/mcp/v1`
+3. Test with cURL:
+   ```bash
+   curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"0.1.0","clientInfo":{"name":"test","version":"1.0.0"},"capabilities":{}}}'
+   ```
+
+### Tools Not Appearing
+
+**Problem:** Tools don't show up in Claude Desktop
+
+**Solutions:**
+1. Verify JSON syntax in config file:
+   ```bash
+   cat ~/Library/Application\ Support/Claude/claude_desktop_config.json | jq '.'
+   ```
+2. Ensure URL ends with `/mcp/v1`
+3. Restart Claude Desktop completely (Cmd+Q, not just close)
+4. Check Claude Desktop logs for errors
+
+### Execution Timeouts
+
+**Problem:** Code execution times out
+
+**Solutions:**
+1. Increase timeout parameter (default: 30s, max: 300s)
+2. Break long-running tasks into smaller chunks
+3. Use sessions for multi-step workflows
+4. Check for infinite loops in code
+
+### CORS Errors
+
+**Problem:** CORS errors when using from browser
+
+**Solutions:**
+1. CORS is enabled by default on the ERA Agent server
+2. If using custom deployment, ensure CORS headers are set
+3. For development, use server-side client (Node.js, Python) instead of browser
+
+## Performance Tips
+
+### Choose the Right Tool
+
+| Scenario | Tool | Reason |
+|----------|------|--------|
+| Quick Python script | `era_python` | Fast, no session overhead |
+| Multiple related runs | Session | State persistence |
+| Package installation | Shell in session | Packages persist |
+| Web scraping | Session | Reuse HTTP connections |
+
+### Optimize Network Usage
+
+1. **Batch operations** - Use sessions to avoid repeated setup
+2. **Reuse sessions** - Create once, use multiple times
+3. **Minimize data transfer** - Process data remotely, return only results
+4. **Use appropriate timeouts** - Don't set unnecessarily high timeouts
+
+### Cloud Benefits
+
+The remote MCP server runs on Cloudflare's global edge network:
+- **Low latency** - Runs close to users worldwide
+- **High availability** - 99.99%+ uptime
+- **Auto-scaling** - Handles any load automatically
+- **Zero maintenance** - No servers to manage
+
+## Next Steps
+
+- Try the [Quick Reference](/docs/hosted/mcp-quick-reference) for common patterns
+- Read the [Full MCP Server Documentation](/docs/hosted/mcp-server)
+- Learn about [Session Management](/docs/hosted/sessions)
+- Compare with [Local MCP](/docs/local/mcp-server) for self-hosted option
+- Check [Example Projects](/docs/examples) for inspiration
+
+## Protocol References
+
+- [Model Context Protocol Specification](https://modelcontextprotocol.io/)
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
+- [ERA Agent REST API](/docs/hosted/api) (alternative to MCP)

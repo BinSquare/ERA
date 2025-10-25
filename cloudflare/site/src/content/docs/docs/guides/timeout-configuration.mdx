@@ -13,8 +13,8 @@ ERA Agent provides flexible timeout configuration at multiple levels. This guide
 
 | Timeout Type | Default | Scope | Can Change at Runtime? |
 |--------------|---------|-------|------------------------|
-| **Execution Timeout** | 30 seconds | Per-request | ✅ Yes |
-| **Session Default Timeout** | 30 seconds | Per-session | ✅ Yes (on create) |
+| **Execution Timeout** | 30 seconds | Per-request | ✅ Yes (per-run override) |
+| **Session Default Timeout** | 30 seconds | Per-session | ✅ Yes (PATCH /api/sessions/\{id\}) |
 | **Container Sleep** | 5 minutes | Global | ❌ No (requires redeploy) |
 
 ---
@@ -90,6 +90,63 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/long-runner/run 
     "timeout": 300
   }'
 ```
+
+### Updating Session Default Timeout
+
+**You can update the default timeout of an existing session at any time:**
+
+```bash
+# Update session timeout from 30s to 5 minutes
+curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/long-runner \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_timeout": 300
+  }'
+```
+
+**This is useful when:**
+- You realize your workload needs more time after creating the session
+- Different phases of processing have different time requirements
+- You want to adjust timeout based on runtime conditions
+
+**Example workflow:**
+
+```bash
+# 1. Create session with standard timeout
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "adaptive-timeout",
+    "persistent": true,
+    "default_timeout": 30
+  }'
+
+# 2. Run quick tasks with 30s timeout
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/adaptive-timeout/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Quick task\")"
+  }'
+
+# 3. Need longer timeout for next phase - update it!
+curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/adaptive-timeout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_timeout": 600
+  }'
+
+# 4. Now long-running tasks use 10 minute timeout by default
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/adaptive-timeout/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "# Long data processing task that takes 8 minutes..."
+  }'
+```
+
+<Aside type="tip">
+**Pro tip:** Use PATCH to update `default_timeout` when you transition between different phases of a workflow (e.g., quick setup → heavy processing → cleanup).
+</Aside>
 
 ### Timeout Priority
 

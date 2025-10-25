@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -301,6 +302,185 @@ func (s *VMService) executeCommand(ctx context.Context, command string, timeoutS
 	}, nil
 }
 
+// StreamEvent represents a streaming output event
+type StreamEvent struct {
+	Type    string `json:"type"`    // "stdout", "stderr", "done", "error"
+	Content string `json:"content"` // Output content
+	ExitCode *int  `json:"exit_code,omitempty"` // Only for "done" events
+	Duration string `json:"duration,omitempty"`  // Only for "done" events
+	Error    string `json:"error,omitempty"`     // Only for "error" events
+}
+
+// RunStreaming executes code in a VM and streams output in real-time
+func (s *VMService) RunStreaming(ctx context.Context, opts VMRunOptions, eventChan chan<- StreamEvent) {
+	defer close(eventChan)
+
+	if opts.Timeout <= 0 {
+		eventChan <- StreamEvent{Type: "error", Error: "timeout must be positive"}
+		return
+	}
+	if opts.Command == "" {
+		eventChan <- StreamEvent{Type: "error", Error: "command is required"}
+		return
+	}
+
+	record, err := s.fetchRecord(opts.VMID)
+	if err != nil {
+		eventChan <- StreamEvent{Type: "error", Error: err.Error()}
+		return
+	}
+
+	if record.Status != "running" {
+		eventChan <- StreamEvent{Type: "error", Error: "vm is not running"}
+		return
+	}
+
+	if opts.File != "" {
+		if err := stageInputFile(opts.File, record.Storage.InputPath); err != nil {
+			eventChan <- StreamEvent{Type: "error", Error: err.Error()}
+			return
+		}
+	}
+
+	start := time.Now()
+
+	stdoutPath := filepath.Join(record.Storage.OutputPath, "stdout.log")
+	stderrPath := filepath.Join(record.Storage.OutputPath, "stderr.log")
+
+	// Determine working directory
+	workDir := record.Storage.Root
+	if record.Persist && record.Storage.PersistPath != "" {
+		workDir = record.Storage.PersistPath
+	}
+
+	// Execute with streaming
+	exitCode, err := s.executeCommandStreaming(ctx, opts.Command, opts.Timeout, stdoutPath, stderrPath, workDir, opts.Envs, eventChan)
+
+	duration := time.Since(start)
+
+	if err != nil {
+		eventChan <- StreamEvent{Type: "error", Error: err.Error()}
+		return
+	}
+
+	// Update record
+	record.LastRunAt = time.Now().UTC()
+	if err := s.store.Save(record); err != nil {
+		s.logger.Error("failed to save record after streaming run", map[string]any{"error": err.Error()})
+	}
+	s.mu.Lock()
+	s.cache[record.ID] = record
+	s.mu.Unlock()
+
+	// Send done event
+	eventChan <- StreamEvent{
+		Type:     "done",
+		ExitCode: &exitCode,
+		Duration: duration.String(),
+	}
+}
+
+func (s *VMService) executeCommandStreaming(ctx context.Context, command string, timeoutSecs int, stdoutPath, stderrPath, workDir string, envs map[string]string, eventChan chan<- StreamEvent) (int, error) {
+	// Create a context with timeout
+	execCtx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
+	defer cancel()
+
+	// Parse the command
+	args := parseCommandLine(command)
+	if len(args) == 0 {
+		return 0, errors.New("empty command")
+	}
+
+	// Create the command
+	cmd := exec.CommandContext(execCtx, args[0], args[1:]...)
+	cmd.Dir = workDir
+
+	// Set environment variables
+	if len(envs) > 0 {
+		cmd.Env = os.Environ()
+		for key, value := range envs {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	// Create pipes for streaming output
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return 0, err
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return 0, err
+	}
+
+	// Create files for writing output
+	stdoutFile, err := os.Create(stdoutPath)
+	if err != nil {
+		return 0, err
+	}
+	defer stdoutFile.Close()
+
+	stderrFile, err := os.Create(stderrPath)
+	if err != nil {
+		return 0, err
+	}
+	defer stderrFile.Close()
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return 0, err
+	}
+
+	// Stream stdout
+	go func() {
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			line := scanner.Text() + "\n"
+			// Write to file
+			stdoutFile.WriteString(line)
+			// Send to event channel
+			select {
+			case eventChan <- StreamEvent{Type: "stdout", Content: line}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Stream stderr
+	go func() {
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text() + "\n"
+			// Write to file
+			stderrFile.WriteString(line)
+			// Send to event channel
+			select {
+			case eventChan <- StreamEvent{Type: "stderr", Content: line}:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	// Wait for command to complete
+	err = cmd.Wait()
+
+	// Get exit code
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else if execCtx.Err() == context.DeadlineExceeded {
+			exitCode = 124 // Timeout exit code
+		} else {
+			exitCode = 1
+		}
+	}
+
+	return exitCode, nil
+}
+
 func parseCommandLine(command string) []string {
 	var args []string
 	var current strings.Builder
@@ -402,6 +582,22 @@ func (s *VMService) Get(vmID string) (VMRecord, bool) {
 		return VMRecord{}, false
 	}
 	return record, true
+}
+
+func (s *VMService) Update(record VMRecord) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Verify record exists
+	if _, exists := s.cache[record.ID]; !exists {
+		return errNotFound
+	}
+
+	// Update cache
+	s.cache[record.ID] = record
+
+	// Persist to disk
+	return s.store.Save(record)
 }
 
 func (s *VMService) GetVMWorkDir(vmID string) string {

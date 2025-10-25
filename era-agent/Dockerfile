@@ -30,6 +30,7 @@ RUN go mod download
 
 # Copy Go source files (updated for Deno support)
 COPY *.go ./
+COPY mcp ./mcp/
 
 # Copy Rust FFI artifacts to where Go expects them
 COPY --from=rust-builder /build/ffi/target/release/libagent_ffi.a ./ffi/target/debug/libagent_ffi.a

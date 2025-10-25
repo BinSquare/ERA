@@ -59,7 +59,89 @@ After updating the configuration, restart Claude Desktop completely. The ERA Age
 
 ## Available Tools
 
-The MCP server provides 9 tools for code execution and session management:
+The MCP server provides 14 tools for code execution and session management:
+
+### Language-Specific Quick Execution Tools
+
+These tools provide the easiest way to run code without managing sessions:
+
+#### era_python
+Execute Python code with a single command.
+
+**Claude Usage:**
+```
+Run this Python FizzBuzz:
+for i in range(1, 16):
+    if i % 15 == 0:
+        print(f'{i}: FizzBuzz')
+    elif i % 3 == 0:
+        print(f'{i}: Fizz')
+    elif i % 5 == 0:
+        print(f'{i}: Buzz')
+    else:
+        print(f'{i}: {i}')
+```
+
+**Features:**
+- Automatic Python 3 execution
+- Handles complex code (f-strings, loops, classes)
+- Clean output capture
+- Internet access enabled by default
+
+#### era_node
+Execute Node.js/JavaScript code.
+
+**Claude Usage:**
+```
+Run this in Node.js:
+const data = [1, 2, 3, 4, 5];
+console.log('Sum:', data.reduce((a, b) => a + b));
+console.log('Average:', data.reduce((a, b) => a + b) / data.length);
+```
+
+#### era_typescript
+Execute TypeScript with type checking.
+
+**Claude Usage:**
+```
+Run this TypeScript code:
+interface User {
+  name: string;
+  age: number;
+}
+
+const user: User = { name: 'Alice', age: 30 };
+console.log(`${user.name} is ${user.age} years old`);
+```
+
+#### era_deno
+Execute code with Deno runtime.
+
+**Claude Usage:**
+```
+Run this with Deno:
+const text = await Deno.readTextFile('/etc/hosts');
+console.log('First 5 lines:', text.split('\n').slice(0, 5));
+```
+
+#### era_shell
+Execute shell commands for system operations.
+
+**Claude Usage:**
+```
+Run these shell commands:
+- Check Python version: python3 --version
+- Install packages: pip install pandas numpy
+- List directory: ls -la
+```
+
+**Common Uses:**
+- **Package installation:** `pip install requests`, `npm install lodash`
+- **Environment setup:** `apt-get update && apt-get install -y git`
+- **File operations:** `mkdir data && cd data && wget [url]`
+- **System info:** `uname -a`, `df -h`, `free -m`
+
+### Core Execution Tools
 
 ### 1. era_execute_code
 
@@ -136,7 +218,32 @@ Delete a session and clean up its resources.
 Delete the Python session we created earlier.
 ```
 
-### 7. era_upload_file
+### 7. era_update_session
+
+Update session configuration like timeout and network access settings.
+
+**Parameters:**
+- `session_id` (string, required): Session ID to update
+- `default_timeout` (number, optional): Default timeout in seconds for all runs
+- `allowInternetAccess` (boolean, optional): Enable/disable outbound requests
+- `allowPublicAccess` (boolean, optional): Enable/disable inbound proxy requests
+
+**Example:**
+```
+Update the Python session to extend timeout to 10 minutes for long-running tasks.
+```
+
+**Example:**
+```
+Disable internet access for security reasons in the session.
+```
+
+**Use Cases:**
+- Extend timeout when tasks take longer than expected
+- Toggle network access based on security requirements
+- Adjust settings between different phases of a workflow
+
+### 8. era_upload_file
 
 Upload a file to a session workspace.
 
@@ -150,7 +257,7 @@ Upload a file to a session workspace.
 Upload a CSV file with this data to the session.
 ```
 
-### 8. era_read_file
+### 9. era_read_file
 
 Read a file from a session workspace.
 
@@ -163,7 +270,7 @@ Read a file from a session workspace.
 Show me the contents of results.txt from the session.
 ```
 
-### 9. era_list_files
+### 10. era_list_files
 
 List all files in a session workspace.
 
@@ -403,9 +510,162 @@ Then update your Claude Desktop configuration with your Worker URL:
 }
 ```
 
+## Example Workflows
+
+### Quick Python Execution
+
+**You:** "Run this Python code: `print([x**2 for x in range(10)])`"
+
+**Claude:** Uses `era_python` (automatically)
+
+**Result:**
+```
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+```
+
+### FizzBuzz with Logging
+
+**You:** "Write a FizzBuzz in Python and log each step"
+
+**Claude:** Uses `era_python` with complete logging code
+
+**Result:** Full FizzBuzz output with all steps logged
+
+### Installing Packages & Data Analysis
+
+**You:** "Create a Python session, install pandas, and analyze some data"
+
+**Claude:**
+1. Uses `era_create_session` → Gets session ID
+2. Uses `era_shell`: `pip install pandas`
+3. Uses `era_run_in_session` to analyze data with pandas
+
+### Multi-Language Algorithm Testing
+
+**You:** "Test quicksort in both Python and JavaScript"
+
+**Claude:**
+1. Uses `era_python` with quicksort implementation
+2. Uses `era_node` with quicksort implementation
+3. Compares results
+
+### Web Scraping with Packages
+
+**You:** "Scrape the top stories from Hacker News"
+
+**Claude:**
+1. Uses `era_create_session` (network already enabled!)
+2. Uses `era_shell`: `pip install requests beautifulsoup4`
+3. Uses `era_run_in_session` to scrape and parse HTML
+
+**Result:** Top stories listed
+
+## Code Execution Gotchas & Best Practices
+
+### ✅ What Works Great
+
+#### Complex Python Code
+Handles f-strings, loops, and complex syntax perfectly:
+
+```python
+for i in range(1, 16):
+    print(f'{i}: FizzBuzz' if i % 15 == 0 else f'{i}: Fizz' if i % 3 == 0 else i)
+```
+
+#### Multi-line Code
+Newlines and indentation are preserved exactly - no escaping needed.
+
+#### Special Characters
+Single quotes, double quotes, backticks all work in strings.
+
+### ⚠️ Common Pitfalls
+
+#### Pitfall 1: Using Generic Tool When Language-Specific Exists
+
+**Less Optimal:**
+```
+Execute this code with language python: print("Hello")
+```
+
+**Better:**
+```
+Use era_python: print("Hello")
+```
+
+#### Pitfall 2: Installing Packages Mid-Execution
+
+**Problem:** Code fails if package isn't installed
+
+**Solution:** Use `era_shell` first:
+```
+1. Create a Python session
+2. Use era_shell: pip install pandas
+3. Then run your pandas code
+```
+
+#### Pitfall 3: Assuming State Between Ephemeral Calls
+
+**Problem:** Variables don't persist between separate era_python calls
+
+**Solution:** Use sessions for stateful work
+
+### 🎯 Hosted vs Local Differences
+
+| Feature | Hosted (This) | Local MCP |
+|---------|---------------|-----------|
+| **Setup** | Just add URL | Need Docker/Firecracker |
+| **Network** | Enabled by default ✅ | Disabled by default |
+| **State** | Durable Objects (cloud) | Local filesystem |
+| **Scaling** | Automatic | Manual |
+| **Configuration** | URL only | Binary path + env vars |
+| **Internet Access** | Always available | Must enable per session |
+
+### 🚀 Performance Tips
+
+#### Choose the Right Tool
+
+| Scenario | Tool | Reason |
+|----------|------|--------|
+| Single Python script | `era_python` | Fast, no session overhead |
+| Multiple related runs | Session + `era_run_in_session` | State persistence |
+| Package installation | `era_shell` | System-level operations |
+| Web scraping | Session (network included!) | Persistent HTTP connections |
+
+#### Session vs Ephemeral
+
+**Use Ephemeral (`era_python`, etc.):**
+- Quick calculations
+- Independent scripts
+- No package dependencies
+
+**Use Sessions:**
+- Installing packages
+- Multi-step workflows
+- Building on previous state
+
+### 🛡️ Security & Limits
+
+#### Internet Access
+- **Enabled by default** (unlike local MCP)
+- All network requests allowed
+- Perfect for API calls and web scraping
+
+#### Resource Limits
+- **CPU:** 1 core per execution
+- **Memory:** 256 MiB default
+- **Timeout:** 30 seconds default (configurable)
+- **Execution:** Isolated Firecracker VMs
+
+#### Cloud Benefits
+- **Automatic scaling:** No infrastructure to manage
+- **Global deployment:** Cloudflare's edge network
+- **Persistent state:** Sessions survive across requests
+- **R2 storage:** Files persist in cloud storage
+
 ## Next Steps
 
 - Try the [REST API](/docs/hosted/api) for direct HTTP access
 - Learn about [session management](/docs/hosted/sessions)
 - Explore [multi-language support](/docs/features/languages)
 - Check out [example projects](/docs/examples)
+- Compare with [Local MCP](/docs/local/mcp-server) for self-hosted option

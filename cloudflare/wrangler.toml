@@ -17,7 +17,7 @@ binding = "ASSETS"
 name = "era-agent-container"
 class_name = "EraAgent"
 image = "../era-agent/Dockerfile"
-instance_type = "standard"
+instance_type = "standard-1"
 max_instances = 10
 
 # Durable Object binding (required for Containers)
@@ -32,6 +32,12 @@ class_name = "EraAgent"
 name = "SESSIONS"
 class_name = "SessionDO"
 
+# Storage Registry Durable Object binding
+# Tracks all storage resources created by sandboxed code
+[[durable_objects.bindings]]
+name = "STORAGE_REGISTRY"
+class_name = "StorageRegistry"
+
 # Migration (required for Durable Objects with Containers)
 [[migrations]]
 tag = "v1"
@@ -41,10 +47,30 @@ new_sqlite_classes = ["EraAgent"]
 tag = "v2"
 new_sqlite_classes = ["SessionDO"]
 
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["StorageRegistry"]
+
 # R2 bucket for session file storage
 [[r2_buckets]]
 binding = "SESSIONS_BUCKET"
 bucket_name = "era-sessions"
+
+# R2 bucket for storage proxy (accessible from sandboxed code)
+[[r2_buckets]]
+binding = "ERA_R2"
+bucket_name = "era-storage"
+
+# KV namespace for storage proxy (accessible from sandboxed code)
+[[kv_namespaces]]
+binding = "ERA_KV"
+id = "c91b21ce94a7417c9cbce40b61fc7a3e"
+
+# D1 database for storage proxy (accessible from sandboxed code)
+[[d1_databases]]
+binding = "ERA_D1"
+database_name = "era-storage"
+database_id = "02edc2cd-1061-4d98-8163-74353265f5cc"
 
 # Optional: Environment variables passed to your container
 [vars]

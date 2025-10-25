@@ -107,7 +107,38 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run 
 curl https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
 ```
 
-### 4. Clean Up
+### 4. Update Session Configuration
+
+You can update session settings at any time without recreating it:
+
+```bash
+# Update timeout for long-running tasks
+curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_timeout": 300
+  }'
+
+# Disable internet access
+curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "allowInternetAccess": false
+  }'
+
+# Update multiple settings
+curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_timeout": 600,
+    "allowInternetAccess": true,
+    "allowPublicAccess": false
+  }'
+```
+
+**See:** [Timeout Configuration Guide](/docs/guides/timeout-configuration) for detailed timeout management strategies.
+
+### 5. Clean Up
 
 ```bash
 curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID

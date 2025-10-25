@@ -26,21 +26,30 @@ export default defineConfig({
         {
           label: 'Getting Started',
           items: [
-            { label: 'Quickstart', slug: 'docs/quickstart' },
+            { label: 'Quickstart - Hosted (Cloudflare)', slug: 'docs/quickstart-hosted' },
+            { label: 'Quickstart - Local (Go/CLI)', slug: 'docs/quickstart-local' },
             { label: 'API Reference', slug: 'docs/api-reference' },
           ],
+        },
+        {
+          label: 'Hosted / Cloudflare',
+          autogenerate: { directory: 'docs/hosted' },
+        },
+        {
+          label: 'Local / Self-Hosted',
+          autogenerate: { directory: 'docs/local' },
         },
         {
           label: 'Guides',
           autogenerate: { directory: 'docs/guides' },
         },
         {
-          label: 'Hosted / Cloud',
-          autogenerate: { directory: 'docs/hosted' },
+          label: 'Examples',
+          autogenerate: { directory: 'docs/examples' },
         },
         {
-          label: 'Local / Self-Hosted',
-          autogenerate: { directory: 'docs/local' },
+          label: 'Tools',
+          autogenerate: { directory: 'docs/tools' },
         },
       ],
     }),

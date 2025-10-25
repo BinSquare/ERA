@@ -9,6 +9,7 @@ import {
   handleGetSession as apiGetSession,
   handleListSessions as apiListSessions,
   handleDeleteSession as apiDeleteSession,
+  handleUpdateSession as apiUpdateSession,
   handleListSessionFiles as apiListSessionFiles,
   handleUploadSessionFile,
   handleDownloadSessionFile,
@@ -19,9 +20,121 @@ import {
  */
 export function getTools(): MCPTool[] {
   return [
+    // Language-specific convenience tools
+    {
+      name: 'era_python',
+      description: 'Execute Python code in an isolated environment. Automatically handles Python 3 execution with clean output capture. Write clean Python code without extra escaping - newlines and indentation are preserved. Example: print("Hello World")',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'Python code to execute. Write clean Python code without extra escaping. Newlines and indentation are preserved.',
+          },
+          timeout: {
+            type: 'number',
+            description: 'Execution timeout in seconds (default: 30)',
+          },
+          allowInternetAccess: {
+            type: 'boolean',
+            description: 'Allow internet access (default: true)',
+          },
+        },
+        required: ['code'],
+      },
+    },
+    {
+      name: 'era_node',
+      description: 'Execute Node.js/JavaScript code in an isolated environment. Example: console.log("Hello from Node!")',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'JavaScript/Node.js code to execute',
+          },
+          timeout: {
+            type: 'number',
+            description: 'Execution timeout in seconds (default: 30)',
+          },
+          allowInternetAccess: {
+            type: 'boolean',
+            description: 'Allow internet access (default: true)',
+          },
+        },
+        required: ['code'],
+      },
+    },
+    {
+      name: 'era_typescript',
+      description: 'Execute TypeScript code with type checking in an isolated environment. Example: const x: string = "Hello"',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'TypeScript code to execute',
+          },
+          timeout: {
+            type: 'number',
+            description: 'Execution timeout in seconds (default: 30)',
+          },
+          allowInternetAccess: {
+            type: 'boolean',
+            description: 'Allow internet access (default: true)',
+          },
+        },
+        required: ['code'],
+      },
+    },
+    {
+      name: 'era_deno',
+      description: 'Execute code with Deno runtime in an isolated environment. Example: console.log("Hello from Deno!")',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          code: {
+            type: 'string',
+            description: 'Deno code to execute',
+          },
+          timeout: {
+            type: 'number',
+            description: 'Execution timeout in seconds (default: 30)',
+          },
+          allowInternetAccess: {
+            type: 'boolean',
+            description: 'Allow internet access (default: true)',
+          },
+        },
+        required: ['code'],
+      },
+    },
+    {
+      name: 'era_shell',
+      description: 'Execute shell commands for system operations like package installation, file operations, or system info. Common uses: pip install <package>, npm install <package>, apt-get install, ls, mkdir, etc. Example: pip install pandas',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          command: {
+            type: 'string',
+            description: 'Shell command to execute',
+          },
+          session_id: {
+            type: 'string',
+            description: 'Optional: Run in a specific session context. If not provided, creates an ephemeral environment.',
+          },
+          timeout: {
+            type: 'number',
+            description: 'Execution timeout in seconds (default: 30)',
+          },
+        },
+        required: ['command'],
+      },
+    },
+    // Core execution tools
     {
       name: 'era_execute_code',
-      description: 'Execute code in an ephemeral environment. Supports Python, Node.js, TypeScript, Go, and Deno. The environment is automatically cleaned up after execution.',
+      description: 'Execute code in an ephemeral environment. Supports Python, Node.js, TypeScript, Go, and Deno. The environment is automatically cleaned up after execution. Prefer using language-specific tools (era_python, era_node, etc.) for simpler usage.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -138,6 +251,32 @@ export function getTools(): MCPTool[] {
           session_id: {
             type: 'string',
             description: 'Session ID to delete',
+          },
+        },
+        required: ['session_id'],
+      },
+    },
+    {
+      name: 'era_update_session',
+      description: 'Update session configuration (timeout, network access, etc.)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          session_id: {
+            type: 'string',
+            description: 'Session ID to update',
+          },
+          default_timeout: {
+            type: 'number',
+            description: 'Default execution timeout in seconds for all runs in this session',
+          },
+          allowInternetAccess: {
+            type: 'boolean',
+            description: 'Allow outbound internet access',
+          },
+          allowPublicAccess: {
+            type: 'boolean',
+            description: 'Allow inbound requests via proxy',
           },
         },
         required: ['session_id'],
@@ -430,6 +569,60 @@ export async function handleDeleteSession(
 }
 
 /**
+ * Handle era_update_session tool call
+ */
+export async function handleUpdateSessionTool(
+  args: any,
+  env: Env
+): Promise<MCPToolResponse> {
+  const { session_id, default_timeout, allowInternetAccess, allowPublicAccess } = args;
+
+  if (!session_id) {
+    throw new Error('Missing required argument: session_id');
+  }
+
+  // Build update payload
+  const updates: any = {};
+  if (default_timeout !== undefined) {
+    updates.default_timeout = default_timeout;
+  }
+  if (allowInternetAccess !== undefined) {
+    updates.allowInternetAccess = allowInternetAccess;
+  }
+  if (allowPublicAccess !== undefined) {
+    updates.allowPublicAccess = allowPublicAccess;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('At least one field must be provided to update');
+  }
+
+  const apiRequest = new Request(`http://internal/api/sessions/${session_id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+
+  const response = await apiUpdateSession(session_id, apiRequest, env);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update session');
+  }
+
+  const result = await response.json();
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Session ${session_id} updated successfully.\n\nUpdated fields:\n${JSON.stringify(updates, null, 2)}`,
+      },
+    ],
+  };
+}
+
+/**
  * Handle era_upload_file tool call
  */
 export async function handleUploadFile(
@@ -574,4 +767,84 @@ function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${Math.round(bytes / Math.pow(k, i) * 100) / 100} ${sizes[i]}`;
+}
+
+/**
+ * Language-specific tool handlers
+ * These wrap handleExecuteCode with the language pre-filled
+ */
+
+export async function handlePython(
+  args: any,
+  env: Env,
+  stub: DurableObjectStub
+): Promise<MCPToolResponse> {
+  return handleExecuteCode({ ...args, language: 'python' }, env, stub);
+}
+
+export async function handleNode(
+  args: any,
+  env: Env,
+  stub: DurableObjectStub
+): Promise<MCPToolResponse> {
+  return handleExecuteCode({ ...args, language: 'node' }, env, stub);
+}
+
+export async function handleTypeScript(
+  args: any,
+  env: Env,
+  stub: DurableObjectStub
+): Promise<MCPToolResponse> {
+  return handleExecuteCode({ ...args, language: 'typescript' }, env, stub);
+}
+
+export async function handleDeno(
+  args: any,
+  env: Env,
+  stub: DurableObjectStub
+): Promise<MCPToolResponse> {
+  return handleExecuteCode({ ...args, language: 'deno' }, env, stub);
+}
+
+export async function handleShell(
+  args: any,
+  env: Env,
+  stub: DurableObjectStub
+): Promise<MCPToolResponse> {
+  const { command, session_id, timeout } = args;
+
+  if (!command) {
+    throw new Error('Missing required argument: command');
+  }
+
+  // If session_id is provided, run shell command in that session
+  if (session_id) {
+    // Wrap the shell command in a Python subprocess call
+    const pythonWrapper = `import subprocess
+import sys
+
+result = subprocess.run(['sh', '-c', ${JSON.stringify(command)}], capture_output=True, text=True)
+print(result.stdout, end='')
+if result.stderr:
+    print(result.stderr, file=sys.stderr, end='')
+sys.exit(result.returncode)`;
+
+    return handleRunInSession({ session_id, code: pythonWrapper, timeout }, env);
+  }
+
+  // Otherwise create ephemeral environment with wrapped shell command
+  const pythonWrapper = `import subprocess
+import sys
+
+result = subprocess.run(['sh', '-c', ${JSON.stringify(command)}], capture_output=True, text=True)
+print(result.stdout, end='')
+if result.stderr:
+    print(result.stderr, file=sys.stderr, end='')
+sys.exit(result.returncode)`;
+
+  return handleExecuteCode({
+    code: pythonWrapper,
+    language: 'python',
+    timeout,
+  }, env, stub);
 }

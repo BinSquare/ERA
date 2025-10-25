@@ -17,9 +17,15 @@ import {
   handleListSessions,
   handleGetSession,
   handleDeleteSession,
+  handleUpdateSessionTool,
   handleUploadFile,
   handleReadFile,
   handleListFiles,
+  handlePython,
+  handleNode,
+  handleTypeScript,
+  handleDeno,
+  handleShell,
 } from './tools';
 import { listResources, readResource } from './resources';
 
@@ -151,6 +157,23 @@ async function handleToolsCall(
 
   // Route to appropriate tool handler
   switch (name) {
+    // Language-specific convenience tools
+    case 'era_python':
+      return await handlePython(args, env, stub);
+
+    case 'era_node':
+      return await handleNode(args, env, stub);
+
+    case 'era_typescript':
+      return await handleTypeScript(args, env, stub);
+
+    case 'era_deno':
+      return await handleDeno(args, env, stub);
+
+    case 'era_shell':
+      return await handleShell(args, env, stub);
+
+    // Core execution tools
     case 'era_execute_code':
       return await handleExecuteCode(args, env, stub);
 
@@ -168,6 +191,9 @@ async function handleToolsCall(
 
     case 'era_delete_session':
       return await handleDeleteSession(args, env);
+
+    case 'era_update_session':
+      return await handleUpdateSessionTool(args, env);
 
     case 'era_upload_file':
       return await handleUploadFile(args, env);

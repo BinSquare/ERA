@@ -271,9 +271,98 @@ echo "Session deleted"
 {"code":"with open(\"results.txt\", \"w\") as f:\n    f.write(f\"Temperature Analysis\\n\")\n    f.write(f\"Average: {avg:.1f}°F\\n\")\n    f.write(f\"Range: {min_temp}°F - {max_temp}°F\\n\")\nprint(\"Results saved to results.txt\")"}
 ```
 
+---
+
+## Real-Time Streaming Output
+
+For LLM generation, progress tracking, or real-time feedback, use streaming output with Server-Sent Events (SSE).
+
+### Example: Stream Progress Updates
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time\nfor i in range(1, 6):\n    print(f\"Processing step {i}/5...\")\n    time.sleep(0.5)\nprint(\"Complete!\")"
+  }'
+```
+
+**Real-time output:**
+```
+event: stdout
+data: {"type":"stdout","content":"Processing step 1/5...\n"}
+
+event: stdout
+data: {"type":"stdout","content":"Processing step 2/5...\n"}
+
+event: stdout
+data: {"type":"stdout","content":"Processing step 3/5...\n"}
+
+event: done
+data: {"type":"done","exit_code":0,"duration":"2.5s"}
+```
+
+### Example: LLM Token Streaming
+
+Perfect for streaming AI-generated text:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/llm-demo/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time\ntokens = [\"The\", \"quick\", \"brown\", \"fox\"]\nfor token in tokens:\n    print(token, end=\" \", flush=True)\n    time.sleep(0.2)"
+  }'
+```
+
+**JSON Body for REST clients:**
+```json
+{"code":"import time\ntokens = [\"The\", \"quick\", \"brown\", \"fox\"]\nfor token in tokens:\n    print(token, end=\" \", flush=True)\n    time.sleep(0.2)"}
+```
+
+### JavaScript Client Example
+
+```javascript
+const response = await fetch(
+  'https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: 'import time\nfor i in range(10):\n    print(f"Line {i}")\n    time.sleep(0.5)'
+    })
+  }
+);
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const chunk = decoder.decode(value);
+  const lines = chunk.split('\n');
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const event = JSON.parse(line.slice(6));
+      if (event.type === 'stdout') {
+        console.log(event.content);
+      }
+    }
+  }
+}
+```
+
+**→ See [Streaming Output Guide](/docs/guides/streaming-output) for complete examples and best practices**
+
+---
+
 ## What's Next?
 
 - [API Reference](/docs/api-reference/) - Complete API documentation
+- [Streaming Output](/docs/guides/streaming-output/) - Real-time output streaming guide
+- [Streaming Examples](/docs/examples/streaming-examples/) - Copy-paste streaming examples
 - [Session Management](/docs/guides/sessions/) - Advanced session features
 - [Persistence](/docs/guides/persistence/) - Data and file storage
 - [File Operations](/docs/guides/files/) - Working with files

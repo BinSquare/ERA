@@ -392,7 +392,7 @@ jobs:
 
       - name: Create session
         run: |
-          curl -X POST ${{ secrets.ERA_API_URL }}/api/sessions \\
+          curl -X POST \${{ secrets.ERA_API_URL }}/api/sessions \\
             -H "Content-Type: application/json" \\
             -d '{
               "language": "node",
@@ -406,7 +406,7 @@ jobs:
       - name: Wait for setup
         run: |
           while true; do
-            STATUS=\$(curl -s ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }} | jq -r '.setup_status')
+            STATUS=\$(curl -s \${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }} | jq -r '.setup_status')
             [ "$STATUS" = "completed" ] && break
             sleep 5
           done
@@ -416,13 +416,13 @@ jobs:
 
       - name: Update code
         run: |
-          curl -X PUT ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/code \\
+          curl -X PUT \${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/code \\
             -H "Content-Type: application/json" \\
             -d '{"code": "require(\"./server.js\")"}'
 
       - name: Get deployment URL
         run: |
-          curl ${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/host?port=3000
+          curl \${{ secrets.ERA_API_URL }}/api/sessions/prod-\${{ github.sha }}/host?port=3000
 `} lang="yaml" title=".github/workflows/deploy.yml" />
 
 ---

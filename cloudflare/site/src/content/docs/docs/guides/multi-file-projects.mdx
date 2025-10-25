@@ -267,7 +267,7 @@ set -e
 
 SESSION_ID="$1"
 PROJECT_DIR="$2"
-API_URL="${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
+API_URL="\${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
 
 if [ -z "$SESSION_ID" ] || [ -z "$PROJECT_DIR" ]; then
   echo "Usage: $0 <session_id> <project_directory>"
