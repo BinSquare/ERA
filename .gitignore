@@ -8,6 +8,8 @@
 *.dll
 *.so
 *.dylib
+.cache/
+agent
 
 # Test binary, built with `go test -c`
 *.test
