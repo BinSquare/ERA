@@ -53,7 +53,7 @@ Packages with **many files** (500+) may take several minutes to set up:
 **For large packages**, consider using **Deno with `npm:` imports** (no setup needed).
 
 **→ See [SETUP.md](./SETUP.md) for complete documentation**
-**→ Run tests: `./test-setup.sh`**
+**→ Run tests: `./tests/test-setup.sh`**
 
 ---
 
@@ -261,7 +261,7 @@ curl -X POST https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/sessions \
 - `"failed"` → Setup encountered an error ❌
 
 **Full documentation:** [SETUP.md](./SETUP.md)
-**Test script:** `./test-setup.sh`
+**Test script:** `./tests/test-setup.sh`
 
 ## 🔧 What Happens During Deploy?
 

@@ -1,20 +1,21 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://era-agent.yawnxyz.workers.dev',
-  output: 'static', // Static site generation (no adapter needed)
-  build: {
-    // Output to parent dist folder so Worker can serve it
-    outDir: '../dist-astro'
-  },
+  output: 'static', // Static site generation
   base: '/', // Serve from root
   integrations: [
+    tailwind(),
     starlight({
       title: 'ERA Agent',
-      description: 'Ephemeral Runtime Agent Documentation',
+      description: 'ERA Runtime Agent Documentation',
+      customCss: [
+        './src/styles/custom.scss',
+      ],
       social: [
         {
           icon: 'github',

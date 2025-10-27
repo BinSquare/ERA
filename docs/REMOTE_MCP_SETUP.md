@@ -21,7 +21,7 @@ Comprehensive guide covering:
 
 ### 2. Test Script
 
-**File:** `test-mcp-remote.sh`
+**File:** `tests/test-mcp-remote.sh`
 
 Automated test script that validates:
 - Connection and initialization
@@ -110,7 +110,7 @@ Then restart Claude Desktop completely.
 Run the test script:
 ```bash
 cd cloudflare
-./test-mcp-remote.sh
+./tests/test-mcp-remote.sh
 ```
 
 Or test manually with cURL:

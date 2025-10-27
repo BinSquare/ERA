@@ -377,10 +377,10 @@ Run the test suite to verify storage proxy functionality:
 
 ```bash
 # Full test suite
-./test-storage.sh
+./tests/test-storage.sh
 
 # Simple quick test
-./test-storage-simple.sh
+./tests/test-storage-simple.sh
 ```
 
 ## Deployment
@@ -456,4 +456,4 @@ wrangler deploy
 
 ## Examples
 
-See `test-storage.sh` for comprehensive examples of all storage operations.
+See `tests/test-storage.sh` for comprehensive examples of all storage operations.

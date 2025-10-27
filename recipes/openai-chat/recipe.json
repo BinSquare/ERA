@@ -1,0 +1,16 @@
+{
+  "name": "openai-chat",
+  "title": "OpenAI Chat API",
+  "description": "Use GPT models for conversational AI and text generation",
+  "language": "node",
+  "entrypoint": "index.js",
+  "env_file": ".env.example",
+  "dependencies": {
+    "npm": ["openai"]
+  },
+  "tags": ["llm", "chat", "openai", "gpt"],
+  "env_required": ["OPENAI_API_KEY"],
+  "env_optional": ["PROMPT", "SYSTEM_PROMPT", "MODEL", "TEMPERATURE", "MAX_TOKENS"],
+  "estimated_runtime": "3-8s",
+  "api_docs": "https://platform.openai.com/docs"
+}

@@ -101,17 +101,38 @@ export async function installNpmPackages(
     }
   }
 
+  console.log(`[npm] Running: ${command}`);
+  console.log(`[npm] Packages: ${packagesList.join(', ')}`);
+
   const runRes = await agentStub.fetch(new Request(`http://agent/api/vm/${vmId}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ command, timeout: 300 }),
   }));
 
+  if (!runRes.ok) {
+    const errorText = await runRes.text();
+    console.error(`[npm] Request failed:`, errorText);
+    return {
+      success: false,
+      packages_installed: packagesList,
+      duration_ms: Date.now() - startTime,
+      stdout: '',
+      stderr: `Failed to execute: ${errorText}`,
+      exit_code: -1,
+    };
+  }
+
   const result = await runRes.json() as {
     exit_code: number;
     stdout: string;
     stderr: string;
   };
+
+  console.log(`[npm] Exit code: ${result.exit_code}`);
+  console.log(`[npm] Duration: ${Date.now() - startTime}ms`);
+  if (result.stdout) console.log(`[npm] stdout:`, result.stdout.substring(0, 500));
+  if (result.stderr) console.log(`[npm] stderr:`, result.stderr.substring(0, 500));
 
   return {
     success: result.exit_code === 0,

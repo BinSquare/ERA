@@ -5,8 +5,10 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
+    "build": "cd site && npm run build",
+    "start": "cd site && npm run build && wrangler dev",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "deploy": "yarn build && wrangler deploy",
     "tail": "wrangler tail",
     "login": "wrangler login",
     "whoami": "wrangler whoami"

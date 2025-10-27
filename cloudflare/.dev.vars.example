@@ -1,0 +1,12 @@
+# Local development environment variables for Cloudflare Worker
+# Copy this to .dev.vars and fill in your actual values
+# Used by: wrangler dev
+
+# API Keys for Recipes
+GROQ_API_KEY=gsk_your_api_key_here
+OPENAI_API_KEY=sk-your_api_key_here
+
+# Optional Recipe Defaults
+MODEL=llama-3.3-70b-versatile
+TEMPERATURE=0.7
+MAX_TOKENS=150

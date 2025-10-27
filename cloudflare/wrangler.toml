@@ -7,9 +7,14 @@ main = "src/index.ts"
 compatibility_date = "2024-10-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Development configuration
+[dev]
+port = 9494
+local_protocol = "http"
+
 # Static assets (Astro site)
 [assets]
-directory = "./dist-astro"
+directory = "./site/dist"
 binding = "ASSETS"
 
 # Container configuration
@@ -75,11 +80,13 @@ database_id = "02edc2cd-1061-4d98-8163-74353265f5cc"
 # Optional: Environment variables passed to your container
 [vars]
 AGENT_LOG_LEVEL = "info"
+ERA_STORAGE_URL = "https://era-agent.yawnxyz.workers.dev"
 
-# Optional: Custom domains (configure after deployment)
-# routes = [
-#   { pattern = "api.yourdomain.com", zone_name = "yourdomain.com" }
-# ]
+# Custom domain configuration for anewera.dev
+routes = [
+  { pattern = "anewera.dev/*", zone_name = "anewera.dev" },
+  { pattern = "www.anewera.dev/*", zone_name = "anewera.dev" }
+]
 
 # Workers settings
 # [limits]

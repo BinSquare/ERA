@@ -1,223 +1,60 @@
-<!DOCTYPE html>
+---
+import "../styles/custom.scss";
+---
+
+<!doctype html>
 <html lang="en">
-<head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width" />
-	<title>ERA Agent - Ephemeral Runtime Agent</title>
-	<style>
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
-		}
-		body {
-			font-family: system-ui, -apple-system, sans-serif;
-			line-height: 1.6;
-			color: #333;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			min-height: 100vh;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			padding: 2rem;
-		}
-		.container {
-			background: white;
-			border-radius: 1rem;
-			padding: 3rem;
-			max-width: 800px;
-			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-		}
-		h1 {
-			font-size: 3rem;
-			margin-bottom: 0.5rem;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			-webkit-background-clip: text;
-			-webkit-text-fill-color: transparent;
-			background-clip: text;
-		}
-		.subtitle {
-			font-size: 1.25rem;
-			color: #666;
-			margin-bottom: 2rem;
-		}
-		.section {
-			margin-bottom: 2rem;
-		}
-		.section h2 {
-			font-size: 1.5rem;
-			margin-bottom: 1rem;
-			color: #667eea;
-		}
-		.features {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 1rem;
-			margin-bottom: 2rem;
-		}
-		.feature {
-			background: #f7fafc;
-			padding: 1.5rem;
-			border-radius: 0.5rem;
-			border-left: 4px solid #667eea;
-		}
-		.feature h3 {
-			font-size: 1.1rem;
-			margin-bottom: 0.5rem;
-			color: #333;
-		}
-		.feature p {
-			font-size: 0.9rem;
-			color: #666;
-		}
-		.endpoints {
-			background: #1a202c;
-			color: #e2e8f0;
-			padding: 1.5rem;
-			border-radius: 0.5rem;
-			font-family: 'Courier New', monospace;
-			font-size: 0.9rem;
-			overflow-x: auto;
-		}
-		.endpoint {
-			margin-bottom: 0.75rem;
-			padding-bottom: 0.75rem;
-			border-bottom: 1px solid #2d3748;
-		}
-		.endpoint:last-child {
-			border-bottom: none;
-			margin-bottom: 0;
-			padding-bottom: 0;
-		}
-		.method {
-			display: inline-block;
-			padding: 0.25rem 0.5rem;
-			border-radius: 0.25rem;
-			font-weight: bold;
-			margin-right: 0.5rem;
-			font-size: 0.75rem;
-		}
-		.get { background: #38b2ac; }
-		.post { background: #4299e1; }
-		.put { background: #ed8936; }
-		.delete { background: #f56565; }
-		.path {
-			color: #90cdf4;
-		}
-		.desc {
-			margin-left: 5rem;
-			color: #a0aec0;
-			font-size: 0.85rem;
-		}
-		.status {
-			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-			margin-top: 2rem;
-			padding: 1rem;
-			background: #f7fafc;
-			border-radius: 0.5rem;
-		}
-		.status-dot {
-			width: 12px;
-			height: 12px;
-			border-radius: 50%;
-			background: #48bb78;
-			animation: pulse 2s ease-in-out infinite;
-		}
-		@keyframes pulse {
-			0%, 100% { opacity: 1; }
-			50% { opacity: 0.5; }
-		}
-		a {
-			color: #667eea;
-			text-decoration: none;
-		}
-		a:hover {
-			text-decoration: underline;
-		}
-	</style>
-</head>
-<body>
-	<div class="container">
-		<h1>ERA Agent</h1>
-		<p class="subtitle">Ephemeral Runtime Agent - Secure code execution on Cloudflare</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>ERA Runtime Agent</title>
+    <link rel="icon" type="image/png" href="/era-logo.png" />
+  </head>
+  <body>
+    <div class="container max-w-3xl mx-auto section-bordered-inset">
+      <div class="hero-page">
 
-		<div class="section">
-			<h2>Features</h2>
-			<div class="features">
-				<div class="feature">
-					<h3>🚀 Multiple Languages</h3>
-					<p>Python, Node.js, TypeScript, Go, Deno</p>
-				</div>
-				<div class="feature">
-					<h3>💾 Persistent Sessions</h3>
-					<p>Custom IDs, data & file storage</p>
-				</div>
-				<div class="feature">
-					<h3>🔒 Secure Execution</h3>
-					<p>Isolated VMs, network disabled</p>
-				</div>
-				<div class="feature">
-					<h3>⚡ Fast & Scalable</h3>
-					<p>Edge deployed, instant response</p>
-				</div>
-			</div>
-		</div>
+        <div class="section-bordered hero-container">
+          <!-- Hero Section with Conway Animation -->
+          <section
+            class="mt-6 relative w-full overflow-hidden bg-white border border-gray-300"
+          >
+            <div class="canvas-container">
+              <div class="title-overlay">
+                <!-- <div>ERA</div> -->
+                <div>ERA RUNTIME AGENT</div>
+              </div>
+              <canvas id="gridwormCanvas"></canvas>
+              <canvas id="gridBackground" class="grid-background"></canvas>
+              <!-- <div class="canvas-inner-border"></div> -->
+            </div>
+          </section>
+        </div>
 
-		<div class="section">
-			<h2>API Endpoints</h2>
-			<div class="endpoints">
-				<div class="endpoint">
-					<span class="method post">POST</span>
-					<span class="path">/api/execute</span>
-					<div class="desc">One-shot code execution</div>
-				</div>
-				<div class="endpoint">
-					<span class="method post">POST</span>
-					<span class="path">/api/sessions</span>
-					<div class="desc">Create persistent session</div>
-				</div>
-				<div class="endpoint">
-					<span class="method get">GET</span>
-					<span class="path">/api/sessions</span>
-					<div class="desc">List all sessions</div>
-				</div>
-				<div class="endpoint">
-					<span class="method get">GET</span>
-					<span class="path">/api/sessions/&#123;id&#125;</span>
-					<div class="desc">Get session metadata</div>
-				</div>
-				<div class="endpoint">
-					<span class="method post">POST</span>
-					<span class="path">/api/sessions/&#123;id&#125;/run</span>
-					<div class="desc">Execute code in session</div>
-				</div>
-				<div class="endpoint">
-					<span class="method post">POST</span>
-					<span class="path">/api/sessions/&#123;id&#125;/duplicate</span>
-					<div class="desc">Clone session</div>
-				</div>
-				<div class="endpoint">
-					<span class="method delete">DELETE</span>
-					<span class="path">/api/sessions/&#123;id&#125;</span>
-					<div class="desc">Delete session</div>
-				</div>
-			</div>
-		</div>
+        <!-- Content Section -->
+        <div class="py-16 px-4 section-bordered merge-top">
+          <h1 class="text-xl mb-4 font-normal">
+            welcome to the era of runtime agents.
+          </h1>
+          <h1 class="text-xl mb-12 font-normal">
+            securely run code, in any language...<br>
+            in virtual sandboxes, or on your own machine. <br>
+            (or on someone else's ;)
+          </h1>
 
-		<div class="status">
-			<div class="status-dot"></div>
-			<div>
-				<strong>Status:</strong> Operational
-				<br />
-				<span style="color: #666; font-size: 0.9rem;">
-					<a href="/health" target="_blank">Check health</a> |
-					<a href="/docs/quickstart/">Documentation</a> |
-					<a href="https://github.com/anthropics/claude-code" target="_blank">GitHub</a>
-				</span>
-			</div>
-		</div>
-	</div>
-</body>
+          <a href="/docs" class="inline-block border border-gray-300 px-4 py-2 font-mono text-sm hover:bg-gray-50 transition-colors">
+            Docs
+          </a>
+
+        </div>
+      </div>
+
+      <!-- Animation Script -->
+      <script type="module" is:inline>
+        import { initERAAnimation } from "/era-animation.js";
+        // Initialize the animation when the DOM is loaded
+        initERAAnimation();
+      </script>
+    </div>
+  </body>
 </html>

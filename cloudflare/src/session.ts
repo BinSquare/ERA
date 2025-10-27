@@ -62,6 +62,11 @@ export class SessionDO {
       });
     }
 
+    // POST /run-setup - Run package installation asynchronously
+    if (url.pathname === '/run-setup' && request.method === 'POST') {
+      return this.handleRunSetup(request);
+    }
+
     // POST /run - Run code with file injection/extraction
     if (url.pathname === '/run' && request.method === 'POST') {
       return this.handleRun(request);
@@ -127,7 +132,8 @@ export class SessionDO {
 
       try {
         // 2. INJECT: Upload files from R2 to VM
-        if (metadata.persistent) {
+        // Inject if persistent OR if setup was completed (has installed packages)
+        if (metadata.persistent || metadata.setup_status === 'completed') {
           await this.injectFiles(vmId, metadata.id, agentStub);
         }
 
@@ -216,6 +222,72 @@ export class SessionDO {
       return new Response(JSON.stringify({
         error: 'Failed to execute code',
         details: error instanceof Error ? error.message : String(error),
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  async handleRunSetup(request: Request): Promise<Response> {
+    try {
+      const { sessionId, language, setup } = await request.json() as {
+        sessionId: string;
+        language: string;
+        setup: SessionSetup;
+      };
+
+      // Update status to running immediately
+      const metadata = await this.state.storage.get<SessionMetadata>('metadata');
+      if (!metadata) {
+        return new Response(JSON.stringify({ error: 'Session not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      await this.state.storage.put('metadata', {
+        ...metadata,
+        setup_status: 'running',
+      });
+
+      // Run setup asynchronously (no waitUntil limits in Durable Objects!)
+      const agentStub = this.env.ERA_AGENT.get(this.env.ERA_AGENT.idFromName('primary'));
+
+      // Fire and forget - setup continues running
+      (async () => {
+        try {
+          const setupResult = await runSessionSetup(sessionId, language, setup, this.env, agentStub);
+
+          // Update session with result
+          const currentMetadata = await this.state.storage.get<SessionMetadata>('metadata');
+          await this.state.storage.put('metadata', {
+            ...currentMetadata,
+            setup_status: setupResult.success ? 'completed' : 'failed',
+            setup_result: setupResult,
+          });
+        } catch (error) {
+          console.error(`[Setup] Failed for session ${sessionId}:`, error);
+          const currentMetadata = await this.state.storage.get<SessionMetadata>('metadata');
+          await this.state.storage.put('metadata', {
+            ...currentMetadata,
+            setup_status: 'failed',
+            setup_result: {
+              success: false,
+              duration_ms: 0,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          });
+        }
+      })();
+
+      return new Response(JSON.stringify({ status: 'started' }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    } catch (error) {
+      return new Response(JSON.stringify({
+        error: error instanceof Error ? error.message : 'Setup failed',
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
@@ -417,21 +489,40 @@ export class SessionDO {
   // INJECT: R2 → VM
   async injectFiles(vmId: string, sessionId: string, agentStub: any): Promise<void> {
     const prefix = `sessions/${sessionId}/`;
-    const listed = await this.env.SESSIONS_BUCKET.list({ prefix });
+    let cursor: string | undefined;
+    let totalFiles = 0;
 
-    for (const obj of listed.objects) {
-      const path = obj.key.replace(prefix, '');
-      const content = await this.env.SESSIONS_BUCKET.get(obj.key);
-      if (!content) continue;
+    console.log(`[Inject] Starting file injection for session ${sessionId}`);
 
-      const bytes = await content.arrayBuffer();
+    // Paginate through all files in R2
+    do {
+      const listed = await this.env.SESSIONS_BUCKET.list({
+        prefix,
+        cursor,
+        limit: 1000,
+      });
 
-      // Upload to VM via Go agent file API
-      await agentStub.fetch(new Request(`http://agent/api/vm/${vmId}/files/${path}`, {
-        method: 'PUT',
-        body: bytes,
-      }));
-    }
+      console.log(`[Inject] Processing batch of ${listed.objects.length} files (total so far: ${totalFiles})`);
+
+      for (const obj of listed.objects) {
+        const path = obj.key.replace(prefix, '');
+        const content = await this.env.SESSIONS_BUCKET.get(obj.key);
+        if (!content) continue;
+
+        const bytes = await content.arrayBuffer();
+
+        // Upload to VM via Go agent file API
+        await agentStub.fetch(new Request(`http://agent/api/vm/${vmId}/files/${path}`, {
+          method: 'PUT',
+          body: bytes,
+        }));
+        totalFiles++;
+      }
+
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+
+    console.log(`[Inject] Completed: ${totalFiles} files injected`);
   }
 
   // EXTRACT: VM → R2

@@ -18,6 +18,9 @@ export interface Env {
   ERA_KV: KVNamespace;              // KV namespace for storage proxy
   ERA_D1: D1Database;               // D1 database for storage proxy
 
+  // Static assets binding (Astro site)
+  ASSETS: Fetcher;                  // Static assets served from ./site/dist
+
   // Environment variables
   ERA_AGENT_IMAGE?: string;         // Optional: custom Docker image
   ERA_STORAGE_URL?: string;         // Optional: URL for storage proxy (for VMs to access storage)

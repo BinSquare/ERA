@@ -32,7 +32,8 @@ export async function runSessionSetup(
 
   try {
     // Step 1: Create temporary VM for setup
-    console.log(`[Setup] Creating VM for session ${sessionId}`);
+    console.log(`[Setup] Creating VM for session ${sessionId} (language: ${language})`);
+    const vmCreateStart = Date.now();
 
     // Map TypeScript to node for setup VM (TypeScript runs on Node.js)
     const setupLanguage = language === 'typescript' ? 'node' : language;
@@ -51,12 +52,14 @@ export async function runSessionSetup(
 
     if (!createRes.ok) {
       const error = await createRes.text();
+      console.error(`[Setup] Failed to create VM:`, error);
       result.error = `Failed to create VM: ${error}`;
       return result;
     }
 
     const { id } = await createRes.json() as { id: string };
     vmId = id;
+    console.log(`[Setup] VM created: ${vmId} (took ${Date.now() - vmCreateStart}ms)`);
 
     // Step 2: Install pip packages (Python)
     if (setup.pip) {

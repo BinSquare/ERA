@@ -1,7 +1,6 @@
 import { Container, loadBalance } from '@cloudflare/containers';
 import { SessionDO, SessionMetadata } from './session';
 import { SessionSetup } from './plugins/types';
-import { runSessionSetup } from './plugins/session_setup';
 import { handleMCPRequest } from './mcp/server';
 import { handleKVOperation, handleD1Operation, handleR2Operation } from './storage-proxy';
 import { StorageRegistry } from './storage-registry';
@@ -163,10 +162,13 @@ export default {
       return await stub.fetch(request);
     }
 
+    // Handle additional doc redirects (Astro handles /docs/ → /docs/quickstart-hosted/)
+    if (url.pathname === '/docs/quickstart' || url.pathname === '/docs/quickstart/') {
+      return Response.redirect(new URL('/docs/quickstart-hosted/', request.url), 301);
+    }
+
     // For non-API routes, serve static assets (Astro site)
-    // @ts-ignore - ASSETS binding is added by wrangler config
     if (env.ASSETS) {
-      // @ts-ignore
       return await env.ASSETS.fetch(request);
     }
 
@@ -418,29 +420,15 @@ export async function handleCreateSession(request: Request, env: Env, ctx: Execu
   }));
 
   // Run setup asynchronously if provided (install packages, run commands, etc.)
-  // This allows long-running npm installs without hitting Worker timeout limits
+  // Delegate to Durable Object to avoid Worker's 30-second waitUntil limit
   if (setup) {
-    ctx.waitUntil((async () => {
-      const agentStub = env.ERA_AGENT.get(env.ERA_AGENT.idFromName('primary'));
-
-      // Update status to running
-      await stub.fetch(new Request('http://session/update', {
-        method: 'POST',
-        body: JSON.stringify({ setup_status: 'running' }),
-      }));
-
-      // Run setup
-      const setupResult = await runSessionSetup(sessionId, language, setup, env, agentStub);
-
-      // Update session metadata with setup result
-      await stub.fetch(new Request('http://session/update', {
-        method: 'POST',
-        body: JSON.stringify({
-          setup_status: setupResult.success ? 'completed' : 'failed',
-          setup_result: setupResult,
-        }),
-      }));
-    })());
+    // Fire and forget - DO will handle it
+    stub.fetch(new Request('http://session/run-setup', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, language, setup }),
+    })).catch(error => {
+      console.error(`[Setup] Failed to start setup for ${sessionId}:`, error);
+    });
   }
 
   // Register session in KV for listing

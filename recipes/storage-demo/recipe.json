@@ -1,0 +1,13 @@
+{
+  "name": "storage-demo",
+  "title": "ERA Storage Demo",
+  "description": "Complete demonstration of KV, D1, and R2 storage operations",
+  "language": "python",
+  "entrypoint": "index.py",
+  "dependencies": {},
+  "tags": ["storage", "kv", "d1", "r2", "demo"],
+  "env_required": [],
+  "env_optional": [],
+  "estimated_runtime": "2-4s",
+  "api_docs": "https://era-agent.yawnxyz.workers.dev/docs/guides/storage-proxy"
+}
