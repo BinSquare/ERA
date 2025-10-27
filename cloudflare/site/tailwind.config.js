@@ -12,7 +12,5 @@ export default {
   corePlugins: {
     preflight: false,
   },
-  // Add important flag to ensure Tailwind utilities work
-  important: '.hero-page',
 }
 

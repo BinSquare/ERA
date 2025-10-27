@@ -79,6 +79,32 @@
   --sl-color-gray-6: #d1d5db;
 }
 
+/* Override purple aside/callout colors with grayscale */
+.starlight-aside,
+[class*="starlight-aside"] {
+  /* Replace purple background with light gray */
+  background-color: #f3f4f6 !important;
+  /* Replace purple border with medium gray */
+  border-inline-start-color: #6b7280 !important;
+  /* Ensure accent color is gray */
+  accent-color: #6b7280 !important;
+  /* Override text accent color */
+  --sl-color-asides-text-accent: #4b5563 !important;
+  color: #4b5563 !important;
+}
+
+/* Dark mode aside overrides */
+:root[data-theme='dark'] {
+  .starlight-aside,
+  [class*="starlight-aside"] {
+    background-color: #1f2937 !important;
+    border-inline-start-color: #9ca3af !important;
+    accent-color: #9ca3af !important;
+    --sl-color-asides-text-accent: #9ca3af !important;
+    color: #d1d5db !important;
+  }
+}
+
 /* Lora Serif Typography */
 .georgia-text {
   font-family: 'Lora', Georgia, serif;
