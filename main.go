@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -41,6 +42,22 @@ func run(ctx context.Context, args []string) error {
 		}
 	}()
 
+	// Check if we should run as an API server
+	if len(args) > 0 && strings.ToLower(args[0]) == "server" {
+		serverAddr := ":8080" // Default address
+		// Check for --addr flag in remaining args
+		for i := 0; i < len(remaining); i++ {
+			if remaining[i] == "--addr" && i+1 < len(remaining) {
+				serverAddr = remaining[i+1]
+				break
+			}
+		}
+
+		apiServer := NewAPIServer(vmService, logger, serverAddr)
+		return apiServer.Start()
+	}
+
+	// Default to CLI mode
 	cli := NewCLI(logger, vmService)
 	if err := cli.Execute(ctx, remaining); err != nil {
 		logger.Error("command failed", map[string]any{"error": err.Error()})
