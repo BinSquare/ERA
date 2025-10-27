@@ -24,7 +24,7 @@ import "../styles/custom.scss";
                 <!-- <div>ERA</div> -->
                 <div>ERA RUNTIME AGENT</div>
               </div>
-              <canvas id="gridwormCanvas"></canvas>
+              <canvas id="conwayCanvas"></canvas>
               <canvas id="gridBackground" class="grid-background"></canvas>
               <!-- <div class="canvas-inner-border"></div> -->
             </div>
@@ -51,7 +51,8 @@ import "../styles/custom.scss";
 
       <!-- Animation Script -->
       <script type="module" is:inline>
-        import { initERAAnimation } from "/era-animation.js";
+        import { initERAAnimation
+} from "/era-animation.js";
         // Initialize the animation when the DOM is loaded
         initERAAnimation();
       </script>

@@ -717,7 +717,7 @@ export function updateCanvas(ctx, SCREEN_WIDTH, SCREEN_HEIGHT) {
 }
 
 export function initERAAnimation() {
-    const c = document.getElementById("gridwormCanvas");
+    const c = document.getElementById("conwayCanvas");
     const ctx = c.getContext("2d");
     
     // Get the canvas container's actual dimensions

@@ -1,5 +1,9 @@
 /* Custom styles for ERA Agent documentation */
 
+/* Protect Starlight from Tailwind by scoping Tailwind to hero-page only */
+/* Tailwind is configured with `important: '.hero-page'` to scope all utilities */
+/* This prevents Tailwind from affecting Starlight pages at all */
+
 /* Import Manrope font */
 @import '@fontsource/manrope/400.css';
 @import '@fontsource/manrope/500.css';
@@ -24,36 +28,55 @@
 @import '@fontsource/ibm-plex-mono/600.css';
 @import '@fontsource/ibm-plex-mono/700.css';
 
+/* Starlight Grayscale Color Overrides */
 :root {
+  /* Accent colors - use darker grayscale for better contrast */
   --sl-color-accent-low: #e5e7eb;
-  --sl-color-accent: #9ca3af;
-  --sl-color-text-accent: #ebebeb;
-  --sl-color-accent-high: #6b7280;
+  --sl-color-accent: #6b7280;
+  --sl-color-accent-high: #4b5563;
+  --sl-color-text-accent: #1f2937;
+
+  --sl-color-bg-inline-code: #f9fafb;
+  --sl-color-bg-inline-code-border: #e5e7eb;
+  --sl-color-bg-inline-code-text: #1f2937;
+  --sl-color-bg-inline-code-text-border: #6b7280;
+  --sl-color-bg-inline-code-text-border-hover: #4b5563;
+  --sl-color-bg-inline-code-text-border-hover-hover: #374151;
+  --sl-color-bg-inline-code-text-border-hover-hover-hover: #1f2937;
+  --sl-color-bg-inline-code-text-border-hover-hover-hover-hover: #0a0a0a;
+  
+  /* Gray scale palette - darker for light mode */
+  --sl-color-gray-1: #9ca3af;
+  --sl-color-gray-2: #9ca3af;
+  --sl-color-gray-3: #6b7280;
+  --sl-color-gray-4: #4f545e;
+  --sl-color-gray-5: #374151;
+  --sl-color-gray-6: #1f2937;
 }
 
-/* Override Starlight aside colors to grayscale */
-.starlight-aside--tip {
-  --sl-color-asides-text-accent: #6b7280;
-  --sl-color-asides-border: #9ca3af;
-  background-color: #f3f4f6;
-}
-
-.starlight-aside--note {
-  --sl-color-asides-text-accent: #6b7280;
-  --sl-color-asides-border: #9ca3af;
-  background-color: #f9fafb;
-}
-
-.starlight-aside--warning {
-  --sl-color-asides-text-accent: #6b7280;
-  --sl-color-asides-border: #9ca3af;
-  background-color: #f3f4f6;
-}
-
-.starlight-aside--danger {
-  --sl-color-asides-text-accent: #4b5563;
-  --sl-color-asides-border: #6b7280;
-  background-color: #f3f4f6;
+/* Dark mode grayscale colors */
+:root[data-theme='dark'] {
+  --sl-color-accent-low: #1f2937;
+  --sl-color-accent: #6b7280;
+  --sl-color-accent-high: #9ca3af;
+  --sl-color-text-accent: #d1d5db;
+  
+  --sl-color-bg-inline-code: #1f2937;
+  --sl-color-bg-inline-code-border: #374151;
+  --sl-color-bg-inline-code-text: #d1d5db;
+  --sl-color-bg-inline-code-text-border: #9ca3af;
+  --sl-color-bg-inline-code-text-border-hover: #6b7280;
+  --sl-color-bg-inline-code-text-border-hover-hover: #4b5563;
+  --sl-color-bg-inline-code-text-border-hover-hover-hover: #374151;
+  --sl-color-bg-inline-code-text-border-hover-hover-hover-hover: #1f2937;
+  --sl-color-bg-inline-code-text-border-hover-hover-hover-hover-hover: #0a0a0a;
+  
+  --sl-color-gray-1: #111827;
+  --sl-color-gray-2: #1f2937;
+  --sl-color-gray-3: #374151;
+  --sl-color-gray-4: #4b5563;
+  --sl-color-gray-5: #9ca3af;
+  --sl-color-gray-6: #d1d5db;
 }
 
 /* Lora Serif Typography */
@@ -73,6 +96,14 @@ body {
   background: #fff;
 }
 
+/* Dark mode body styles */
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #e5e7eb;
+    background: #0a0a0a;
+  }
+}
+
 /* Global monospace font */
 code, pre, .font-mono, [class*="font-mono"] {
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
@@ -87,6 +118,44 @@ code, pre, .font-mono, [class*="font-mono"] {
   margin: 0 auto;
   height: 300px;
   background-color: white;
+  
+  /* Add top and bottom borders like section-bordered */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: calc(-50vw + 50%);
+    width: 100vw;
+    height: 1px;
+    background-color: #d1d5db;
+    pointer-events: none;
+    z-index: 30;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: calc(-50vw + 50%);
+    width: 100vw;
+    height: 1px;
+    background-color: #d1d5db;
+    pointer-events: none;
+    z-index: 30;
+  }
+}
+
+/* Dark mode canvas container */
+@media (prefers-color-scheme: dark) {
+  .hero-page .canvas-container {
+    background-color: #0a0a0a;
+    
+    /* Dark mode borders */
+    &::before,
+    &::after {
+      background-color: #374151;
+    }
+  }
 }
 
 /* Responsive sizing */
@@ -129,6 +198,13 @@ code, pre, .font-mono, [class*="font-mono"] {
   gap: 6rem;
 }
 
+/* Dark mode title overlay */
+@media (prefers-color-scheme: dark) {
+  .hero-page .title-overlay {
+    color: rgba(255, 255, 255, 0.2);
+  }
+}
+
 /* Responsive typography and spacing */
 @media (min-width: 768px) {
   .hero-page .title-overlay {
@@ -155,13 +231,20 @@ code, pre, .font-mono, [class*="font-mono"] {
   z-index: 10;
 }
 
-.hero-page #gridwormCanvas {
+.hero-page #conwayCanvas {
   display: block;
   width: 100%;
   height: 100%;
   background-color: white;
   position: relative;
   z-index: 1;
+}
+
+/* Dark mode canvas */
+@media (prefers-color-scheme: dark) {
+  .hero-page #conwayCanvas {
+    background-color: #0a0a0a;
+  }
 }
 
 /* Links styling */
@@ -172,11 +255,40 @@ code, pre, .font-mono, [class*="font-mono"] {
   &:hover {
     color: #666;
   }
+  
+  /* Button-style links (with border class) */
+  &[class*="border"] {
+    text-decoration: none;
+    border: 1px solid #d1d5db !important;
+    
+    &:hover {
+      background-color: #f9fafb;
+    }
+  }
+}
+
+/* Dark mode links */
+@media (prefers-color-scheme: dark) {
+  .hero-page a {
+    color: #e5e7eb;
+    
+    &:hover {
+      color: #9ca3af;
+    }
+  }
 }
 
 /* Remove all rounded corners globally */
 .hero-page * {
   border-radius: 0 !important;
+}
+
+/* Exception: Don't override social icons border-radius */
+.sl-flex.social-icons,
+.social-icons {
+  * {
+    border-radius: revert !important;
+  }
 }
 
 /* Full-width horizontal separator line */
@@ -192,6 +304,13 @@ code, pre, .font-mono, [class*="font-mono"] {
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
   width: 100vw;
+}
+
+/* Dark mode separator */
+@media (prefers-color-scheme: dark) {
+  .hr-separator {
+    background-color: #374151; /* dark gray border */
+  }
 }
 
 /* Alternative: full-width divider class for sections */
@@ -231,6 +350,19 @@ code, pre, .font-mono, [class*="font-mono"] {
   }
 }
 
+/* Dark mode section divider */
+@media (prefers-color-scheme: dark) {
+  .section-divider {
+    &::before {
+      background-color: #374151;
+    }
+    
+    &.divider-double::after {
+      background-color: #374151;
+    }
+  }
+}
+
 /* Section with full-width top and bottom borders */
 .section-bordered {
   position: relative;
@@ -265,6 +397,19 @@ code, pre, .font-mono, [class*="font-mono"] {
   }
 }
 
+/* Dark mode section bordered */
+@media (prefers-color-scheme: dark) {
+  .section-bordered {
+    &::before {
+      background-color: #374151;
+    }
+    
+    &::after {
+      background-color: #374151;
+    }
+  }
+}
+
 /* Full-height vertical borders */
 .section-bordered-vertical {
   position: relative;
@@ -291,6 +436,19 @@ code, pre, .font-mono, [class*="font-mono"] {
     background-color: #d1d5db; /* border-gray-300 */
     pointer-events: none;
     z-index: 1000;
+  }
+}
+
+/* Dark mode vertical borders */
+@media (prefers-color-scheme: dark) {
+  .section-bordered-vertical {
+    &::before {
+      background-color: #374151;
+    }
+    
+    &::after {
+      background-color: #374151;
+    }
   }
 }
 
@@ -329,9 +487,42 @@ code, pre, .font-mono, [class*="font-mono"] {
   }
 }
 
+/* Dark mode inset borders */
+@media (prefers-color-scheme: dark) {
+  .section-bordered-inset {
+    &::before {
+      background-color: #374151;
+    }
+    
+    &::after {
+      background-color: #374151;
+    }
+  }
+}
 
 
-/* Hide elements with aria-hidden="true" */
-[aria-hidden="true"] {
+
+/* Hide doubled up left nav carets */
+.top-level .caret {
   display: none !important;
+}
+
+/* Dark mode overrides for Tailwind utility classes used in hero page */
+@media (prefers-color-scheme: dark) {
+  .bg-white {
+    background-color: #0a0a0a !important;
+  }
+  
+  .border-gray-300 {
+    border-color: #374151 !important;
+  }
+  
+  .hover\:bg-gray-50:hover {
+    background-color: #1f2937 !important;
+  }
+  
+  /* Ensure text remains visible in dark mode */
+  h1, h2, h3, h4, h5, h6 {
+    color: #e5e7eb;
+  }
 }

@@ -9,7 +9,6 @@ export default defineConfig({
   output: 'static', // Static site generation
   base: '/', // Serve from root
   integrations: [
-    tailwind(),
     starlight({
       title: 'ERA Agent',
       description: 'ERA Runtime Agent Documentation',
@@ -20,7 +19,7 @@ export default defineConfig({
         {
           icon: 'github',
           label: 'GitHub',
-          href: 'https://github.com/anthropics/claude-code',
+          href: 'https://github.com/BinSquare/ERA',
         },
       ],
       sidebar: [
@@ -54,5 +53,6 @@ export default defineConfig({
         },
       ],
     }),
+    tailwind(),
   ],
 });
