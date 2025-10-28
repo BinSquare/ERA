@@ -44,7 +44,7 @@
   --sl-color-bg-inline-code-text-border-hover-hover: #374151;
   --sl-color-bg-inline-code-text-border-hover-hover-hover: #1f2937;
   --sl-color-bg-inline-code-text-border-hover-hover-hover-hover: #0a0a0a;
-  
+
   /* Gray scale palette - darker for light mode */
   --sl-color-gray-1: #9ca3af;
   --sl-color-gray-2: #9ca3af;
@@ -60,7 +60,7 @@
   --sl-color-accent: #6b7280;
   --sl-color-accent-high: #9ca3af;
   --sl-color-text-accent: #d1d5db;
-  
+
   --sl-color-bg-inline-code: #1f2937;
   --sl-color-bg-inline-code-border: #374151;
   --sl-color-bg-inline-code-text: #d1d5db;
@@ -70,7 +70,7 @@
   --sl-color-bg-inline-code-text-border-hover-hover-hover: #374151;
   --sl-color-bg-inline-code-text-border-hover-hover-hover-hover: #1f2937;
   --sl-color-bg-inline-code-text-border-hover-hover-hover-hover-hover: #0a0a0a;
-  
+
   --sl-color-gray-1: #111827;
   --sl-color-gray-2: #1f2937;
   --sl-color-gray-3: #374151;
@@ -81,7 +81,7 @@
 
 /* Override purple aside/callout colors with grayscale */
 .starlight-aside,
-[class*="starlight-aside"] {
+[class*='starlight-aside'] {
   /* Replace purple background with light gray */
   background-color: #f3f4f6 !important;
   /* Replace purple border with medium gray */
@@ -96,7 +96,7 @@
 /* Dark mode aside overrides */
 :root[data-theme='dark'] {
   .starlight-aside,
-  [class*="starlight-aside"] {
+  [class*='starlight-aside'] {
     background-color: #1f2937 !important;
     border-inline-start-color: #9ca3af !important;
     accent-color: #9ca3af !important;
@@ -116,7 +116,8 @@
 
 /* Hero Page Styles - Namespaced */
 body {
-  font-family: 'Work Sans', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Work Sans', 'Manrope', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
   line-height: 1.6;
   color: #2d2c2b;
   background: #fff;
@@ -131,10 +132,12 @@ body {
 }
 
 /* Global monospace font */
-code, pre, .font-mono, [class*="font-mono"] {
+code,
+pre,
+.font-mono,
+[class*='font-mono'] {
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
 }
-
 
 /* Canvas container with nested grid border */
 .hero-page .canvas-container {
@@ -144,7 +147,7 @@ code, pre, .font-mono, [class*="font-mono"] {
   margin: 0 auto;
   height: 300px;
   background-color: white;
-  
+
   /* Add top and bottom borders like section-bordered */
   &::before {
     content: '';
@@ -157,7 +160,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     pointer-events: none;
     z-index: 30;
   }
-  
+
   &::after {
     content: '';
     position: absolute;
@@ -175,7 +178,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 @media (prefers-color-scheme: dark) {
   .hero-page .canvas-container {
     background-color: #0a0a0a;
-    
+
     /* Dark mode borders */
     &::before,
     &::after {
@@ -281,12 +284,12 @@ code, pre, .font-mono, [class*="font-mono"] {
   &:hover {
     color: #666;
   }
-  
+
   /* Button-style links (with border class) */
-  &[class*="border"] {
+  &[class*='border'] {
     text-decoration: none;
     border: 1px solid #d1d5db !important;
-    
+
     &:hover {
       background-color: #f9fafb;
     }
@@ -297,7 +300,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 @media (prefers-color-scheme: dark) {
   .hero-page a {
     color: #e5e7eb;
-    
+
     &:hover {
       color: #9ca3af;
     }
@@ -317,6 +320,14 @@ code, pre, .font-mono, [class*="font-mono"] {
   }
 }
 
+/* Fix social icons visibility in dark mode */
+:root[data-theme='dark'] {
+  .sl-flex.social-icons svg,
+  .social-icons svg {
+    filter: brightness(0) invert(1);
+  }
+}
+
 /* Full-width horizontal separator line */
 .hr-separator {
   position: relative;
@@ -325,7 +336,7 @@ code, pre, .font-mono, [class*="font-mono"] {
   border: none;
   height: 1px;
   background-color: #d1d5db; /* border-gray-300 */
-  
+
   /* Break out of container to full width */
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
@@ -342,7 +353,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 /* Alternative: full-width divider class for sections */
 .section-divider {
   position: relative;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -352,18 +363,18 @@ code, pre, .font-mono, [class*="font-mono"] {
     height: 1px;
     background-color: #d1d5db; /* border-gray-300 */
   }
-  
+
   /* Can also add a bottom border variant */
   &.divider-bottom::before {
     top: auto;
     bottom: 0;
   }
-  
+
   /* Thick divider variant */
   &.divider-thick::before {
     height: 2px;
   }
-  
+
   /* Double line variant */
   &.divider-double::after {
     content: '';
@@ -382,7 +393,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     &::before {
       background-color: #374151;
     }
-    
+
     &.divider-double::after {
       background-color: #374151;
     }
@@ -392,7 +403,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 /* Section with full-width top and bottom borders */
 .section-bordered {
   position: relative;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -402,7 +413,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     height: 1px;
     background-color: #d1d5db; /* border-gray-300 */
   }
-  
+
   &::after {
     content: '';
     position: absolute;
@@ -412,11 +423,11 @@ code, pre, .font-mono, [class*="font-mono"] {
     height: 1px;
     background-color: #d1d5db; /* border-gray-300 */
   }
-  
+
   /* When section-bordered comes after another section-bordered, merge borders */
   &.merge-top {
     margin-top: -1px;
-    
+
     &::before {
       display: none; /* Hide top border since previous section already has it */
     }
@@ -429,7 +440,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     &::before {
       background-color: #374151;
     }
-    
+
     &::after {
       background-color: #374151;
     }
@@ -439,7 +450,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 /* Full-height vertical borders */
 .section-bordered-vertical {
   position: relative;
-  
+
   &::before {
     content: '';
     position: fixed;
@@ -451,7 +462,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     pointer-events: none;
     z-index: 1000;
   }
-  
+
   &::after {
     content: '';
     position: fixed;
@@ -471,7 +482,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     &::before {
       background-color: #374151;
     }
-    
+
     &::after {
       background-color: #374151;
     }
@@ -487,7 +498,7 @@ code, pre, .font-mono, [class*="font-mono"] {
 /* Vertical borders aligned to container content area */
 .section-bordered-inset {
   position: relative;
-  
+
   &::before {
     content: '';
     position: fixed;
@@ -499,7 +510,7 @@ code, pre, .font-mono, [class*="font-mono"] {
     pointer-events: none;
     z-index: 1000;
   }
-  
+
   &::after {
     content: '';
     position: fixed;
@@ -519,14 +530,12 @@ code, pre, .font-mono, [class*="font-mono"] {
     &::before {
       background-color: #374151;
     }
-    
+
     &::after {
       background-color: #374151;
     }
   }
 }
-
-
 
 /* Hide doubled up left nav carets */
 .top-level .caret {
@@ -538,17 +547,22 @@ code, pre, .font-mono, [class*="font-mono"] {
   .bg-white {
     background-color: #0a0a0a !important;
   }
-  
+
   .border-gray-300 {
     border-color: #374151 !important;
   }
-  
+
   .hover\:bg-gray-50:hover {
     background-color: #1f2937 !important;
   }
-  
+
   /* Ensure text remains visible in dark mode */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: #e5e7eb;
   }
 }
