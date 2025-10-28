@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
+	"os/exec"
 	"strings"
-	"syscall"
 )
 
 func main() {
@@ -16,8 +15,11 @@ func main() {
 }
 
 func run(ctx context.Context, args []string) error {
-	// Check if we should run as HTTP server
-	mode := strings.ToLower(strings.TrimSpace(os.Getenv("AGENT_MODE")))
+	// Check if another instance is running
+	if err := checkForRunningInstance(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return err
+	}
 
 	opts, remaining, err := parseGlobalOptions(args)
 	if err != nil {
@@ -25,41 +27,44 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 
-	logger := NewLogger(opts.LogLevel)
-
-	// Check if we're running MCP mode first
-	isMCPMode := len(remaining) > 0 && remaining[0] == "mcp"
-
-	vmService, err := NewVMService(logger)
+	logger, err := NewLogger(opts.LogLevel, opts.LogFile)
 	if err != nil {
-		if isMCPMode {
-			// In MCP mode, warn but continue - allows testing tools without VM infrastructure
-			logger.Error("VM service init failed - MCP server will start but code execution won't work", map[string]any{
-				"error": err.Error(),
-				"help":  "To actually run code, ensure Docker/Firecracker is available",
-			})
-			// Use a stub VM service for MCP mode
-			vmService = nil
-		} else {
-			// For other modes, VM service is required
-			logger.Error("failed to init vm service", map[string]any{"error": err.Error()})
-			return err
-		}
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		return err
 	}
 	defer func() {
-		if vmService != nil {
-			if cerr := vmService.Close(); cerr != nil {
-				logger.Error("failed to close vm store", map[string]any{"error": cerr.Error()})
-			}
+		if cerr := logger.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "error closing logger: %v\n", cerr)
 		}
 	}()
 
-	// Run as HTTP server if mode is set or if first arg is "serve"
-	if mode == "http" || mode == "server" || (len(remaining) > 0 && remaining[0] == "serve") {
-		return runHTTPServer(ctx, vmService, logger)
+	vmService, err := NewVMService(logger, opts.VMRuntime)
+	if err != nil {
+		logger.Error("failed to init vm service", map[string]any{"error": err.Error()})
+		return err
+	}
+	defer func() {
+		if cerr := vmService.Close(); cerr != nil {
+			logger.Error("failed to close vm store", map[string]any{"error": cerr.Error()})
+		}
+	}()
+
+	// Check if we should run as an API server
+	if len(args) > 0 && strings.ToLower(args[0]) == "server" {
+		serverAddr := ":8080" // Default address
+		// Check for --addr flag in remaining args
+		for i := 0; i < len(remaining); i++ {
+			if remaining[i] == "--addr" && i+1 < len(remaining) {
+				serverAddr = remaining[i+1]
+				break
+			}
+		}
+
+		apiServer := NewAPIServer(vmService, logger, serverAddr)
+		return apiServer.Start()
 	}
 
-	// Otherwise run as CLI
+	// Default to CLI mode
 	cli := NewCLI(logger, vmService)
 	if err := cli.Execute(ctx, remaining); err != nil {
 		logger.Error("command failed", map[string]any{"error": err.Error()})
@@ -68,27 +73,63 @@ func run(ctx context.Context, args []string) error {
 	return nil
 }
 
-func runHTTPServer(ctx context.Context, vmService *VMService, logger *Logger) error {
-	// Setup signal handling for graceful shutdown
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+// checkForRunningInstance checks if another instance of the agent is already running
+func checkForRunningInstance() error {
+	// Use ps with full command line to identify agent processes
+	cmd := exec.Command("ps", "-eo", "pid,command")
+	output, err := cmd.Output()
+	if err != nil {
+		// If ps fails, we can't check, so assume it's safe to proceed
+		return nil
+	}
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	psOutput := string(output)
+	lines := strings.Split(psOutput, "\n")
+	currentPID := os.Getpid()
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// Split the line to get PID and full command
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		
+		pidStr := fields[0]
+		
+		// Skip header line
+		if pidStr == "PID" {
+			continue
+		}
+		
+		// Reconstruct the command by joining the remaining fields
+		command := strings.Join(fields[1:], " ")
+		
+		// Convert PID to integer to check against current process
+		if pidStr == fmt.Sprintf("%d", currentPID) {
+			continue
+		}
+		
+		// Check if the command contains "agent" and ends with "agent" as an executable
+		// This distinguishes from other processes that might contain "agent" like "logioptionsplus_agent"
+		// Also look for common execution patterns
+		if strings.Contains(command, "agent") {
+			// Check if the executable part of the command is "agent" or contains "/agent"
+			// Split by spaces and look for the executable name
+			cmdParts := strings.Fields(command)
+			if len(cmdParts) > 0 {
+				executable := cmdParts[0]
+				// Check if the executable is the agent binary (has "agent" as the final part of the path)
+				if strings.Contains(executable, "/agent") || executable == "agent" || executable == "./agent" {
+					return fmt.Errorf("another instance of agent is already running with PID %s", pidStr)
+				}
+			}
+		}
+	}
 
-	go func() {
-		<-sigCh
-		logger.Info("received shutdown signal", nil)
-		cancel()
-	}()
-
-	port := getenvOrDefault("PORT", "8787")
-	server := NewHTTPServer(vmService, logger, port)
-
-	logger.Info("starting agent in http server mode", map[string]any{
-		"port": port,
-		"env":  "Set AGENT_MODE=http or run './agent serve' to start server",
-	})
-
-	return server.Start(ctx)
+	return nil
 }
