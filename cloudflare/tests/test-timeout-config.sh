@@ -3,7 +3,7 @@
 
 set -e
 
-API_URL="${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
+API_URL="${ERA_API_URL:-https://anewera.dev}"
 TIMESTAMP=$(date +%s)
 
 # Colors

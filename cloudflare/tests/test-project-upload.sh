@@ -4,7 +4,7 @@
 
 set -e
 
-API_URL="${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
+API_URL="${ERA_API_URL:-https://anewera.dev}"
 SESSION_ID="test-multi-file-$(date +%s)"
 TEST_PROJECT="/tmp/era-test-project"
 

@@ -1,9 +1,19 @@
 #!/bin/bash
 
 # Check ERA Agent Container Status
-# This script checks if the container is provisioned and ready
+# 
+# This script checks if your deployed Cloudflare Container is ready and responding.
+# Useful after deploying to verify the container has fully provisioned.
+#
+# Usage: ./check-container.sh
+# 
+# What it does:
+# - Polls the /health endpoint until container responds
+# - Waits up to 5 minutes (20 attempts x 15 seconds)
+# - Shows status messages during provisioning
+# - Provides next steps once ready
 
-URL="https://era-agent.yawnxyz.workers.dev/health"
+URL="https://anewera.dev/health"
 MAX_ATTEMPTS=20
 WAIT_TIME=15
 
@@ -16,8 +26,8 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
     
     RESPONSE=$(curl -s "$URL" 2>&1)
     
-    # Check if we got a successful response
-    if echo "$RESPONSE" | grep -q '"status"'; then
+    # Check if we got a successful response (check for both "healthy" and "status" fields)
+    if echo "$RESPONSE" | grep -q '"healthy"' || echo "$RESPONSE" | grep -q '"status"'; then
         echo ""
         echo "✅ SUCCESS! Container is ready!"
         echo ""
@@ -27,11 +37,11 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
         echo "🎉 Your ERA Agent is fully operational!"
         echo ""
         echo "Try these commands:"
-        echo "  # List VMs"
-        echo "  curl $URL/../api/vms"
+        echo "  # Create a session"
+        echo "  curl -X POST https://anewera.dev/api/sessions -H 'Content-Type: application/json' -d '{\"language\":\"python\"}'"
         echo ""
-        echo "  # Create a VM"
-        echo "  curl -X POST $URL/../api/vm -H 'Content-Type: application/json' -d '{\"language\":\"python\"}'"
+        echo "  # List sessions"
+        echo "  curl https://anewera.dev/api/sessions"
         echo ""
         exit 0
     elif echo "$RESPONSE" | grep -q "provisioning"; then

@@ -13,7 +13,6 @@ import "../styles/custom.scss";
   <body>
     <div class="container max-w-3xl mx-auto section-bordered-inset">
       <div class="hero-page">
-
         <div class="section-bordered hero-container">
           <!-- Hero Section with Conway Animation -->
           <section
@@ -33,38 +32,129 @@ import "../styles/custom.scss";
 
         <!-- Content Section -->
         <div class="py-16 px-4 section-bordered merge-top">
-          <div style="max-width: 38rem; margin: 0 auto;">
-            <h1 class="text-2xl mb-6 font-light tracking-wide" style="text-align: center; font-family: 'Manrope', sans-serif; letter-spacing: -0.02em;">
+          <div class="hero-content-wrapper">
+            <h1 class="text-2xl mb-6 font-light tracking-wide hero-title">
               Welcome to the ERA of Runtime for Agents
             </h1>
-            <h1 class="text-base mb-8 font-light leading-relaxed" style="text-align: center; font-family: 'Manrope', sans-serif; letter-spacing: 0.01em; opacity: 0.85;">
-              Securely run any code, in any language, with no repercussions.<br>
-              <br>
-              ERA is an open-source project providing fast and secure runtime environments with persistent storage for running your AI-agents. Want to self-host? Get started with our documentation.
+            <h1 class="text-base mb-8 font-light leading-relaxed hero-subtitle">
+              Securely run any code, in any language, with no repercussions.<br
+              />
+              <br />
+              ERA is an open-source project providing fast and secure runtime environments
+              with persistent storage for running your AI-agents. Want to self-host?
+              Get started with our documentation.
             </h1>
 
-            <div style="text-align: center;">
-              <a href="/docs" class="inline-block border border-gray-300 px-6 py-3 font-mono text-sm hover:bg-gray-50 transition-colors" style="letter-spacing: 0.05em;">
+            <div class="text-center">
+              <a
+                href="/docs"
+                class="inline-block border border-gray-300 px-6 py-3 font-mono text-sm hover:bg-gray-50 transition-colors hero-button"
+              >
                 VIEW DOCS
               </a>
             </div>
           </div>
-          
         </div>
         <!-- Waitlist Section -->
-        <div style="max-width: 38rem; margin: 0 auto; text-align: center;">
-          <p class="text-sm font-light" style="font-family: 'Manrope', sans-serif; letter-spacing: 0.01em; opacity: 0.85; margin-bottom: 1rem;">
-            Get early access to fully managed ERA Cloud
+        <div class="hero-waitlist-wrapper mx-auto w-full max-w-3xl">
+          <p class="text-center mt-12 mb-4">
+            Get early access to fully managed ERA Cloud!
           </p>
+
+          <!-- Custom Email Signup -->
+          <form
+            id="emailSignup"
+            class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mt-6 font-sans"
+          >
+            <input
+              type="email"
+              id="emailInput"
+              placeholder="Enter your email"
+              required
+              class="text-md flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
+            />
+            <button
+              type="submit"
+              class="px-6 py-3 border-2 border-gray-500 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium font-sans"
+            >
+              Sign Up
+            </button>
+          </form>
+          <div id="signupMessage" class="text-center mt-4"></div>
         </div>
-        <script src="https://getlaunchlist.com/js/widget.js" defer></script>
-        <div class="launchlist-widget" data-key-id="rBjg2z" data-height="180px"></div>
+
+        <!-- Commented out Launchlist widget -->
+        <!-- <script src="https://getlaunchlist.com/js/widget.js" defer></script> -->
+        <!-- <div class="launchlist-widget" data-key-id="rBjg2z" data-height="180px"></div> -->
+
+        <script type="module">
+          const form = document.getElementById("emailSignup");
+          const messageDiv = document.getElementById("signupMessage");
+
+          form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("emailInput").value;
+            const submitButton = form.querySelector('button[type="submit"]');
+
+            // Disable button and show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = "Signing up...";
+            messageDiv.textContent = "";
+
+             try {
+               const payload = {
+                 sheetUrl:
+                   "https://script.google.com/macros/s/AKfycbzdnuXjpFbuIsFqtB473TrPdTjI7xGt5cCyBh2p98NriX7i-pD96CqPxBzj7eeFyZajfQ/exec",
+                 sheet: "Signups",
+                 data: {
+                   Email: email,
+                 },
+               };
+               
+               console.log("Sending payload:", payload);
+               
+               const response = await fetch(
+                 "https://yawnxyz--fb461022b44411f0a14b0224a6c84d84.web.val.run/log",
+                 {
+                   method: "POST",
+                   headers: {
+                     "Content-Type": "application/json",
+                   },
+                   body: JSON.stringify(payload),
+                 }
+               );
+
+               console.log("Response status:", response.status);
+               console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+               
+               const responseText = await response.text();
+               console.log("Response body:", responseText);
+
+               if (response.ok) {
+                 messageDiv.textContent = "✓ Thanks for signing up!";
+                 messageDiv.className = "text-center mt-4 text-green-600";
+                 form.reset();
+               } else {
+                 console.error("Server error:", responseText);
+                 throw new Error("Signup failed: " + responseText);
+               }
+             } catch (error) {
+               console.error("Error details:", error);
+               messageDiv.textContent =
+                 "✗ Something went wrong. Please try again.";
+               messageDiv.className = "text-center mt-4 text-red-600";
+             } finally {
+              submitButton.disabled = false;
+              submitButton.textContent = "Sign Up";
+            }
+          });
+        </script>
       </div>
 
       <!-- Animation Script -->
       <script type="module" is:inline>
-        import { initERAAnimation
-} from "/era-animation.js";
+        import { initERAAnimation } from "/era-animation.js";
         // Initialize the animation when the DOM is loaded
         initERAAnimation();
       </script>

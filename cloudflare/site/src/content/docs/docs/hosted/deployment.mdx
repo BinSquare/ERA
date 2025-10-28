@@ -7,7 +7,7 @@ Deploy your own ERA Agent instance on Cloudflare Workers to get a dedicated, cus
 
 ## Why Deploy Your Own?
 
-While you can use the public ERA Agent at `https://era-agent.yawnxyz.workers.dev`, deploying your own instance gives you:
+While you can use the public ERA Agent at `https://anewera.dev`, deploying your own instance gives you:
 
 - **🔐 Private Access** - Control who can use your instance
 - **⚙️ Custom Configuration** - Adjust limits, timeouts, and settings
@@ -92,7 +92,7 @@ bucket_name = "era-sessions"
 # Container runtime bindings
 [container_runtime]
 # Configure container execution
-instance_type = "standard-1"
+instance_type = "standard"
 ```
 
 ### Custom Domain
@@ -310,7 +310,7 @@ Optimize for your workload:
 ```toml
 [container_runtime]
 # Standard tier: 1 CPU, 256 MB
-instance_type = "standard-1"
+instance_type = "standard"
 
 # Or upgrade for more resources
 # instance_type = "standard-2"  # 2 CPU, 512 MB

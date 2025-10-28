@@ -18,7 +18,7 @@ ERA Agent allows you to **store code directly in a session** and update it at an
 ### 1. Create a Session
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -31,7 +31,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ### 2. Store Initial Code
 
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+curl -X PUT https://anewera.dev/api/sessions/my-api/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(\"Hello from ERA!\")",
@@ -45,20 +45,20 @@ When you run without providing code, it automatically uses the stored code:
 
 ```bash
 # No "code" field needed - uses stored code
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/run \
+curl -X POST https://anewera.dev/api/sessions/my-api/run \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
 
 **Or via proxy URL:**
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/proxy/my-api/8000/test
+curl https://anewera.dev/proxy/my-api/8000/test
 ```
 
 ### 4. Update the Code
 
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+curl -X PUT https://anewera.dev/api/sessions/my-api/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(\"Updated version 2!\")",
@@ -78,7 +78,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
 
 ```bash
 # Create session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "session_id": "stripe-webhook",
@@ -88,7 +88,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Store basic handler (v1)
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+curl -X PUT https://anewera.dev/api/sessions/stripe-webhook/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    print(json.dumps({\"status\": \"received\", \"version\": 1}))",
@@ -96,14 +96,14 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/co
   }'
 
 # Get public URL
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/host?port=8000
-# URL: https://era-agent.yawnxyz.workers.dev/proxy/stripe-webhook/8000
+curl https://anewera.dev/api/sessions/stripe-webhook/host?port=8000
+# URL: https://anewera.dev/proxy/stripe-webhook/8000
 ```
 
 **Step 2: Add Validation**
 
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+curl -X PUT https://anewera.dev/api/sessions/stripe-webhook/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    method = os.getenv(\"ERA_HTTP_METHOD\")\n    if method != \"POST\":\n        print(json.dumps({\"error\": \"Only POST allowed\"}))\n    else:\n        print(json.dumps({\"status\": \"received\", \"version\": 2}))",
@@ -114,7 +114,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/co
 **Step 3: Process Payload**
 
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/code \
+curl -X PUT https://anewera.dev/api/sessions/stripe-webhook/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os, json\nif os.getenv(\"ERA_REQUEST_MODE\") == \"proxy\":\n    body = os.getenv(\"ERA_HTTP_BODY\")\n    data = json.loads(body or \"{}\")\n    event_type = data.get(\"type\")\n    print(json.dumps({\"status\": \"processed\", \"event\": event_type, \"version\": 3}))",
@@ -151,7 +151,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/stripe-webhook/co
 
 **Example:**
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code \
+curl -X PUT https://anewera.dev/api/sessions/my-session/code \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(\"Hello World\")",
@@ -175,7 +175,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code \
 
 **Example:**
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code
+curl https://anewera.dev/api/sessions/my-session/code
 ```
 
 ## Complete Examples
@@ -208,7 +208,7 @@ if os.getenv("ERA_REQUEST_MODE") == "proxy":
 
 **Store it:**
 ```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/code \
+curl -X PUT https://anewera.dev/api/sessions/my-api/code \
   -H "Content-Type: application/json" \
   -d @- <<'EOF'
 {
@@ -276,7 +276,7 @@ if (process.env.ERA_REQUEST_MODE === 'proxy') {
 If you have stored code and run without providing code:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -288,7 +288,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 You can override stored code for one-off executions:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(\"One-time test\")"
@@ -302,7 +302,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 If there's no stored code and you don't provide code:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -352,7 +352,7 @@ curl .../proxy/my-session/8000/test
 
 ```bash
 # Download current code before major updates
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/code > backup.json
+curl https://anewera.dev/api/sessions/my-session/code > backup.json
 ```
 
 ## Use Cases
@@ -363,7 +363,7 @@ Update your webhook processing logic without re-registering with external servic
 
 ```bash
 # Register once with Stripe/GitHub/etc
-URL: https://era-agent.yawnxyz.workers.dev/proxy/webhook/8000
+URL: https://anewera.dev/proxy/webhook/8000
 
 # Update handler anytime
 curl -X PUT .../webhook/code -d '{"code": "new_logic"}'
@@ -375,7 +375,7 @@ Iterate on your API without changing URLs:
 
 ```bash
 # Share API URL with clients
-URL: https://era-agent.yawnxyz.workers.dev/proxy/api-v1/8000
+URL: https://anewera.dev/proxy/api-v1/8000
 
 # Add features, fix bugs, improve performance
 curl -X PUT .../api-v1/code -d '{"code": "improved_version"}'
@@ -387,7 +387,7 @@ Create live coding demonstrations:
 
 ```bash
 # Share demo URL in presentation
-URL: https://era-agent.yawnxyz.workers.dev/proxy/demo/8000
+URL: https://anewera.dev/proxy/demo/8000
 
 # Update demo code during presentation
 curl -X PUT .../demo/code -d '{"code": "next_example"}'
@@ -402,7 +402,7 @@ Store processing logic that runs on a schedule:
 curl -X PUT .../daily-report/code -d '{"code": "generate_report"}'
 
 # External scheduler hits endpoint daily
-URL: https://era-agent.yawnxyz.workers.dev/proxy/daily-report/8000
+URL: https://anewera.dev/proxy/daily-report/8000
 ```
 
 ## Limitations

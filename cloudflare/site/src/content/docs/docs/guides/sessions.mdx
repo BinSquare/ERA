@@ -10,7 +10,7 @@ Sessions are the core of ERA Agent's persistent execution model. Each session pr
 ### Basic Session
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -25,7 +25,7 @@ This creates a session with an auto-generated ID like `sess_1234567890_abc123`.
 Use custom IDs for easier session management:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -41,7 +41,7 @@ Now you can reference the session by your custom ID: `my-data-processor`.
 Store custom data with your session:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -67,7 +67,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 SESSION_ID="data-processor"
 
 # Create session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d "{
     \"language\": \"python\",
@@ -80,21 +80,21 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 
 ```bash
 # First run - setup
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "data = []\nprint(\"Data initialized\")"
   }'
 
 # Second run - append data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "data.append({\"value\": 42})\nprint(f\"Data length: {len(data)}\")"
   }'
 
 # Third run - data persists
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "data.append({\"value\": 99})\nprint(f\"Data: {data}\")"
@@ -104,7 +104,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run 
 ### 3. Check Session Status
 
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+curl https://anewera.dev/api/sessions/$SESSION_ID
 ```
 
 ### 4. Update Session Configuration
@@ -113,21 +113,21 @@ You can update session settings at any time without recreating it:
 
 ```bash
 # Update timeout for long-running tasks
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+curl -X PATCH https://anewera.dev/api/sessions/$SESSION_ID \
   -H "Content-Type: application/json" \
   -d '{
     "default_timeout": 300
   }'
 
 # Disable internet access
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+curl -X PATCH https://anewera.dev/api/sessions/$SESSION_ID \
   -H "Content-Type: application/json" \
   -d '{
     "allowInternetAccess": false
   }'
 
 # Update multiple settings
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
+curl -X PATCH https://anewera.dev/api/sessions/$SESSION_ID \
   -H "Content-Type: application/json" \
   -d '{
     "default_timeout": 600,
@@ -141,7 +141,7 @@ curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID \
 ### 5. Clean Up
 
 ```bash
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+curl -X DELETE https://anewera.dev/api/sessions/$SESSION_ID
 ```
 
 ## Listing Sessions
@@ -149,7 +149,7 @@ curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
 Get all active sessions:
 
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions
+curl https://anewera.dev/api/sessions
 ```
 
 **Response:**
@@ -175,7 +175,7 @@ curl https://era-agent.yawnxyz.workers.dev/api/sessions
 Duplicate a session with all its files and state:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/duplicate \
+curl -X POST https://anewera.dev/api/sessions/data-processor/duplicate \
   -H "Content-Type: application/json" \
   -d '{
     "new_id": "data-processor-backup",
@@ -203,14 +203,14 @@ Each session is completely isolated:
 
 ```bash
 # Session A
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-a/run \
+curl -X POST https://anewera.dev/api/sessions/session-a/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "secret = \"password123\"\nprint(secret)"
   }'
 
 # Session B - can't access session-a's variable
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-b/run \
+curl -X POST https://anewera.dev/api/sessions/session-b/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(secret)"  # NameError: name \"secret\" is not defined
@@ -232,7 +232,7 @@ session_id="prod:user:${USER_ID}:analysis:$(date +%s)"
 ### Store Metadata
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -250,12 +250,12 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 
 ```bash
 # List sessions
-SESSIONS=$(curl -s https://era-agent.yawnxyz.workers.dev/api/sessions | jq -r '.sessions[].id')
+SESSIONS=$(curl -s https://anewera.dev/api/sessions | jq -r '.sessions[].id')
 
 # Delete old sessions
 for session in $SESSIONS; do
   echo "Deleting $session"
-  curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$session
+  curl -X DELETE https://anewera.dev/api/sessions/$session
 done
 ```
 
@@ -265,16 +265,16 @@ done
 # Check if session exists before running
 SESSION_ID="my-session"
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-  https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID)
+  https://anewera.dev/api/sessions/$SESSION_ID)
 
 if [ $STATUS -eq 200 ]; then
   # Session exists, run code
-  curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
     -H "Content-Type: application/json" \
     -d '{"code": "print(\"Hello\")"}'
 else
   echo "Session not found, creating..."
-  curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  curl -X POST https://anewera.dev/api/sessions \
     -H "Content-Type: application/json" \
     -d "{\"language\": \"python\", \"session_id\": \"$SESSION_ID\"}"
 fi
@@ -286,14 +286,14 @@ fi
 
 ```bash
 # Create a template with common imports
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/template-python/run \
+curl -X POST https://anewera.dev/api/sessions/template-python/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nimport math\nimport re\nprint(\"Template initialized\")"
   }'
 
 # Clone for each user
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/template-python/duplicate \
+curl -X POST https://anewera.dev/api/sessions/template-python/duplicate \
   -H "Content-Type: application/json" \
   -d '{"new_id": "user-123-workspace"}'
 ```
@@ -302,21 +302,21 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/template-python/
 
 ```bash
 # Stage 1: Data collection
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+curl -X POST https://anewera.dev/api/sessions/workflow-1/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "data = [1, 2, 3, 4, 5]\nprint(f\"Collected {len(data)} items\")"
   }'
 
 # Stage 2: Processing (minutes later)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+curl -X POST https://anewera.dev/api/sessions/workflow-1/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "processed = [x * 2 for x in data]\nprint(f\"Processed: {processed}\")"
   }'
 
 # Stage 3: Results (hours later)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow-1/run \
+curl -X POST https://anewera.dev/api/sessions/workflow-1/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "total = sum(processed)\nprint(f\"Total: {total}\")"

@@ -25,7 +25,7 @@ Add the ERA Agent remote server to your Claude Desktop configuration:
 {
   "mcpServers": {
     "era-agent": {
-      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+      "url": "https://anewera.dev/mcp/v1"
     }
   }
 }
@@ -36,7 +36,7 @@ Add the ERA Agent remote server to your Claude Desktop configuration:
 {
   "mcpServers": {
     "era-agent": {
-      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+      "url": "https://anewera.dev/mcp/v1"
     }
   }
 }
@@ -47,7 +47,7 @@ Add the ERA Agent remote server to your Claude Desktop configuration:
 {
   "mcpServers": {
     "era-agent": {
-      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+      "url": "https://anewera.dev/mcp/v1"
     }
   }
 }
@@ -96,7 +96,7 @@ ERA Agent implements the [Model Context Protocol](https://modelcontextprotocol.i
 ### Endpoint
 
 ```
-https://era-agent.yawnxyz.workers.dev/mcp/v1
+https://anewera.dev/mcp/v1
 ```
 
 ### Transport
@@ -304,7 +304,7 @@ Read a specific resource.
 ### Test Connection
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -324,7 +324,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
 ### List Available Tools
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -337,7 +337,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
 ### Execute Python Code
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -356,7 +356,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
 
 ```bash
 # 1. Create session
-SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+SESSION_ID=$(curl -s -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -374,7 +374,7 @@ SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
 echo "Created session: $SESSION_ID"
 
 # 2. Run code in session
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d "{
     \"jsonrpc\": \"2.0\",
@@ -390,7 +390,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
   }"
 
 # 3. Access variable from previous execution
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d "{
     \"jsonrpc\": \"2.0\",
@@ -415,7 +415,7 @@ import requests
 import json
 
 class ERAMCPClient:
-    def __init__(self, url="https://era-agent.yawnxyz.workers.dev/mcp/v1"):
+    def __init__(self, url="https://anewera.dev/mcp/v1"):
         self.url = url
         self.request_id = 0
 
@@ -497,7 +497,7 @@ print(result["content"][0]["text"])
 
 ```javascript
 class ERAMCPClient {
-  constructor(url = "https://era-agent.yawnxyz.workers.dev/mcp/v1") {
+  constructor(url = "https://anewera.dev/mcp/v1") {
     this.url = url;
     this.requestId = 0;
   }
@@ -620,7 +620,7 @@ See the [MCP Server documentation](/docs/hosted/mcp-server) for detailed tool de
 
 ### Public Deployment
 
-The default deployment at `https://era-agent.yawnxyz.workers.dev` is **public** and has no authentication. This is fine for:
+The default deployment at `https://anewera.dev` is **public** and has no authentication. This is fine for:
 - Testing and experimentation
 - Non-sensitive code execution
 - Learning MCP protocol
@@ -696,10 +696,10 @@ Deploy to a private network or VPN:
 
 **Solutions:**
 1. Check internet connectivity
-2. Verify URL is correct: `https://era-agent.yawnxyz.workers.dev/mcp/v1`
+2. Verify URL is correct: `https://anewera.dev/mcp/v1`
 3. Test with cURL:
    ```bash
-   curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+   curl -X POST https://anewera.dev/mcp/v1 \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"0.1.0","clientInfo":{"name":"test","version":"1.0.0"},"capabilities":{}}}'
    ```

@@ -14,7 +14,7 @@ NC='\033[0m'
 
 # Get base URL from argument or use default
 BASE_URL="${1:-http://localhost:8787}"
-BASE_URL="${1:-https://era-agent.yawnxyz.workers.dev}"
+BASE_URL="${1:-https://anewera.dev}"
 
 echo -e "${BLUE}"
 echo "╔════════════════════════════════════════╗"

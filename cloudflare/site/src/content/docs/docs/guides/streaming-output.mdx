@@ -31,7 +31,7 @@ data: {"type":"stdout","content":"Line 2\n"}
 ### Basic Streaming Request
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+curl -X POST https://anewera.dev/api/sessions/my-session/stream \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import time\nfor i in range(10):\n    print(f\"Processing {i}\")\n    time.sleep(0.5)"
@@ -71,7 +71,7 @@ data: {"type":"done","exit_code":0,"duration":"5.123s"}
 ```javascript
 async function streamExecution(sessionId, code) {
   const response = await fetch(
-    `https://era-agent.yawnxyz.workers.dev/api/sessions/${sessionId}/stream`,
+    `https://anewera.dev/api/sessions/${sessionId}/stream`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -130,7 +130,7 @@ import requests
 import json
 
 def stream_execution(session_id, code):
-    url = f"https://era-agent.yawnxyz.workers.dev/api/sessions/{session_id}/stream"
+    url = f"https://anewera.dev/api/sessions/{session_id}/stream"
 
     response = requests.post(
         url,
@@ -163,7 +163,7 @@ for i in range(10):
 ### Bash (with jq)
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+curl -X POST https://anewera.dev/api/sessions/my-session/stream \
   -H "Content-Type: application/json" \
   -d '{"code": "import time; [print(f\"Line {i}\") or time.sleep(0.3) for i in range(10)]"}' \
   2>/dev/null | while IFS= read -r line; do

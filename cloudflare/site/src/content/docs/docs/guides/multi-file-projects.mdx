@@ -28,7 +28,7 @@ my-project/
 
 ```bash
 # Create session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -37,7 +37,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Upload utils.js
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/files/utils.js \
+curl -X PUT https://anewera.dev/api/sessions/my-utils-project/files/utils.js \
   -H "Content-Type: application/javascript" \
   --data-binary @- <<'EOF'
 module.exports = {
@@ -47,7 +47,7 @@ module.exports = {
 EOF
 
 # Upload index.js
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/files/index.js \
+curl -X PUT https://anewera.dev/api/sessions/my-utils-project/files/index.js \
   -H "Content-Type: application/javascript" \
   --data-binary @- <<'EOF'
 const utils = require('./utils');
@@ -57,7 +57,7 @@ console.log(utils.greet('World'));  // Hello, World!
 EOF
 
 # Run it
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/run \
+curl -X POST https://anewera.dev/api/sessions/my-utils-project/run \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./index.js\")"}'
 ```
@@ -79,7 +79,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project
 
 ```bash
 # Create session with automatic package installation
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -93,11 +93,11 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Wait for setup to complete (typically 10-30 seconds)
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-api | jq '.setup_status'
+curl https://anewera.dev/api/sessions/my-api | jq '.setup_status'
 # Should return: "completed"
 
 # Upload your code
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/files/index.js \
+curl -X PUT https://anewera.dev/api/sessions/my-api/files/index.js \
   --data-binary @- <<'EOF'
 const _ = require('lodash');
 const axios = require('axios');
@@ -108,7 +108,7 @@ console.log('Chunked:', chunks);
 EOF
 
 # Run it - lodash and axios are already installed!
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/run \
+curl -X POST https://anewera.dev/api/sessions/my-api/run \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./index.js\")"}'
 ```
@@ -143,7 +143,7 @@ my-app/
 PACKAGE_JSON=$(cat package.json | jq -c .)
 
 # Create session with setup
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "typescript",
@@ -161,19 +161,19 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 
 ```bash
 # Upload files while maintaining directory structure
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/index.ts \
+curl -X PUT https://anewera.dev/api/sessions/my-app/files/src/index.ts \
   --data-binary @src/index.ts
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/utils/helpers.ts \
+curl -X PUT https://anewera.dev/api/sessions/my-app/files/src/utils/helpers.ts \
   --data-binary @src/utils/helpers.ts
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/utils/validators.ts \
+curl -X PUT https://anewera.dev/api/sessions/my-app/files/src/utils/validators.ts \
   --data-binary @src/utils/validators.ts
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/services/api.ts \
+curl -X PUT https://anewera.dev/api/sessions/my-app/files/src/services/api.ts \
   --data-binary @src/services/api.ts
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/config/settings.json \
+curl -X PUT https://anewera.dev/api/sessions/my-app/files/config/settings.json \
   --data-binary @config/settings.json
 ```
 
@@ -181,7 +181,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/conf
 
 ```bash
 # TypeScript files run via tsx automatically
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/run \
+curl -X POST https://anewera.dev/api/sessions/my-app/run \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./src/index.ts\")"}'
 ```
@@ -215,7 +215,7 @@ requests>=2.31.0
 # Step 1: Create session with dependencies
 REQUIREMENTS=$(cat requirements.txt)
 
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -229,26 +229,26 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Step 2: Upload Python modules
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/__init__.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/processors/__init__.py \
   --data-binary @processors/__init__.py
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/cleaner.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/processors/cleaner.py \
   --data-binary @processors/cleaner.py
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/analyzer.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/processors/analyzer.py \
   --data-binary @processors/analyzer.py
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/utils/__init__.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/utils/__init__.py \
   --data-binary @utils/__init__.py
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/utils/helpers.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/utils/helpers.py \
   --data-binary @utils/helpers.py
 
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/main.py \
+curl -X PUT https://anewera.dev/api/sessions/data-processor/files/main.py \
   --data-binary @main.py
 
 # Step 3: Run
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+curl -X POST https://anewera.dev/api/sessions/data-processor/run \
   -H "Content-Type: application/json" \
   -d '{"code": "exec(open(\"main.py\").read())"}'
 ```
@@ -267,7 +267,7 @@ set -e
 
 SESSION_ID="$1"
 PROJECT_DIR="$2"
-API_URL="\${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
+API_URL="\${ERA_API_URL:-https://anewera.dev}"
 
 if [ -z "$SESSION_ID" ] || [ -z "$PROJECT_DIR" ]; then
   echo "Usage: $0 <session_id> <project_directory>"
@@ -379,7 +379,7 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configuration
-API_URL = os.environ.get('ERA_API_URL', 'https://era-agent.yawnxyz.workers.dev')
+API_URL = os.environ.get('ERA_API_URL', 'https://anewera.dev')
 MAX_WORKERS = 10  # Parallel uploads
 
 # Patterns to exclude
@@ -524,7 +524,7 @@ express-api/
 
 ```bash
 # 1. Create session with dependencies
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -538,7 +538,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # 2. Wait for setup completion
-while [ "$(curl -s https://era-agent.yawnxyz.workers.dev/api/sessions/express-api | jq -r '.setup_status')" != "completed" ]; do
+while [ "$(curl -s https://anewera.dev/api/sessions/express-api | jq -r '.setup_status')" != "completed" ]; do
   echo "Waiting for package installation..."
   sleep 2
 done
@@ -548,7 +548,7 @@ echo "Packages installed!"
 ./era-upload.sh express-api ./express-api
 
 # 4. Store the server code
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/code \
+curl -X PUT https://anewera.dev/api/sessions/express-api/code \
   -H "Content-Type: application/json" \
   -d @- <<'EOF'
 {
@@ -558,11 +558,11 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/code 
 EOF
 
 # 5. Get public URL
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/host?port=3000
-# Returns: {"url": "https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000"}
+curl https://anewera.dev/api/sessions/express-api/host?port=3000
+# Returns: {"url": "https://anewera.dev/proxy/express-api/3000"}
 
 # 6. Test the API
-curl https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000/api/users
+curl https://anewera.dev/proxy/express-api/3000/api/users
 ```
 
 ## Best Practices
@@ -615,7 +615,7 @@ curl -X PUT .../files/node_modules/express/index.js ...
 
 ```bash
 # Always verify setup completed
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.setup_status'
+curl https://anewera.dev/api/sessions/my-session | jq '.setup_status'
 
 # Possible values:
 # "pending"   - Setup queued
@@ -655,7 +655,7 @@ jobs:
         run: |
           PACKAGE_JSON=$(cat package.json | jq -c .)
 
-          curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \\
+          curl -X POST https://anewera.dev/api/sessions \\
             -H "Content-Type: application/json" \\
             -d '{
               "language": "node",
@@ -675,13 +675,13 @@ jobs:
 
       - name: Update Code
         run: |
-          curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/prod-api/code \\
+          curl -X PUT https://anewera.dev/api/sessions/prod-api/code \\
             -H "Content-Type: application/json" \\
             -d '{"code": "require(\"./server.js\")"}'
 
       - name: Get Public URL
         run: |
-          curl https://era-agent.yawnxyz.workers.dev/api/sessions/prod-api/host?port=3000
+          curl https://anewera.dev/api/sessions/prod-api/host?port=3000
 `} lang="yaml" title=".github/workflows/deploy.yml" />
 
 ## Troubleshooting
@@ -705,7 +705,7 @@ jobs:
 
 **Solution:** Check setup status:
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.setup_result'
+curl https://anewera.dev/api/sessions/my-session | jq '.setup_result'
 ```
 
 If failed, recreate session with correct package names.

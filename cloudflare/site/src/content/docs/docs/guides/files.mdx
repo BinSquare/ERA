@@ -15,16 +15,16 @@ Upload any file type (JSON, CSV, images, etc.) to a session:
 
 ```bash
 # Upload JSON data
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/data.json \
+curl -X PUT https://anewera.dev/api/sessions/my-session/files/data.json \
   -H "Content-Type: application/json" \
   --data-binary @data.json
 
 # Upload CSV
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/users.csv \
+curl -X PUT https://anewera.dev/api/sessions/my-session/files/users.csv \
   --data-binary @users.csv
 
 # Upload image
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/logo.png \
+curl -X PUT https://anewera.dev/api/sessions/my-session/files/logo.png \
   -H "Content-Type: image/png" \
   --data-binary @logo.png
 ```
@@ -32,7 +32,7 @@ curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/
 ### List All Files
 
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+curl https://anewera.dev/api/sessions/my-session/files
 ```
 
 **Response:**
@@ -51,37 +51,37 @@ curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
 
 ```bash
 # Download to file
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/output.json -o output.json
+curl https://anewera.dev/api/sessions/my-session/files/output.json -o output.json
 
 # View content
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/report.txt
+curl https://anewera.dev/api/sessions/my-session/files/report.txt
 ```
 
 ### Complete Workflow Example
 
 ```bash
 # 1. Create session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"language": "python", "session_id": "processor", "persistent": true}'
 
 # 2. Upload input data
 echo '{"users": [{"id": 1, "name": "Alice"}]}' | \
-  curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/processor/files/input.json \
+  curl -X PUT https://anewera.dev/api/sessions/processor/files/input.json \
   --data-binary @-
 
 # 3. Run processing code
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/processor/run \
+curl -X POST https://anewera.dev/api/sessions/processor/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\"input.json\") as f:\n    data = json.load(f)\nprint(f\"Processed {len(data['\''users'\''])} users\")\nwith open(\"output.json\", \"w\") as f:\n    json.dump({\"status\": \"success\", \"count\": len(data['\''users'\''])}, f)"
   }'
 
 # 4. Download results
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/processor/files/output.json -o result.json
+curl https://anewera.dev/api/sessions/processor/files/output.json -o result.json
 
 # 5. List all files
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/processor/files
+curl https://anewera.dev/api/sessions/processor/files
 ```
 
 **→ See [API Reference](/docs/api-reference#get-apisessionsidfiles) for complete file API documentation**
@@ -93,7 +93,7 @@ curl https://era-agent.yawnxyz.workers.dev/api/sessions/processor/files
 ### Creating Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"hello.txt\", \"w\") as f:\n    f.write(\"Hello, ERA Agent!\")\nprint(\"File created\")"
@@ -103,7 +103,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Reading Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"hello.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"Content: {content}\")"
@@ -113,7 +113,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Appending to Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"hello.txt\", \"a\") as f:\n    f.write(\"\\nAnother line!\")\nprint(\"Content appended\")"
@@ -123,7 +123,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Deleting Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\nif os.path.exists(\"hello.txt\"):\n    os.remove(\"hello.txt\")\n    print(\"File deleted\")\nelse:\n    print(\"File not found\")"
@@ -135,7 +135,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Write JSON
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\ndata = {\n    \"users\": [\n        {\"id\": 1, \"name\": \"Alice\", \"score\": 100},\n        {\"id\": 2, \"name\": \"Bob\", \"score\": 85}\n    ],\n    \"metadata\": {\"version\": \"1.0\", \"count\": 2}\n}\n\nwith open(\"data.json\", \"w\") as f:\n    json.dump(data, f, indent=2)\n\nprint(\"JSON file created\")"
@@ -145,7 +145,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Read and Update JSON
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\n# Read\nwith open(\"data.json\", \"r\") as f:\n    data = json.load(f)\n\n# Update\ndata[\"users\"].append({\"id\": 3, \"name\": \"Charlie\", \"score\": 92})\ndata[\"metadata\"][\"count\"] = len(data[\"users\"])\n\n# Write back\nwith open(\"data.json\", \"w\") as f:\n    json.dump(data, f, indent=2)\n\nprint(f\"Updated. Total users: {data[\"metadata\"][\"count\"]}\")"
@@ -157,7 +157,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Create Directories
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\n\n# Create single directory\nos.makedirs(\"data\", exist_ok=True)\n\n# Create nested directories\nos.makedirs(\"project/src/utils\", exist_ok=True)\n\nprint(\"Directories created\")"
@@ -167,7 +167,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### List Directory Contents
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\n\n# List current directory\nfiles = os.listdir(\".\")\nprint(f\"Files in current directory: {files}\")\n\n# List specific directory\nif os.path.exists(\"data\"):\n    data_files = os.listdir(\"data\")\n    print(f\"Files in data/: {data_files}\")"
@@ -177,7 +177,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Walk Directory Tree
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\n\nprint(\"Directory structure:\")\nfor root, dirs, files in os.walk(\".\"):\n    level = root.replace(\".\", \"\").count(os.sep)\n    indent = \" \" * 2 * level\n    print(f\"{indent}{os.path.basename(root)}/\")\n    subindent = \" \" * 2 * (level + 1)\n    for file in files:\n        print(f\"{subindent}{file}\")"
@@ -189,7 +189,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Check File Existence
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\n\nfiles_to_check = [\"data.json\", \"config.txt\", \"missing.txt\"]\n\nfor filename in files_to_check:\n    exists = os.path.exists(filename)\n    print(f\"{filename}: {\"exists\" if exists else \"not found\"}\")"
@@ -199,7 +199,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Get File Size
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\n\nif os.path.exists(\"data.json\"):\n    size = os.path.getsize(\"data.json\")\n    print(f\"data.json size: {size} bytes\")\n    \n    # Human readable\n    if size < 1024:\n        print(f\"  ({size} B)\")\n    elif size < 1024 * 1024:\n        print(f\"  ({size / 1024:.2f} KB)\")\n    else:\n        print(f\"  ({size / (1024 * 1024):.2f} MB)\")"
@@ -209,7 +209,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### File Stats
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\nimport time\n\nif os.path.exists(\"data.json\"):\n    stats = os.stat(\"data.json\")\n    print(f\"Size: {stats.st_size} bytes\")\n    print(f\"Modified: {time.ctime(stats.st_mtime)}\")\n    print(f\"Created: {time.ctime(stats.st_ctime)}\")"
@@ -221,7 +221,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Write Binary Data
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "# Create a simple binary file\ndata = bytes([0x48, 0x65, 0x6C, 0x6C, 0x6F])  # \"Hello\" in ASCII\n\nwith open(\"binary.dat\", \"wb\") as f:\n    f.write(data)\n\nprint(f\"Written {len(data)} bytes\")"
@@ -231,7 +231,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Read Binary Data
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"binary.dat\", \"rb\") as f:\n    data = f.read()\n\nprint(f\"Read {len(data)} bytes\")\nprint(f\"Hex: {data.hex()}\")\nprint(f\"As text: {data.decode(\"ascii\")}\")"
@@ -243,7 +243,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Write CSV
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import csv\n\ndata = [\n    [\"Name\", \"Age\", \"City\"],\n    [\"Alice\", 30, \"New York\"],\n    [\"Bob\", 25, \"San Francisco\"],\n    [\"Charlie\", 35, \"Boston\"]\n]\n\nwith open(\"users.csv\", \"w\", newline=\"\") as f:\n    writer = csv.writer(f)\n    writer.writerows(data)\n\nprint(\"CSV file created\")"
@@ -253,7 +253,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Read and Process CSV
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import csv\n\nwith open(\"users.csv\", \"r\") as f:\n    reader = csv.DictReader(f)\n    users = list(reader)\n\nprint(f\"Total users: {len(users)}\")\nfor user in users:\n    print(f\"  {user[\"Name\"]}: {user[\"Age\"]} years old, lives in {user[\"City\"]}\")\n\n# Calculate average age\navg_age = sum(int(u[\"Age\"]) for u in users) / len(users)\nprint(f\"Average age: {avg_age:.1f}\")"
@@ -265,7 +265,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Log Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/logger/run \
+curl -X POST https://anewera.dev/api/sessions/logger/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "from datetime import datetime\nimport os\n\ndef log_message(message, level=\"INFO\"):\n    timestamp = datetime.now().isoformat()\n    log_entry = f\"[{timestamp}] {level}: {message}\\n\"\n    \n    with open(\"app.log\", \"a\") as f:\n        f.write(log_entry)\n    \n    return log_entry\n\n# Log some messages\nlog_message(\"Application started\")\nlog_message(\"User logged in\", \"INFO\")\nlog_message(\"Processing data\", \"DEBUG\")\nlog_message(\"Task completed\", \"INFO\")\n\n# Read log\nwith open(\"app.log\", \"r\") as f:\n    logs = f.read()\n\nprint(\"Log contents:\")\nprint(logs)"
@@ -276,21 +276,21 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/logger/run \
 
 ```bash
 # Step 1: Generate raw data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/pipeline/run \
+curl -X POST https://anewera.dev/api/sessions/pipeline/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nimport os\n\nos.makedirs(\"data\", exist_ok=True)\n\nraw_data = [\n    {\"id\": 1, \"value\": 10, \"status\": \"active\"},\n    {\"id\": 2, \"value\": 20, \"status\": \"inactive\"},\n    {\"id\": 3, \"value\": 15, \"status\": \"active\"}\n]\n\nwith open(\"data/raw.json\", \"w\") as f:\n    json.dump(raw_data, f, indent=2)\n\nprint(f\"Generated {len(raw_data)} records\")"
   }'
 
 # Step 2: Process data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/pipeline/run \
+curl -X POST https://anewera.dev/api/sessions/pipeline/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\n# Read raw data\nwith open(\"data/raw.json\", \"r\") as f:\n    raw_data = json.load(f)\n\n# Filter and transform\nprocessed = [\n    {\"id\": item[\"id\"], \"value\": item[\"value\"] * 2}\n    for item in raw_data\n    if item[\"status\"] == \"active\"\n]\n\n# Save processed data\nwith open(\"data/processed.json\", \"w\") as f:\n    json.dump(processed, f, indent=2)\n\nprint(f\"Processed {len(processed)} active records\")"
   }'
 
 # Step 3: Generate report
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/pipeline/run \
+curl -X POST https://anewera.dev/api/sessions/pipeline/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\n# Read processed data\nwith open(\"data/processed.json\", \"r\") as f:\n    processed = json.load(f)\n\n# Generate report\ntotal_value = sum(item[\"value\"] for item in processed)\navg_value = total_value / len(processed) if processed else 0\n\nreport = f\"\"\"Data Processing Report\n======================\nRecords processed: {len(processed)}\nTotal value: {total_value}\nAverage value: {avg_value:.2f}\n\"\"\"\n\nwith open(\"data/report.txt\", \"w\") as f:\n    f.write(report)\n\nprint(report)"
@@ -302,7 +302,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/pipeline/run \
 Get file information from session metadata:
 
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+curl https://anewera.dev/api/sessions/my-session
 ```
 
 **Response includes file list:**
@@ -331,7 +331,7 @@ curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
 ### Always Check File Existence
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\nimport json\n\nconfig_file = \"config.json\"\n\nif os.path.exists(config_file):\n    with open(config_file, \"r\") as f:\n        config = json.load(f)\nelse:\n    # Initialize with defaults\n    config = {\"setting1\": \"default\", \"setting2\": 42}\n    with open(config_file, \"w\") as f:\n        json.dump(config, f)\n\nprint(f\"Config loaded: {config}\")"
@@ -342,7 +342,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Good - file automatically closed
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"data.txt\", \"w\") as f:\n    f.write(\"content\")"
@@ -357,7 +357,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Organize with Directories
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\nimport json\n\n# Organized structure\nos.makedirs(\"data/raw\", exist_ok=True)\nos.makedirs(\"data/processed\", exist_ok=True)\nos.makedirs(\"config\", exist_ok=True)\nos.makedirs(\"logs\", exist_ok=True)\n\nprint(\"Directory structure created\")"
@@ -367,7 +367,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Handle Errors Gracefully
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\ntry:\n    with open(\"data.json\", \"r\") as f:\n        data = json.load(f)\n    print(f\"Loaded {len(data)} items\")\nexcept FileNotFoundError:\n    print(\"File not found, using defaults\")\n    data = []\nexcept json.JSONDecodeError:\n    print(\"Invalid JSON, resetting file\")\n    data = []\n    with open(\"data.json\", \"w\") as f:\n        json.dump(data, f)"

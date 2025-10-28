@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 # Configuration
-DEFAULT_API_URL = 'https://era-agent.yawnxyz.workers.dev'
+DEFAULT_API_URL = 'https://anewera.dev'
 MAX_WORKERS = 10  # Parallel uploads
 TIMEOUT = 30  # Request timeout in seconds
 

@@ -33,7 +33,7 @@ ERA Agent provides powerful mechanisms for passing data to your code, storing st
 ### Creating Session with Initial Data
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -153,7 +153,7 @@ console.log(`Counter incremented to: ${data.counter}`);
 
 ```bash
 # Run code
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-demo/run \
+curl -X POST https://anewera.dev/api/sessions/data-demo/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\".session_data.json\", \"r\") as f: data=json.load(f)\ndata[\"counter\"]+=1\nwith open(\".session_data.json\", \"w\") as f: json.dump(data, f)"
@@ -191,7 +191,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-demo/run \
 ```bash
 SESSION_ID="counter-$(date +%s)"
 
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -207,7 +207,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 **2. Increment counter:**
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json; from datetime import datetime; data = json.load(open(\".session_data.json\")); data[\"count\"] += 1; data[\"history\"].append(datetime.now().isoformat()); json.dump(data, open(\".session_data.json\", \"w\")); print(f\"Count: {data[\"count\"]}\")"
@@ -231,7 +231,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run 
 
 ```bash
 # Run the same code again
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json; from datetime import datetime; data = json.load(open(\".session_data.json\")); data[\"count\"] += 1; data[\"history\"].append(datetime.now().isoformat()); json.dump(data, open(\".session_data.json\", \"w\")); print(f\"Count: {data[\"count\"]}\")"
@@ -260,7 +260,7 @@ Pass runtime configuration without modifying session data.
 ### Using Environment Variables
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os; print(f\"API Key: {os.environ.get(\"API_KEY\")}\"); print(f\"Debug: {os.environ.get(\"DEBUG\")}\")",
@@ -281,8 +281,8 @@ ERA Agent automatically provides these environment variables:
 | `ERA_SESSION` | Always "true" | `"true"` |
 | `ERA_SESSION_ID` | Current session ID | `"my-session"` |
 | `ERA_LANGUAGE` | Session language | `"python"` |
-| `ERA_BASE_URL` | API base URL | `"https://era-agent.yawnxyz.workers.dev"` |
-| `ERA_PROXY_URL` | Proxy URL for this session | `"https://era-agent.yawnxyz.workers.dev/proxy/my-session"` |
+| `ERA_BASE_URL` | API base URL | `"https://anewera.dev"` |
+| `ERA_PROXY_URL` | Proxy URL for this session | `"https://anewera.dev/proxy/my-session"` |
 
 **Example using ERA variables:**
 
@@ -309,7 +309,7 @@ HTTP requests are **disabled by default** for security. Set `allowInternetAccess
 ### Enable Internet Access
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -427,7 +427,7 @@ fetchGitHubUser('github').catch(console.error);
 
 ```bash
 # Create with metadata
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -442,7 +442,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Retrieve metadata
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/tagged-session | jq '.metadata'
+curl https://anewera.dev/api/sessions/tagged-session | jq '.metadata'
 ```
 
 **Response:**
@@ -609,12 +609,12 @@ console.log(`Current state: ${data.state}`);
 
 ```bash
 # Start processing
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/state-machine/run \
+curl -X POST https://anewera.dev/api/sessions/state-machine/run \
   -H "Content-Type: application/json" \
   -d '{"code": "...", "env": {"EVENT": "start"}}'
 
 # Complete
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/state-machine/run \
+curl -X POST https://anewera.dev/api/sessions/state-machine/run \
   -H "Content-Type: application/json" \
   -d '{"code": "...", "env": {"EVENT": "complete"}}'
 ```
@@ -759,7 +759,7 @@ try {
 
 ```bash
 # Check session settings
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.allowInternetAccess'
+curl https://anewera.dev/api/sessions/my-session | jq '.allowInternetAccess'
 
 # If false, recreate session with allowInternetAccess: true
 ```

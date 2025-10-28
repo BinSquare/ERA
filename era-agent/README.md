@@ -11,12 +11,13 @@ Minimal scaffold for a secure code-execution runner with a flat Go CLI and suppo
 ### Installation (macOS)
 ```bash
 # 1. Install dependencies
+brew tap slp/krun
 brew install krunvm buildah
 
 # 2. Setup case-sensitive volume and state directory
 ./scripts/macos/setup.sh
 
-# 3. Follow the script's output to set environment variables
+# 3. Follow the script's output to set environment variables (paste these into the terminal)
 export AGENT_STATE_DIR="/Volumes/krunvm/agent-state"  # example from setup script
 export KRUNVM_DATA_DIR="/Volumes/krunvm/agent-state/krunvm"
 export CONTAINERS_STORAGE_CONF="/Volumes/krunvm/agent-state/containers/storage.conf"
@@ -25,7 +26,7 @@ export CONTAINERS_STORAGE_CONF="/Volumes/krunvm/agent-state/containers/storage.c
 make
 
 # 5. Test with a simple command
-./agent vm temp --language python --cmd "python -c 'print(\"Hello, World!\")'"
+./agent vm temp --language python --cmd 'python -c "print(\"Hello, World!\")"'
 ```
 
 ### Installation (Linux)
@@ -38,7 +39,7 @@ make
 make
 
 # Run with default settings (may require sudo or specific setup)
-sudo ./agent vm temp --language python --cmd "python -c 'print(\"Hello, World!\")'"
+sudo ./agent vm temp --language python --cmd 'python -c "print(\"Hello, World!\")"'
 ```
 
 ## Platform Setup Details
@@ -119,7 +120,7 @@ agent vm exec --vm ruby-<vm-id> --cmd 'ruby -e "puts %(hello world)"'
 agent vm exec --vm golang-<vm-id> --cmd 'go run /in/main.go'   # assumes /in/main.go is mounted
 
 # Use ephemeral execution (create, run, cleanup in one command)
-agent vm temp --language python --cmd "python -c 'print(\"Hello from temp VM!\")'"
+agent vm temp --language python --cmd 'python -c "print(\"Hello from temp VM!\")"'
 
 # Use interactive shell to explore a VM
 agent vm shell --vm python-<vm-id>
@@ -201,7 +202,7 @@ echo "AGENT_STATE_DIR: $AGENT_STATE_DIR"
 echo "KRUNVM_DATA_DIR: $KRUNVM_DATA_DIR"
 
 # Test with a simple ephemeral command
-./agent vm temp --language python --cmd "echo 'Setup working!'"
+./agent vm temp --language python --cmd 'echo "Setup working!"'
 ```
 
 ## Layout

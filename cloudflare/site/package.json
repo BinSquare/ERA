@@ -14,7 +14,6 @@
     "@astrojs/starlight": "^0.36.1",
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/lora": "^5.2.8",
-    "@fontsource/manrope": "^5.2.8",
     "@fontsource/work-sans": "^5.2.8",
     "astro": "^5.15.1",
     "sass": "^1.93.2"

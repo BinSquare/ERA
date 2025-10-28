@@ -4,7 +4,7 @@
 
 set -e
 
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 TIMESTAMP=$(date +%s)
 
 echo "🧪 Testing ERA Agent Setup System"

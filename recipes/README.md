@@ -108,7 +108,7 @@ cd cloudflare
 
 ```bash
 # Set your hosted ERA Agent URL
-export ERA_API_URL=https://era-agent.yawnxyz.workers.dev
+export ERA_API_URL=https://anewera.dev
 
 # Run the recipe
 ./run-recipe.sh --remote groq-chat

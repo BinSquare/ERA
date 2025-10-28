@@ -2,6 +2,16 @@
 
 > 🎉 **Cloudflare Containers is now stable!** (as of late 2024)
 
+## 📦 Docker Configuration
+
+Docker files are managed by the **Cloudflare Docker Compiler** in `scripts/cloudflare-docker/`. 
+
+- **Templates** are stored in `scripts/cloudflare-docker/templates/`
+- **Generated files** go to `era-agent/` when you run the compiler
+- **Keep era-agent clean** - generated files are temporary
+
+See `scripts/cloudflare-docker/README.md` for details.
+
 ## ✨ NEW: Automatic Package Installation
 
 **Install packages automatically when creating a session - works with ALL languages!**
@@ -86,19 +96,42 @@ VMService → Create/Run/Manage VMs
 
 **No Docker Hub or external registry needed!** Cloudflare builds and hosts everything automatically.
 
-### Deploy in 4 Commands
+### Quick Deploy
+
+**Option 1: Use the automated script (recommended)**
 
 ```bash
-# 1. Install dependencies
+./build-and-deploy.sh
+```
+
+This script:
+1. Generates Docker files from templates
+2. Builds the Docker image
+3. Deploys to Cloudflare
+4. Offers to clean up generated files
+
+**Option 2: Manual steps**
+
+```bash
+# 1. Generate Docker configuration
+cd ../scripts/cloudflare-docker
+./docker-compiler.sh
+
+# 2. Build Docker image
+cd ../../era-agent
+docker build -t era-agent:latest .
+
+# 3. Install dependencies
+cd ../cloudflare
 npm install
 
-# 2. Login to Cloudflare
+# 4. Login to Cloudflare
 npx wrangler login
 
-# 3. Create R2 bucket for session storage
+# 5. Create R2 bucket for session storage
 npx wrangler r2 bucket create era-sessions
 
-# 4. Deploy (builds Docker image and deploys Worker)
+# 6. Deploy
 npx wrangler deploy
 ```
 
@@ -265,27 +298,45 @@ curl -X POST https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/sessions \
 
 ## 🔧 What Happens During Deploy?
 
-When you run `npx wrangler deploy`:
+### Full Workflow
 
-1. **Reads `wrangler.toml`**
-   - Sees `image = "../era-agent/Dockerfile"`
-   - Understands this is a container-based Worker
+When you run `./build-and-deploy.sh`:
+
+1. **Generates Docker Files**
+   - Runs `scripts/cloudflare-docker/docker-compiler.sh`
+   - Copies templates to `era-agent/` directory
+   - Creates: Dockerfile, docker-compose.yml, helper scripts
 
 2. **Builds Docker Image**
-   - Uses your local Docker to build from `../era-agent/Dockerfile`
-   - Includes the Go `agent` binary and all dependencies
+   - Uses `era-agent/Dockerfile` to build locally
+   - Multi-stage build: Go compilation → Runtime environment
+   - Includes Python, Node.js, Deno, Go compilers
 
-3. **Pushes to Cloudflare's Registry**
-   - Automatically uploads to Cloudflare's container registry
-   - No manual docker push needed!
+3. **Deploys to Cloudflare**
+   - Reads `wrangler.toml` (points to `../era-agent/Dockerfile`)
+   - Pushes image to Cloudflare's registry (automatic)
+   - Creates/updates Worker with container binding
+   - Configures R2 storage and Durable Objects
 
-4. **Deploys Worker**
-   - Creates/updates your Worker
-   - Sets up the container binding
-   - Configures routing
+4. **Cleanup (Optional)**
+   - Removes generated Docker files from `era-agent/`
+   - Keeps `era-agent/` directory clean
 
 5. **Ready!**
    - Your API is live at `https://era-agent.YOUR_SUBDOMAIN.workers.dev`
+
+### Using wrangler deploy directly
+
+If you already have Docker files in `era-agent/`:
+
+```bash
+npx wrangler deploy
+```
+
+Cloudflare will:
+- Build from existing `../era-agent/Dockerfile`
+- Push to their registry automatically
+- Deploy the Worker
 
 ## 📁 File Structure
 
@@ -935,11 +986,15 @@ curl https://era-agent.YOUR_SUBDOMAIN.workers.dev/health
 ### After Changing Go Code
 
 ```bash
-# 1. Rebuild Go agent
-cd ../era-agent
-make agent
+# Rebuild and redeploy
+cd cloudflare
+./build-and-deploy.sh
+```
 
-# 2. Redeploy (Cloudflare rebuilds Docker image)
+Or manually:
+```bash
+cd era-agent
+make agent
 cd ../cloudflare
 npx wrangler deploy
 ```
@@ -948,30 +1003,40 @@ npx wrangler deploy
 
 ```bash
 # Just redeploy (no Docker rebuild needed)
+cd cloudflare
 npx wrangler deploy
 ```
 
-### After Changing Dockerfile
+### After Changing Docker Templates
 
 ```bash
-# Redeploy (Cloudflare rebuilds from new Dockerfile)
-npx wrangler deploy
+# Regenerate Docker files and redeploy
+cd scripts/cloudflare-docker
+./docker-compiler.sh
+
+cd ../../cloudflare
+./build-and-deploy.sh
 ```
 
 ## 🎯 Using the Automated Script
 
-For convenience, use the root-level build script:
+Use the Cloudflare build-and-deploy script:
 
 ```bash
-# From ERA-cf-clean/ directory
-cd ..
-./build-deploy.sh
-
-# With options
-./build-deploy.sh --tail              # Deploy and tail logs
-./build-deploy.sh --skip-go-build     # Skip Go build step
-./build-deploy.sh --help              # Show all options
+cd cloudflare
+./build-and-deploy.sh
 ```
+
+This script:
+- Generates Docker files from templates
+- Builds the Docker image locally  
+- Deploys to Cloudflare
+- Checks for R2 bucket and creates if needed
+- Offers to clean up generated Docker files
+
+**Interactive prompts:**
+- Cloudflare login (if not logged in)
+- Clean up generated files (after deploy)
 
 ## ⚙️ Advanced Configuration
 
@@ -1093,8 +1158,14 @@ These are passed to your Go container.
 ## 🎯 Quick Commands Reference
 
 ```bash
-# Deploy
-npx wrangler deploy
+# Generate Docker files
+cd scripts/cloudflare-docker && ./docker-compiler.sh
+
+# Build and deploy (all-in-one)
+cd cloudflare && ./build-and-deploy.sh
+
+# Deploy only (if Docker files already exist)
+cd cloudflare && npx wrangler deploy
 
 # View logs
 npx wrangler tail
@@ -1110,6 +1181,9 @@ npx wrangler delete
 
 # Test health endpoint
 curl https://era-agent.YOUR_SUBDOMAIN.workers.dev/health
+
+# Clean up generated Docker files
+cd era-agent && rm -f Dockerfile docker-compose.yml .dockerignore *.sh HTTP_API.md DOCKER_DEPLOYMENT.md
 ```
 
 ## 🔒 Security Notes

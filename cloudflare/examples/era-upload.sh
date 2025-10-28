@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 SESSION_ID="$1"
 PROJECT_DIR="$2"
-API_URL="${3:-${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}}"
+API_URL="${3:-${ERA_API_URL:-https://anewera.dev}}"
 
 if [ -z "$SESSION_ID" ] || [ -z "$PROJECT_DIR" ]; then
   echo -e "${RED}Usage: $0 <session_id> <project_directory> [api_url]${NC}"

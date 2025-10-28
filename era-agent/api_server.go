@@ -13,34 +13,34 @@ import (
 
 // APIServer handles HTTP API requests for the ERA Agent
 type APIServer struct {
-	vmService    *VMService
-	logger       *Logger
-	server       *http.Server
-	apiKey       string
-	enableAuth   bool
+	vmService  *VMService
+	logger     *Logger
+	server     *http.Server
+	apiKey     string
+	enableAuth bool
 }
 
 // APIRequest represents the structure for API requests
 type APIRequest struct {
-	Language  string `json:"language"`
-	Command   string `json:"command"`
-	Image     string `json:"image"`
-	CPU       int    `json:"cpu"`
-	Memory    int    `json:"memory"`
-	Network   string `json:"network"`
-	Persist   bool   `json:"persist"`
-	File      string `json:"file"`
-	Timeout   int    `json:"timeout"`
-	VMID      string `json:"vm_id"`
-	KeepPersist bool `json:"keep_persist"`
+	Language    string `json:"language"`
+	Command     string `json:"command"`
+	Image       string `json:"image"`
+	CPU         int    `json:"cpu"`
+	Memory      int    `json:"memory"`
+	Network     string `json:"network"`
+	Persist     bool   `json:"persist"`
+	File        string `json:"file"`
+	Timeout     int    `json:"timeout"`
+	VMID        string `json:"vm_id"`
+	KeepPersist bool   `json:"keep_persist"`
 }
 
 // APIResponse represents the structure for API responses
 type APIResponse struct {
-	Success    bool                   `json:"success"`
-	Error      string                 `json:"error,omitempty"`
-	Data       interface{}            `json:"data,omitempty"`
-	StatusCode int                    `json:"status_code,omitempty"`
+	Success    bool        `json:"success"`
+	Error      string      `json:"error,omitempty"`
+	Data       interface{} `json:"data,omitempty"`
+	StatusCode int         `json:"status_code,omitempty"`
 }
 
 // VMInfo represents information about a VM
@@ -79,7 +79,10 @@ func NewAPIServer(vmService *VMService, logger *Logger, addr string) *APIServer 
 	}
 
 	mux := http.NewServeMux()
-	
+
+	// Health check endpoint
+	mux.HandleFunc("/health", api.handleHealth)
+
 	// API routes
 	mux.HandleFunc("/api/vm/create", api.handleCreateVM)
 	mux.HandleFunc("/api/vm/execute", api.handleExecuteInVM)
@@ -88,7 +91,7 @@ func NewAPIServer(vmService *VMService, logger *Logger, addr string) *APIServer 
 	mux.HandleFunc("/api/vm/stop", api.handleStopVM)
 	mux.HandleFunc("/api/vm/clean", api.handleCleanVM)
 	mux.HandleFunc("/api/vm/shell", api.handleShell) // Note: shell might need websocket for interactivity
-	
+
 	// Web interface routes
 	mux.HandleFunc("/", api.handleWebInterface)
 	mux.HandleFunc("/index.html", api.handleWebInterface)
@@ -184,13 +187,13 @@ func (api *APIServer) handleWebAssets(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	
+
 	// Prevent directory traversal
 	if strings.Contains(filePath, "..") {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
-	
+
 	// Serve the file
 	http.ServeFile(w, r, "web/"+filePath)
 }
@@ -621,6 +624,16 @@ func (api *APIServer) handleShell(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "shell endpoint requires WebSocket connection, not implemented yet", http.StatusNotImplemented)
 }
 
+// handleHealth handles health check requests
+func (api *APIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
+	// Simple health check - return 200 OK with status info
+	api.sendJSONSuccess(w, map[string]interface{}{
+		"status":  "healthy",
+		"service": "ERA Agent",
+		"version": "1.0.0",
+	}, http.StatusOK)
+}
+
 // sendJSONSuccess sends a successful JSON response
 func (api *APIServer) sendJSONSuccess(w http.ResponseWriter, data interface{}, statusCode int) {
 	api.sendJSONResponse(w, APIResponse{
@@ -643,7 +656,7 @@ func (api *APIServer) sendJSONError(w http.ResponseWriter, errorMsg string, stat
 func (api *APIServer) sendJSONResponse(w http.ResponseWriter, response APIResponse, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		api.logger.Error("failed to encode JSON response", map[string]any{
 			"error": err.Error(),

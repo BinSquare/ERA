@@ -23,7 +23,7 @@ cp recipes/groq-chat/.env.example recipes/groq-chat/.env
 ./run-recipe.sh groq-chat
 
 # 3. Script sends env vars in API request body
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/{id}/run \
+curl -X POST https://anewera.dev/api/sessions/{id}/run \
   -d '{"code": "...", "env": {"GROQ_API_KEY": "gsk_..."}}'
 
 # 4. Worker passes env vars to sandboxed VM
@@ -51,7 +51,7 @@ echo "GROQ_API_KEY=gsk_your_actual_key_here" > recipes/groq-chat/.env
 ./run-recipe.sh groq-chat
 
 # Or against hosted worker
-ERA_API_URL=https://era-agent.yawnxyz.workers.dev ./run-recipe.sh groq-chat
+ERA_API_URL=https://anewera.dev ./run-recipe.sh groq-chat
 ```
 
 **Pros:**

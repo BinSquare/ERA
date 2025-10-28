@@ -92,7 +92,7 @@ ERA Agent is a **secure code execution platform** that runs your code in isolate
 
 ### Python Execution
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -103,14 +103,14 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
 ### Persistent Sessions
 ```bash
 # Create session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -d '{"language":"python","persistent":true}'
 
 # Run code (state persists)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/{id}/run \
+curl -X POST https://anewera.dev/api/sessions/{id}/run \
   -d '{"code":"x = 42"}'
 
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/{id}/run \
+curl -X POST https://anewera.dev/api/sessions/{id}/run \
   -d '{"code":"print(f\"x = {x}\")"}'  # x is still available!
 ```
 
@@ -120,7 +120,7 @@ Add to your Claude Desktop config:
 {
   "mcpServers": {
     "era-agent": {
-      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+      "url": "https://anewera.dev/mcp/v1"
     }
   }
 }

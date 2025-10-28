@@ -10,7 +10,7 @@ This guide provides practical, copy-paste examples for streaming output in vario
 Test streaming with this simple countdown:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/test-stream/stream \
+curl -X POST https://anewera.dev/api/sessions/test-stream/stream \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import time\nfor i in range(5, 0, -1):\n    print(f\"Countdown: {i}\")\n    time.sleep(1)\nprint(\"Done!\")"
@@ -45,7 +45,7 @@ print()  # Final newline
 ```javascript
 async function streamLLM(sessionId, code) {
   const response = await fetch(
-    `https://era-agent.yawnxyz.workers.dev/api/sessions/${sessionId}/stream`,
+    `https://anewera.dev/api/sessions/${sessionId}/stream`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -406,7 +406,7 @@ Complete bash script for consuming streams:
 #!/bin/bash
 
 SESSION_ID="streaming-demo"
-BASE_URL="https://era-agent.yawnxyz.workers.dev"
+BASE_URL="https://anewera.dev"
 
 # Create session
 echo "Creating session..."

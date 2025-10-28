@@ -5,7 +5,7 @@ import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://era-agent.yawnxyz.workers.dev',
+  site: 'https://anewera.dev',
   output: 'static', // Static site generation
   base: '/', // Serve from root
   integrations: [

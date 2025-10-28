@@ -53,7 +53,7 @@ sys.exit(result.returncode)`;
 
 ### Remote MCP Server Capabilities
 
-The ERA Agent MCP server at `https://era-agent.yawnxyz.workers.dev/mcp/v1` provides:
+The ERA Agent MCP server at `https://anewera.dev/mcp/v1` provides:
 
 #### Transport
 - Protocol: JSON-RPC 2.0 over HTTP
@@ -92,7 +92,7 @@ Add to `claude_desktop_config.json`:
 {
   "mcpServers": {
     "era-agent": {
-      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+      "url": "https://anewera.dev/mcp/v1"
     }
   }
 }
@@ -116,7 +116,7 @@ cd cloudflare
 Or test manually with cURL:
 ```bash
 # Initialize
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -130,7 +130,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
   }'
 
 # List tools
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -140,7 +140,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
   }'
 
 # Execute Python
-curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+curl -X POST https://anewera.dev/mcp/v1 \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -194,7 +194,7 @@ Code Execution (Python/Node/TypeScript/Deno/Shell)
 
 ### Public Deployment
 
-The default `https://era-agent.yawnxyz.workers.dev` is public and has no authentication.
+The default `https://anewera.dev` is public and has no authentication.
 
 **Safe for:**
 - Testing and experimentation

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Quick test for lodash (no types)
 
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 TIMESTAMP=$(date +%s)
 session_id="test-lodash-simple-${TIMESTAMP}"
 

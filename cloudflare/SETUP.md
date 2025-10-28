@@ -280,7 +280,7 @@ Even if your setup commands create these files, they will NOT be persisted to R2
 
 2. **Pass secrets at runtime**
    ```bash
-   curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+   curl -X POST https://anewera.dev/api/sessions/my-session/run \
      -H "Content-Type: application/json" \
      -d '{
        "code": "print(os.environ.get(\"API_KEY\"))",

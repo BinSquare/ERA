@@ -259,7 +259,7 @@ MESSAGE=Hello
 
 ```bash
 # Set remote URL
-export ERA_API_URL=https://era-agent.yawnxyz.workers.dev
+export ERA_API_URL=https://anewera.dev
 
 # Run recipe on hosted worker
 ./run-recipe.sh --remote storage-demo
@@ -272,7 +272,7 @@ export ERA_API_URL=https://era-agent.yawnxyz.workers.dev
 ./run-recipe.sh storage-demo
 
 # Remote
-ERA_API_URL=https://era-agent.yawnxyz.workers.dev \
+ERA_API_URL=https://anewera.dev \
   ./run-recipe.sh storage-demo
 ```
 

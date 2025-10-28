@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test script for /api/execute endpoint
 # Usage: ./test-execute.sh [BASE_URL]
-# Example: ./test-execute.sh https://era-agent.yawnxyz.workers.dev
+# Example: ./test-execute.sh https://anewera.dev
 
 set -e
 

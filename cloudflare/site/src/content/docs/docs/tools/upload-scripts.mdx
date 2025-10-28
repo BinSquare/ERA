@@ -45,7 +45,7 @@ export ERA_API_URL="https://era-agent.your-domain.workers.dev"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Session ID:  my-session
 Directory:   ./my-project
-API URL:     https://era-agent.yawnxyz.workers.dev
+API URL:     https://anewera.dev
 
 🔍 Scanning for files...
 📁 Found 15 files to upload
@@ -62,9 +62,9 @@ API URL:     https://era-agent.yawnxyz.workers.dev
    ✅ Successfully uploaded: 15 files
 
 Next steps:
-  1. Check files: curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
-  2. Run code:    curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run -d '{"code": "..."}'
-  3. View logs:   curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+  1. Check files: curl https://anewera.dev/api/sessions/my-session/files
+  2. Run code:    curl -X POST https://anewera.dev/api/sessions/my-session/run -d '{"code": "..."}'
+  3. View logs:   curl https://anewera.dev/api/sessions/my-session
 ```
 
 **Excluded Patterns:**
@@ -118,7 +118,7 @@ python3 era_upload.py my-session ./my-project
 ============================================================
 Session ID:  my-session
 Directory:   ./my-project
-API URL:     https://era-agent.yawnxyz.workers.dev
+API URL:     https://anewera.dev
 
 🔍 Scanning for files...
 📁 Found 47 files (2.3MB total)
@@ -138,9 +138,9 @@ API URL:     https://era-agent.yawnxyz.workers.dev
 📊 Average speed: 191.5KB/s
 
 Next steps:
-  1. Check files: curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
-  2. Run code:    curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run -d '{"code": "..."}'
-  3. View logs:   curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+  1. Check files: curl https://anewera.dev/api/sessions/my-session/files
+  2. Run code:    curl -X POST https://anewera.dev/api/sessions/my-session/run -d '{"code": "..."}'
+  3. View logs:   curl https://anewera.dev/api/sessions/my-session
 ```
 
 **Performance:**
@@ -291,7 +291,7 @@ Test projects are created in `/tmp/era-tests/`:
 # test-my-project.sh
 
 SESSION_ID="my-test-\$(date +%s)"
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 
 echo "Creating session..."
 curl -X POST "$API_URL/api/sessions" \\
@@ -319,7 +319,7 @@ echo "Test complete!"
 # test-with-deps.sh
 
 SESSION_ID="my-test-\$(date +%s)"
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 
 # Create with dependencies
 echo "Creating session with dependencies..."
@@ -455,7 +455,7 @@ chmod +x era_upload.py
 **Solution:**
 ```bash
 # Test API connectivity
-curl https://era-agent.yawnxyz.workers.dev/health
+curl https://anewera.dev/health
 
 # Verify API URL is correct
 echo $ERA_API_URL
@@ -468,10 +468,10 @@ echo $ERA_API_URL
 **Solution:**
 ```bash
 # List files to verify
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
+curl https://anewera.dev/api/sessions/my-session/files
 
 # Check if session is persistent
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.persistent'
+curl https://anewera.dev/api/sessions/my-session | jq '.persistent'
 ```
 
 ---

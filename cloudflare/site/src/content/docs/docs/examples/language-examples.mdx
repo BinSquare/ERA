@@ -65,7 +65,7 @@ console.log('✅ JS test passed!');
 
 ```bash
 # 1. Create session with dependencies
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -77,14 +77,14 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # 2. Wait for setup to complete (20-30 seconds)
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/js-project | jq '.setup_status'
+curl https://anewera.dev/api/sessions/js-project | jq '.setup_status'
 # Should return: "completed"
 
 # 3. Upload files
 ./era-upload.sh js-project ./js-project
 
 # 4. Run the code
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/js-project/run \
+curl -X POST https://anewera.dev/api/sessions/js-project/run \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./index.js\")"}'
 ```
@@ -153,7 +153,7 @@ console.log('✅ TS test passed!');
 
 ```bash
 # 1. Create session with dependencies
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "typescript",
@@ -165,13 +165,13 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # 2. Wait for setup
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/ts-project | jq '.setup_status'
+curl https://anewera.dev/api/sessions/ts-project | jq '.setup_status'
 
 # 3. Upload files (Python script is faster for multiple files)
 python3 era_upload.py ts-project ./ts-project
 
 # 4. Run the code (tsx is used automatically for .ts files)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/ts-project/run \
+curl -X POST https://anewera.dev/api/sessions/ts-project/run \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./index.ts\")"}'
 ```
@@ -259,7 +259,7 @@ print('✅ Python test passed!')
 # 1. Create session with requirements.txt
 REQUIREMENTS=$(cat requirements.txt)
 
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -273,13 +273,13 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # 2. Wait for pip install to complete
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/py-project | jq '.setup_status'
+curl https://anewera.dev/api/sessions/py-project | jq '.setup_status'
 
 # 3. Upload files
 python3 era_upload.py py-project ./py-project
 
 # 4. Run the main script
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/py-project/run \
+curl -X POST https://anewera.dev/api/sessions/py-project/run \
   -H "Content-Type: application/json" \
   -d '{"code": "exec(open(\"main.py\").read())"}'
 ```
@@ -337,7 +337,7 @@ console.log('✅ Deno test passed!');
 
 ```bash
 # 1. Create session (no dependencies needed)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "deno",
@@ -349,7 +349,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ./era-upload.sh deno-project ./deno-project
 
 # 3. Run with Deno
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-project/run \
+curl -X POST https://anewera.dev/api/sessions/deno-project/run \
   -H "Content-Type: application/json" \
   -d '{"code": "/usr/local/bin/deno run --allow-read main.ts"}'
 ```
@@ -476,7 +476,7 @@ module.exports = router;
 **Deployment:**
 ```bash
 # Create with dependencies
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -492,15 +492,15 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ./era-upload.sh express-api ./express-api
 
 # Store server code
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/code \
+curl -X PUT https://anewera.dev/api/sessions/express-api/code \
   -H "Content-Type: application/json" \
   -d '{"code": "require(\"./server.js\")"}'
 
 # Get public URL
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/host?port=3000
+curl https://anewera.dev/api/sessions/express-api/host?port=3000
 
 # Access API
-curl https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000/api/users
+curl https://anewera.dev/proxy/express-api/3000/api/users
 ```
 
 ### Python Data Processing Pipeline
@@ -582,7 +582,7 @@ def log(message):
 # Create with data science packages
 REQUIREMENTS=$(cat requirements.txt)
 
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -599,7 +599,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 python3 era_upload.py data-pipeline ./data-pipeline
 
 # Run pipeline
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-pipeline/run \
+curl -X POST https://anewera.dev/api/sessions/data-pipeline/run \
   -H "Content-Type: application/json" \
   -d '{"code": "exec(open(\"pipeline.py\").read())"}'
 ```
@@ -621,11 +621,11 @@ echo "Testing session: $SESSION_ID"
 
 # Check files
 echo "Files uploaded:"
-curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/files" | jq '.files[].path'
+curl -s "https://anewera.dev/api/sessions/$SESSION_ID/files" | jq '.files[].path'
 
 # Run code
 echo "Running code..."
-curl -s -X POST "https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run" \\
+curl -s -X POST "https://anewera.dev/api/sessions/$SESSION_ID/run" \\
   -H "Content-Type: application/json" \\
   -d "{\"code\": \"$ENTRY_POINT\"}" | jq '.'
 `} lang="bash" title="test-project.sh" />

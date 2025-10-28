@@ -20,7 +20,7 @@ The `\n` should be two characters (backslash + n), not an actual newline.
 The simplest way to use ERA Agent is with one-shot execution - send your code and get results immediately.
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{"language":"python","code":"print(\"Hello from ERA Agent!\")\nprint(2 + 2)"}'
 ```
@@ -51,7 +51,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
 
 **Node.js:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{"language":"node","code":"console.log(\"Hello from Node.js!\"); console.log(Math.PI);"}'
 ```
@@ -63,7 +63,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
 
 **Go:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}'
 ```
@@ -80,7 +80,7 @@ For more complex workflows, create a persistent session that maintains state bet
 ### 1. Create a Session
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"language":"python","persistent":true,"session_id":"my-python-env","data":{"project":"data-analysis","user":"developer"}}'
 ```
@@ -113,7 +113,7 @@ Run code multiple times in the same session - variables and state persist betwee
 
 **First execution - define a variable:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+curl -X POST https://anewera.dev/api/sessions/my-python-env/run \
   -H "Content-Type: application/json" \
   -d '{"code":"counter = 0\nprint(f\"Counter initialized: {counter}\")"}'
 ```
@@ -125,7 +125,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/ru
 
 **Second execution - variable persists:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+curl -X POST https://anewera.dev/api/sessions/my-python-env/run \
   -H "Content-Type: application/json" \
   -d '{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}'
 ```
@@ -137,7 +137,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/ru
 
 **Third execution - still persists:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env/run \
+curl -X POST https://anewera.dev/api/sessions/my-python-env/run \
   -H "Content-Type: application/json" \
   -d '{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}'
 ```
@@ -159,7 +159,7 @@ Counter value: 2
 Delete the session when you're done:
 
 ```bash
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/my-python-env
+curl -X DELETE https://anewera.dev/api/sessions/my-python-env
 ```
 
 ## Persistent Sessions with Files
@@ -169,7 +169,7 @@ Sessions can store files that persist between executions. Perfect for data proce
 ### Creating Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+curl -X POST https://anewera.dev/api/sessions/data-processor/run \
   -H "Content-Type: application/json" \
   -d '{"code":"with open(\"data.txt\", \"w\") as f:\n    f.write(\"Line 1\\nLine 2\\nLine 3\")\nprint(\"File created!\")"}'
 ```
@@ -182,7 +182,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/r
 ### Reading Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+curl -X POST https://anewera.dev/api/sessions/data-processor/run \
   -H "Content-Type: application/json" \
   -d '{"code":"with open(\"data.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"File contents: {content}\")"}'
 ```
@@ -195,7 +195,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/r
 ### Processing Files
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+curl -X POST https://anewera.dev/api/sessions/data-processor/run \
   -H "Content-Type: application/json" \
   -d '{"code":"with open(\"data.txt\", \"r\") as f:\n    lines = f.readlines()\nprint(f\"Line count: {len(lines)}\")\nfor i, line in enumerate(lines, 1):\n    print(f\"  {i}: {line.strip()}\")"}'
 ```
@@ -219,7 +219,7 @@ Here's a complete workflow showing session creation, multiple operations, and cl
 
 ```bash
 # 1. Create a persistent session
-SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+SESSION_ID=$(curl -s -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"language":"python","persistent":true,"session_id":"data-analysis-'$(date +%s)'","data":{"project":"temperature-analysis"}}' \
   | jq -r '.id')
@@ -227,25 +227,25 @@ SESSION_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/sessions 
 echo "Created session: $SESSION_ID"
 
 # 2. Initialize data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{"code":"temperatures = [72, 75, 68, 71, 73, 70, 74]\nprint(f\"Loaded {len(temperatures)} temperature readings\")"}'
 
 # 3. Calculate statistics
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{"code":"avg = sum(temperatures) / len(temperatures)\nmin_temp = min(temperatures)\nmax_temp = max(temperatures)\nprint(f\"Average: {avg:.1f}°F\")\nprint(f\"Range: {min_temp}°F - {max_temp}°F\")"}'
 
 # 4. Save results to file
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+curl -X POST https://anewera.dev/api/sessions/$SESSION_ID/run \
   -H "Content-Type: application/json" \
   -d '{"code":"with open(\"results.txt\", \"w\") as f:\n    f.write(f\"Temperature Analysis\\n\")\n    f.write(f\"Average: {avg:.1f}°F\\n\")\n    f.write(f\"Range: {min_temp}°F - {max_temp}°F\\n\")\nprint(\"Results saved to results.txt\")"}'
 
 # 5. Get session info
-curl -s https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID | jq
+curl -s https://anewera.dev/api/sessions/$SESSION_ID | jq
 
 # 6. Clean up
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID
+curl -X DELETE https://anewera.dev/api/sessions/$SESSION_ID
 echo "Session deleted"
 ```
 
@@ -280,7 +280,7 @@ For LLM generation, progress tracking, or real-time feedback, use streaming outp
 ### Example: Stream Progress Updates
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+curl -X POST https://anewera.dev/api/sessions/my-session/stream \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import time\nfor i in range(1, 6):\n    print(f\"Processing step {i}/5...\")\n    time.sleep(0.5)\nprint(\"Complete!\")"
@@ -307,7 +307,7 @@ data: {"type":"done","exit_code":0,"duration":"2.5s"}
 Perfect for streaming AI-generated text:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/llm-demo/stream \
+curl -X POST https://anewera.dev/api/sessions/llm-demo/stream \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import time\ntokens = [\"The\", \"quick\", \"brown\", \"fox\"]\nfor token in tokens:\n    print(token, end=\" \", flush=True)\n    time.sleep(0.2)"
@@ -323,7 +323,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/llm-demo/stream 
 
 ```javascript
 const response = await fetch(
-  'https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream',
+  'https://anewera.dev/api/sessions/my-session/stream',
   {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

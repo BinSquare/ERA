@@ -5,7 +5,7 @@
 
 set -e
 
-MCP_URL="${MCP_URL:-https://era-agent.yawnxyz.workers.dev/mcp/v1}"
+MCP_URL="${MCP_URL:-https://anewera.dev/mcp/v1}"
 
 echo "=========================================="
 echo "ERA Agent Remote MCP Server Test"

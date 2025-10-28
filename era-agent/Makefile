@@ -119,3 +119,41 @@ image-python:
 		--registries-conf "$REGISTRIES_CONF" \
 		-t $(IMAGES_REGISTRY)/python:3.11-$(IMAGES_DATE) \
 		scripts/images/python-hello
+
+
+# Docker targets
+docker-build:
+	docker build -t era-agent:latest .
+
+docker-run:
+	docker run -d \
+		--name era-agent \
+		-p 8787:8787 \
+		-v era-agent-state:/var/lib/agent \
+		era-agent:latest
+
+docker-stop:
+	docker stop era-agent || true
+	docker rm era-agent || true
+
+docker-clean: docker-stop
+	docker rmi era-agent:latest || true
+	docker volume rm era-agent-state || true
+
+# Docker Compose targets
+docker-up:
+	docker-compose up -d
+
+docker-down:
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f
+
+# Cloudflare deployment helpers
+cf-build:
+	@echo "Building for Cloudflare Containers..."
+	docker build -t era-agent:cloudflare .
+	@echo "Tag and push to your registry:"
+	@echo "  docker tag era-agent:cloudflare your-registry/era-agent:latest"
+	@echo "  docker push your-registry/era-agent:latest"

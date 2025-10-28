@@ -93,3 +93,10 @@ debug/
 # Ai tooling
 .claude/
 .qwen/
+node_modules/
+
+# cloudflare
+node_modules/
+cloudflare/node_modules/
+cloudflare/.wrangler/
+.astro

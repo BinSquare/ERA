@@ -19,7 +19,7 @@ You can try it out by running code in a session:
 
 ```bash
 # Create a session
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -28,7 +28,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Check environment variables
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os; print(f\"Session ID: {os.environ.get('\''ERA_SESSION_ID'\'')}\"); print(f\"Language: {os.environ.get('\''ERA_LANGUAGE'\'')}\")"
@@ -57,7 +57,7 @@ Set environment variables for a specific code execution. Works with all language
 #### Python
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\\napi_key = os.environ.get(\"API_KEY\")\\nprint(f\"API Key: {api_key}\")",
@@ -71,7 +71,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 #### Node.js
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "const apiKey = process.env.API_KEY;\\nconsole.log(\"API Key:\", apiKey);",
@@ -84,7 +84,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 #### TypeScript
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "const apiKey: string = process.env.API_KEY || \"default\";\\nconsole.log(\"API Key:\", apiKey);",
@@ -97,7 +97,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 #### Go
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "package main\\nimport (\\n\\t\"fmt\"\\n\\t\"os\"\\n)\\nfunc main() {\\n\\tapiKey := os.Getenv(\"API_KEY\")\\n\\tfmt.Println(\"API Key:\", apiKey)\\n}",
@@ -110,7 +110,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 #### Deno
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "const apiKey = Deno.env.get(\"API_KEY\");\\nconsole.log(\"API Key:\", apiKey);",
@@ -134,7 +134,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 Set environment variables during session setup (package installation phase):
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -165,7 +165,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 
 ```bash
 # Day 1: Create session and run code with API key
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+curl -X POST https://anewera.dev/api/sessions/prod-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os; print(os.environ.get(\"API_KEY\"))",
@@ -174,7 +174,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run
 # Output: secret123
 
 # Days later: Come back to same session - API_KEY is gone!
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+curl -X POST https://anewera.dev/api/sessions/prod-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os; print(os.environ.get(\"API_KEY\"))"
@@ -182,7 +182,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run
 # Output: None
 
 # You must pass it again:
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run \
+curl -X POST https://anewera.dev/api/sessions/prod-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os; print(os.environ.get(\"API_KEY\"))",
@@ -206,7 +206,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-session/run
 
 ```bash
 # Make API call with secret key
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import requests\\nimport os\\napi_key = os.environ.get(\"OPENAI_API_KEY\")\\nresponse = requests.get(\"https://api.openai.com/v1/models\", headers={\"Authorization\": f\"Bearer {api_key}\"})\\nprint(response.json())",
@@ -220,7 +220,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Connect to database with credentials
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\\ndb_url = os.environ.get(\"DATABASE_URL\")\\nprint(f\"Connecting to: {db_url}\")",
@@ -234,7 +234,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Pass multiple secrets at once
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\\nfor key in [\"API_KEY\", \"DB_PASSWORD\", \"JWT_SECRET\"]:\\n    print(f\"{key}: {os.environ.get(key)}\")",
@@ -250,7 +250,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Different env vars per execution
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\\nenv = os.environ.get(\"ENVIRONMENT\")\\nprint(f\"Running in: {env}\")",
@@ -261,7 +261,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
   }'
 
 # Later: Use different values
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\\nenv = os.environ.get(\"ENVIRONMENT\")\\nprint(f\"Running in: {env}\")",

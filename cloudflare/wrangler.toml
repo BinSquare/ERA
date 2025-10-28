@@ -22,7 +22,7 @@ binding = "ASSETS"
 name = "era-agent-container"
 class_name = "EraAgent"
 image = "../era-agent/Dockerfile"
-instance_type = "standard-1"
+instance_type = "standard"
 max_instances = 10
 
 # Durable Object binding (required for Containers)
@@ -80,7 +80,7 @@ database_id = "02edc2cd-1061-4d98-8163-74353265f5cc"
 # Optional: Environment variables passed to your container
 [vars]
 AGENT_LOG_LEVEL = "info"
-ERA_STORAGE_URL = "https://era-agent.yawnxyz.workers.dev"
+ERA_STORAGE_URL = "https://anewera.dev"
 
 # Custom domain configuration for anewera.dev
 routes = [

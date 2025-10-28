@@ -10,7 +10,7 @@ echo "================================"
 echo ""
 
 # Set base URL - update this after deployment
-BASE_URL="${MCP_URL:-https://era-agent.yawnxyz.workers.dev}"
+BASE_URL="${MCP_URL:-https://anewera.dev}"
 MCP_ENDPOINT="$BASE_URL/mcp/v1"
 
 echo "Testing MCP endpoint: $MCP_ENDPOINT"

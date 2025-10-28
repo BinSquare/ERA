@@ -162,6 +162,11 @@ export default {
       return await stub.fetch(request);
     }
 
+    // Health check endpoint - pass to Go agent
+    if (url.pathname === '/health') {
+      return await stub.fetch(request);
+    }
+
     // Handle additional doc redirects (Astro handles /docs/ → /docs/quickstart-hosted/)
     if (url.pathname === '/docs/quickstart' || url.pathname === '/docs/quickstart/') {
       return Response.redirect(new URL('/docs/quickstart-hosted/', request.url), 301);
@@ -1226,7 +1231,7 @@ function getDocumentation() {
     <p>ERA Agent provides a REST API for creating and managing isolated VM instances for code execution. Built with Go and deployed on Cloudflare's edge network.</p>
     
     <h3>Base URL</h3>
-    <code>https://era-agent.yawnxyz.workers.dev</code>
+    <code>https://anewera.dev</code>
 
     <h2>Endpoints</h2>
 
@@ -1236,7 +1241,7 @@ function getDocumentation() {
       <p>Health check endpoint - verify the service is running</p>
       <div class="example">
         <strong>Example:</strong>
-        <pre><code>curl https://era-agent.yawnxyz.workers.dev/health</code></pre>
+        <pre><code>curl https://anewera.dev/health</code></pre>
       </div>
     </div>
 
@@ -1254,7 +1259,7 @@ function getDocumentation() {
   "persist": false
 }</code></pre>
         <strong>Example:</strong>
-        <pre><code>curl -X POST https://era-agent.yawnxyz.workers.dev/api/vm \\
+        <pre><code>curl -X POST https://anewera.dev/api/vm \\
   -H "Content-Type: application/json" \\
   -d '{"language":"python","cpu_count":1,"memory_mib":256}'</code></pre>
       </div>
@@ -1266,7 +1271,7 @@ function getDocumentation() {
       <p>Get details about a specific VM</p>
       <div class="example">
         <strong>Example:</strong>
-        <pre><code>curl https://era-agent.yawnxyz.workers.dev/api/vm/python-123456789</code></pre>
+        <pre><code>curl https://anewera.dev/api/vm/python-123456789</code></pre>
       </div>
     </div>
 
@@ -1281,7 +1286,7 @@ function getDocumentation() {
   "timeout": 30
 }</code></pre>
         <strong>Example:</strong>
-        <pre><code>curl -X POST https://era-agent.yawnxyz.workers.dev/api/vm/python-123/run \\
+        <pre><code>curl -X POST https://anewera.dev/api/vm/python-123/run \\
   -H "Content-Type: application/json" \\
   -d '{"command":"python -c \\"print(42)\\"","timeout":30}'</code></pre>
       </div>
@@ -1313,17 +1318,17 @@ function getDocumentation() {
 
     <h2>Quick Start</h2>
     <pre><code># 1. Create a VM
-VM_ID=$(curl -s -X POST https://era-agent.yawnxyz.workers.dev/api/vm \\
+VM_ID=$(curl -s -X POST https://anewera.dev/api/vm \\
   -H "Content-Type: application/json" \\
   -d '{"language":"python","cpu_count":1,"memory_mib":256}' | jq -r '.id')
 
 # 2. Run code
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/vm/$VM_ID/run \\
+curl -X POST https://anewera.dev/api/vm/$VM_ID/run \\
   -H "Content-Type: application/json" \\
   -d '{"command":"python -c \\"print(42)\\"","timeout":30}'
 
 # 3. Clean up
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/vm/$VM_ID</code></pre>
+curl -X DELETE https://anewera.dev/api/vm/$VM_ID</code></pre>
 
     <h2>Rate Limits & Resources</h2>
     <ul>

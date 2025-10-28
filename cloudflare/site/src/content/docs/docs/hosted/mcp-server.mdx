@@ -19,7 +19,7 @@ Add the following configuration to your Claude Desktop settings:
     {
       "mcpServers": {
         "era-agent": {
-          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+          "url": "https://anewera.dev/mcp/v1"
         }
       }
     }
@@ -30,7 +30,7 @@ Add the following configuration to your Claude Desktop settings:
     {
       "mcpServers": {
         "era-agent": {
-          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+          "url": "https://anewera.dev/mcp/v1"
         }
       }
     }
@@ -41,7 +41,7 @@ Add the following configuration to your Claude Desktop settings:
     {
       "mcpServers": {
         "era-agent": {
-          "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+          "url": "https://anewera.dev/mcp/v1"
         }
       }
     }
@@ -50,7 +50,7 @@ Add the following configuration to your Claude Desktop settings:
 </Tabs>
 
 :::tip[Using Your Own Deployment]
-Replace `https://era-agent.yawnxyz.workers.dev` with your own Cloudflare Worker URL after deploying.
+Replace `https://anewera.dev` with your own Cloudflare Worker URL after deploying.
 :::
 
 ### Restart Claude Desktop
@@ -367,7 +367,7 @@ The MCP server implements the [Model Context Protocol](https://modelcontextproto
 ### Endpoint
 
 ```
-https://era-agent.yawnxyz.workers.dev/mcp/v1
+https://anewera.dev/mcp/v1
 ```
 
 ### Request Format
@@ -453,7 +453,7 @@ This will test:
 
 4. **Check the MCP server is running**:
    ```bash
-   curl -X POST https://era-agent.yawnxyz.workers.dev/mcp/v1 \
+   curl -X POST https://anewera.dev/mcp/v1 \
      -H "Content-Type: application/json" \
      -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"0.1.0","clientInfo":{"name":"test","version":"1.0.0"}}}'
    ```

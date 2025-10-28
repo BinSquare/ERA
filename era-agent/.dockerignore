@@ -1,0 +1,69 @@
+# ERA Agent .dockerignore
+# Exclude unnecessary files from Docker build context
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build artifacts
+agent
+agent-*
+*.o
+*.a
+*.so
+*.dylib
+
+# State directories
+.agent_state
+agent-state/
+.cache/
+
+# Documentation (keep only what's needed)
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Go
+go.work
+go.work.sum
+
+# Test files
+*_test.go
+test-*.sh
+tests/
+
+# Docker files (these are copied explicitly if needed)
+Dockerfile.*
+docker-compose.*.yml
+
+# Scripts (except essential ones)
+scripts/macos/
+scripts/brew-install/
+
+# SDK and examples
+sdk/
+homebrew/
+
+# Web development files (copy web/ explicitly)
+web/node_modules/
+web/.next/
+web/dist/
+
+# Other
+TODO.md
+NOTES.md
+.env
+.env.local
+

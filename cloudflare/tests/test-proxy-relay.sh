@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test the Worker-as-relay proxy system
 
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 TIMESTAMP=$(date +%s)
 SESSION_ID="test-proxy-relay-${TIMESTAMP}"
 

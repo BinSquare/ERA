@@ -16,7 +16,7 @@ ERA Agent supports automatic package installation during session creation for al
 
 ```bash
 # Create Python session with packages
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -46,7 +46,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ### Install Packages
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -61,7 +61,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ### Using requirements.txt Format
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -77,7 +77,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ## Node.js (npm)
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "node",
@@ -92,7 +92,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 Then use in your code:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/node-app/run \
+curl -X POST https://anewera.dev/api/sessions/node-app/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "const axios = require(\"axios\");\nconst ms = require(\"ms\");\nconsole.log(\"5 days in ms:\", ms(\"5 days\"));"
@@ -104,7 +104,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/node-app/run \
 TypeScript sessions use Node.js + tsx under the hood:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "typescript",
@@ -121,7 +121,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 ## Go (go modules)
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "go",
@@ -139,7 +139,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
 
 ```bash
 # Create regular Deno session (no setup)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "deno",
@@ -148,7 +148,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Use npm packages directly
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-app/run \
+curl -X POST https://anewera.dev/api/sessions/deno-app/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import { format } from \"npm:date-fns@3.0.0\";\nimport { z } from \"npm:zod@3.22.0\";\nconst date = format(new Date(), \"yyyy-MM-dd\");\nconsole.log(\"Formatted:\", date);"
@@ -160,7 +160,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-app/run \
 Run arbitrary commands during setup:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -182,7 +182,7 @@ Package installation runs asynchronously to avoid Worker timeout limits:
 ### 1. Create Session (Returns Immediately)
 
 ```bash
-response=$(curl -s -X POST "https://era-agent.yawnxyz.workers.dev/api/sessions" \
+response=$(curl -s -X POST "https://anewera.dev/api/sessions" \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -201,7 +201,7 @@ echo "$response" | jq '{id, setup_status}'
 
 ```bash
 # Check setup status
-curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/my-session" | jq '{setup_status, setup_result}'
+curl -s "https://anewera.dev/api/sessions/my-session" | jq '{setup_status, setup_result}'
 ```
 
 Status values:
@@ -213,7 +213,7 @@ Status values:
 ### 3. Run Code (After Setup Completes)
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import requests\nimport pandas as pd\nprint(f\"requests: {requests.__version__}\")\nprint(f\"pandas: {pd.__version__}\")"
@@ -226,7 +226,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Day 1: Create session with packages (wait 2-3 minutes for setup)
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -238,7 +238,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Days/weeks later: Use same session ID - packages are INSTANTLY available!
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-analytics/run \
+curl -X POST https://anewera.dev/api/sessions/prod-analytics/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import pandas as pd\nimport numpy as np\nprint(\"Packages loaded instantly!\")"
@@ -292,7 +292,7 @@ Setup `envs` are only for non-sensitive configuration during package installatio
 }
 
 # ✅ GOOD - Pass secrets at runtime
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\napi_key = os.environ.get(\"API_KEY\")\nprint(f\"Using API key: {api_key[:4]}...\")",
@@ -308,7 +308,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 #!/bin/bash
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 SESSION_ID="ml-project-$(date +%s)"
 
 # 1. Create session with packages
@@ -367,7 +367,7 @@ If setup takes longer than expected (> 5-7 minutes), it likely hit the Container
 Check the setup result for error details:
 
 ```bash
-curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/my-session" | jq '.setup_result'
+curl -s "https://anewera.dev/api/sessions/my-session" | jq '.setup_result'
 ```
 
 Common issues:

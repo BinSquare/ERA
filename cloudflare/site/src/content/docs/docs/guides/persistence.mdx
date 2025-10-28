@@ -13,14 +13,14 @@ In a persistent session, the following persist across code executions:
 
 ```bash
 # First run
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "counter = 0\nuser_data = {\"name\": \"Alice\", \"score\": 0}"
   }'
 
 # Later run - variables still exist
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "counter += 1\nuser_data[\"score\"] += 10\nprint(f\"Counter: {counter}, Score: {user_data[\"score\"]}\")"
@@ -31,14 +31,14 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Create file
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"config.json\", \"w\") as f:\n    f.write(\"{\\\"setting\\\": \\\"value\\\"}\")"
   }'
 
 # Read file in later run
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "with open(\"config.json\", \"r\") as f:\n    config = f.read()\nprint(f\"Config: {config}\")"
@@ -49,14 +49,14 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # First run - import
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nimport math\nfrom datetime import datetime"
   }'
 
 # Later run - imports still available
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "data = {\"timestamp\": datetime.now().isoformat()}\nprint(json.dumps(data))"
@@ -67,7 +67,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 
 ```bash
 # Create session with data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST https://anewera.dev/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -79,7 +79,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
   }'
 
 # Retrieve metadata later
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+curl https://anewera.dev/api/sessions/my-session
 ```
 
 ## What Doesn't Persist?
@@ -90,14 +90,14 @@ Each session is isolated - nothing persists between different sessions:
 
 ```bash
 # Session A
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-a/run \
+curl -X POST https://anewera.dev/api/sessions/session-a/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "shared_data = \"This is session A\""
   }'
 
 # Session B - can't access session-a's data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/session-b/run \
+curl -X POST https://anewera.dev/api/sessions/session-b/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "print(shared_data)"  # Error: name \"shared_data\" is not defined
@@ -110,7 +110,7 @@ The `/api/execute` endpoint creates temporary sessions that are immediately dest
 
 ```bash
 # First execution
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -118,7 +118,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
   }'
 
 # Second execution - fresh environment
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST https://anewera.dev/api/execute \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
@@ -134,14 +134,14 @@ Store configuration that persists across runs:
 
 ```bash
 # Initialize configuration
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/app-session/run \
+curl -X POST https://anewera.dev/api/sessions/app-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nconfig = {\"api_url\": \"https://api.example.com\", \"timeout\": 30}\nwith open(\"config.json\", \"w\") as f:\n    json.dump(config, f)"
   }'
 
 # Load configuration in any run
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/app-session/run \
+curl -X POST https://anewera.dev/api/sessions/app-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\"config.json\", \"r\") as f:\n    config = json.load(f)\nprint(f\"API URL: {config[\"api_url\"]}\")"
@@ -154,21 +154,21 @@ Build up data over multiple runs:
 
 ```bash
 # Initialize log
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/logger/run \
+curl -X POST https://anewera.dev/api/sessions/logger/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nlog = []\nwith open(\"log.json\", \"w\") as f:\n    json.dump(log, f)"
   }'
 
 # Add entry 1
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/logger/run \
+curl -X POST https://anewera.dev/api/sessions/logger/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\"log.json\", \"r\") as f:\n    log = json.load(f)\nlog.append({\"event\": \"user_login\", \"time\": \"10:00\"})\nwith open(\"log.json\", \"w\") as f:\n    json.dump(log, f)\nprint(f\"Log entries: {len(log)}\")"
   }'
 
 # Add entry 2
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/logger/run \
+curl -X POST https://anewera.dev/api/sessions/logger/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\"log.json\", \"r\") as f:\n    log = json.load(f)\nlog.append({\"event\": \"user_action\", \"time\": \"10:05\"})\nwith open(\"log.json\", \"w\") as f:\n    json.dump(log, f)\nprint(f\"Log entries: {len(log)}\")"
@@ -181,28 +181,28 @@ Implement workflows with persistent state:
 
 ```bash
 # Initialize workflow
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow/run \
+curl -X POST https://anewera.dev/api/sessions/workflow/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "state = \"initialized\"\nsteps_completed = 0\nprint(f\"State: {state}\")"
   }'
 
 # Step 1: Collect data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow/run \
+curl -X POST https://anewera.dev/api/sessions/workflow/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "if state == \"initialized\":\n    data = [1, 2, 3, 4, 5]\n    state = \"data_collected\"\n    steps_completed += 1\n    print(f\"Data collected. State: {state}\")\nelse:\n    print(f\"Invalid state: {state}\")"
   }'
 
 # Step 2: Process data
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow/run \
+curl -X POST https://anewera.dev/api/sessions/workflow/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "if state == \"data_collected\":\n    result = sum(data) / len(data)\n    state = \"processed\"\n    steps_completed += 1\n    print(f\"Average: {result}. State: {state}\")\nelse:\n    print(f\"Invalid state: {state}\")"
   }'
 
 # Step 3: Complete
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/workflow/run \
+curl -X POST https://anewera.dev/api/sessions/workflow/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "if state == \"processed\":\n    state = \"completed\"\n    print(f\"Workflow completed in {steps_completed} steps\")\nelse:\n    print(f\"Invalid state: {state}\")"
@@ -215,14 +215,14 @@ Cache expensive computations:
 
 ```bash
 # First run - compute and cache
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/cache-demo/run \
+curl -X POST https://anewera.dev/api/sessions/cache-demo/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nimport os\n\ndef expensive_computation(n):\n    result = sum(range(n))\n    return result\n\ncache_file = \"cache.json\"\nif os.path.exists(cache_file):\n    with open(cache_file, \"r\") as f:\n        cache = json.load(f)\n    print(\"Using cached result\")\nelse:\n    result = expensive_computation(1000000)\n    cache = {\"result\": result}\n    with open(cache_file, \"w\") as f:\n        json.dump(cache, f)\n    print(\"Computed and cached result\")\n\nprint(f\"Result: {cache[\"result\"]}\")"
   }'
 
 # Second run - uses cache
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/cache-demo/run \
+curl -X POST https://anewera.dev/api/sessions/cache-demo/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\nwith open(\"cache.json\", \"r\") as f:\n    cache = json.load(f)\nprint(f\"Cached result: {cache[\"result\"]}\")"
@@ -234,7 +234,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/cache-demo/run \
 Update session metadata during execution:
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "result = 42\nprint(f\"Computed: {result}\")",
@@ -246,7 +246,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
   }'
 
 # Retrieve updated metadata
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+curl https://anewera.dev/api/sessions/my-session
 ```
 
 ## Best Practices
@@ -255,7 +255,7 @@ curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
 
 ```bash
 # Create initialization script
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "# Initialize session\nimport json\nimport os\n\n# Set up config if not exists\nif not os.path.exists(\"config.json\"):\n    config = {\"version\": \"1.0\", \"initialized\": True}\n    with open(\"config.json\", \"w\") as f:\n        json.dump(config, f)\n\n# Initialize state\nif \"state\" not in dir():\n    state = {\"runs\": 0}\n\nprint(\"Session initialized\")"
@@ -265,7 +265,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Check File Existence
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import os\nimport json\n\ndata_file = \"data.json\"\n\nif os.path.exists(data_file):\n    with open(data_file, \"r\") as f:\n        data = json.load(f)\n    print(f\"Loaded existing data: {len(data)} items\")\nelse:\n    data = []\n    print(\"Initialized new data\")\n\n# Add new item\ndata.append({\"value\": 42})\n\n# Save\nwith open(data_file, \"w\") as f:\n    json.dump(data, f)"
@@ -275,7 +275,7 @@ curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
 ### Version Control
 
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+curl -X POST https://anewera.dev/api/sessions/my-session/run \
   -H "Content-Type: application/json" \
   -d '{
     "code": "import json\n\nVERSION = \"2.0\"\n\ntry:\n    with open(\"data.json\", \"r\") as f:\n        data = json.load(f)\n    \n    # Migrate if needed\n    if data.get(\"version\", \"1.0\") != VERSION:\n        print(f\"Migrating from {data.get(\"version\")} to {VERSION}\")\n        # Perform migration...\n        data[\"version\"] = VERSION\n        with open(\"data.json\", \"w\") as f:\n            json.dump(data, f)\nexcept FileNotFoundError:\n    data = {\"version\": VERSION, \"items\": []}\n    with open(\"data.json\", \"w\") as f:\n        json.dump(data, f)"

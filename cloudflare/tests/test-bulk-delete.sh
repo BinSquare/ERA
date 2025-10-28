@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test bulk session deletion
 
-API_URL="https://era-agent.yawnxyz.workers.dev"
+API_URL="https://anewera.dev"
 TIMESTAMP=$(date +%s)
 
 echo "🧪 Testing Bulk Session Delete"
