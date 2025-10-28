@@ -48,8 +48,8 @@ Usage:
   agent [command]
 
 Available Commands:
-  vm          Manage VM sessions
-  serve       Start HTTP server
+  vm          Manage VMs
+  server      Start HTTP server
   mcp         Start MCP server
   version     Show version info
   help        Help about any command
@@ -100,12 +100,12 @@ The CLI is the fastest way to test ERA Agent locally.
 ### Example 1: Simple Python Execution
 
 ```bash
-# Create a Python session
-VM_ID=$(./agent vm create --language python | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
-echo "Session ID: $VM_ID"
+# Create a Python VM
+VM_ID=$(./agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+echo "VM ID: $VM_ID"
 
 # Run Python code
-./agent vm run --vm $VM_ID --cmd 'python3 -c "print(\"Hello from ERA Agent!\"); print(2 + 2)"'
+./agent vm run --vm $VM_ID --cmd 'python3 -c "print(\"Hello from ERA Agent!\"); print(2 + 2)"' --timeout 30
 
 # Clean up
 ./agent vm clean --vm $VM_ID
@@ -114,24 +114,24 @@ echo "Session ID: $VM_ID"
 ### Example 2: Multi-Step Workflow
 
 ```bash
-# Create persistent Python session
-VM_ID=$(./agent vm create --language python --persist | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+# Create persistent Python VM
+VM_ID=$(./agent vm create --language python --persist | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 # Step 1: Define variables
 ./agent vm run --vm $VM_ID --cmd 'python3 -c "
 x = 42
 y = 100
 print(f\"Initialized: x={x}, y={y}\")
-"'
+"' --timeout 30
 
 # Step 2: Use variables (they persist!)
 ./agent vm run --vm $VM_ID --cmd 'python3 -c "
 result = x + y
 print(f\"Result: {x} + {y} = {result}\")
-"'
+"' --timeout 30
 
-# Get session info
-./agent vm get --vm $VM_ID
+# List VMs to see current state
+./agent vm list
 
 # Clean up when done
 ./agent vm clean --vm $VM_ID
@@ -141,26 +141,26 @@ print(f\"Result: {x} + {y} = {result}\")
 
 **Node.js:**
 ```bash
-VM_ID=$(./agent vm create --language node | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
-./agent vm run --vm $VM_ID --cmd 'node -e "console.log(\"Hello from Node.js!\"); console.log(Math.PI)"'
+VM_ID=$(./agent vm create --language node | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+./agent vm run --vm $VM_ID --cmd 'node -e "console.log(\"Hello from Node.js!\"); console.log(Math.PI)"' --timeout 30
 ./agent vm clean --vm $VM_ID
 ```
 
 **Go:**
 ```bash
-VM_ID=$(./agent vm create --language go | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
+VM_ID=$(./agent vm create --language golang | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 echo 'package main
 import "fmt"
 func main() { fmt.Println("Hello from Go!") }' > /tmp/hello.go
 
-./agent vm run --vm $VM_ID --file /tmp/hello.go
+./agent vm run --vm $VM_ID --cmd "go run /tmp/hello.go" --timeout 30
 ./agent vm clean --vm $VM_ID
 ```
 
-**TypeScript:**
+**Ruby:**
 ```bash
-VM_ID=$(./agent vm create --language typescript | grep -o 'Created.*: .*' | cut -d':' -f2 | tr -d ' ')
-./agent vm run --vm $VM_ID --cmd 'ts-node -e "const msg: string = \"Hello from TypeScript!\"; console.log(msg)"'
+VM_ID=$(./agent vm create --language ruby | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+./agent vm run --vm $VM_ID --cmd 'ruby -e "puts \"Hello from Ruby!\""' --timeout 30
 ./agent vm clean --vm $VM_ID
 ```
 
@@ -171,54 +171,50 @@ For REST API access, run ERA Agent as an HTTP server.
 ### Start the Server
 
 ```bash
-# Start on default port (8787)
-./agent serve
+# Start on default port (8080)
+./agent server
 
 # Or specify custom port
-PORT=9000 ./agent serve
+PORT=9000 ./agent server
 
 # Or use environment variable
-AGENT_MODE=http PORT=8787 ./agent
+AGENT_MODE=http PORT=8080 ./agent
 ```
 
 ### Test the Server
 
 ```bash
-# Execute Python code
-curl -X POST http://localhost:8787/api/execute \
+# Create a VM
+curl -X POST http://localhost:8080/api/vm/create \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
-    "code": "print(\"Hello from HTTP API!\")\nprint([x**2 for x in range(10)])"
+    "cpu": 1,
+    "memory": 256,
+    "persist": true
   }'
 
-# Create a session
-curl -X POST http://localhost:8787/api/sessions \
+# Execute code in VM (replace abc123 with actual VM ID from create response)
+curl -X POST http://localhost:8080/api/vm/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vm_id": "abc123",
+    "command": "python -c \"print(\\\"Hello from HTTP API!\\\")\\nprint([x**2 for x in range(10)])\"",
+    "timeout": 30
+  }'
+
+# Execute code in temporary VM
+curl -X POST http://localhost:8080/api/vm/temp \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
-    "persistent": true,
-    "session_id": "my-session"
+    "command": "x = 42\\nprint(f\\\"x = {x}\\\")",
+    "cpu": 1,
+    "memory": 256
   }'
 
-# Run code in session
-curl -X POST http://localhost:8787/api/sessions/my-session/run \
-  -H "Content-Type: application/json" \
-  -d '{"code": "x = 42\nprint(f\"x = {x}\")"}'
-
-# Run more code (state persists)
-curl -X POST http://localhost:8787/api/sessions/my-session/run \
-  -H "Content-Type: application/json" \
-  -d '{"code": "y = x * 2\nprint(f\"y = {y}\")"}'
-
-# List all sessions
-curl http://localhost:8787/api/sessions
-
-# Get session info
-curl http://localhost:8787/api/sessions/my-session
-
-# Delete session
-curl -X DELETE http://localhost:8787/api/sessions/my-session
+# List all VMs
+curl http://localhost:8080/api/vm/list
 ```
 
 ## Quick Start: MCP Server for Claude Desktop
@@ -305,7 +301,7 @@ Control agent behavior with environment variables:
 export AGENT_MODE=http              # Run as HTTP server
 
 # Server settings
-export PORT=8787                    # HTTP server port
+export PORT=8080                    # HTTP server port
 
 # Logging
 export AGENT_LOG_LEVEL=debug        # Log level: debug, info, warn, error
@@ -321,7 +317,7 @@ Create a `.env` file for persistent configuration:
 ```bash
 # .env
 AGENT_MODE=http
-PORT=8787
+PORT=8080
 AGENT_LOG_LEVEL=info
 AGENT_STATE_DIR=/var/lib/era-agent
 ```
@@ -355,13 +351,18 @@ Most settings can also be set via CLI flags:
 
 ```bash
 # 1. Start HTTP server in background
-./agent serve &
+./agent server &
 SERVER_PID=$!
 
-# 2. Test your code
-curl -X POST http://localhost:8787/api/execute \
+# 2. Test your code (create VM and execute)
+VM_ID=$(curl -s -X POST http://localhost:8080/api/vm/create \
   -H "Content-Type: application/json" \
-  -d @test-payload.json
+  -d '{"language": "python", "cpu": 1, "memory": 256}' | \
+  jq -r '.data.id')
+
+curl -X POST http://localhost:8080/api/vm/execute \
+  -H "Content-Type: application/json" \
+  -d "{\"vm_id\": \"$VM_ID\", \"command\": \"print(\\\"Hello from dev workflow!\\\")\", \"timeout\": 30}"
 
 # 3. View logs
 tail -f /var/log/era-agent.log
@@ -412,20 +413,26 @@ done
 ### VM Management
 
 ```bash
-# Create session
+# Create VM
 ./agent vm create --language <lang> [options]
 
 # Run code
-./agent vm run --vm <id> --cmd <command>
-./agent vm run --vm <id> --file <path>
+./agent vm run --vm <id> --cmd <command> --timeout <seconds>
+./agent vm run --vm <id> --file <path> --timeout <seconds>
 
-# List sessions
+# Execute on multiple VMs
+./agent vm exec --cmd <command> --timeout <seconds> --vm <id> [options]
+
+# Execute in temporary VM
+./agent vm temp --language <lang> --cmd <command> --timeout <seconds> [options]
+
+# List VMs
 ./agent vm list
 
-# Get session info
-./agent vm get --vm <id>
+# Interactive shell
+./agent vm shell --vm <id>
 
-# Clean up session
+# Clean up VM
 ./agent vm clean --vm <id>
 ```
 
@@ -433,8 +440,8 @@ done
 
 ```bash
 # HTTP server
-./agent serve
-PORT=9000 ./agent serve
+./agent server
+PORT=9000 ./agent server
 
 # MCP server (for Claude Desktop)
 ./agent mcp
@@ -447,18 +454,34 @@ PORT=9000 ./agent serve
 --log-level <level>    # debug, info, warn, error
 
 # VM Create
---language <lang>      # python, node, typescript, go, deno
+--language <lang>      # python, javascript, node, ruby, golang
 --cpu <count>          # CPU cores (default: 1)
---mem <mib>           # Memory in MiB (default: 256)
+--mem <mib>            # Memory in MiB (default: 256)
 --network <mode>       # none (default), allow_all
---persist              # Enable persistence
+--persist              # Enable persistent volume
 
 # VM Run
---vm <id>             # Session ID
+--vm <id>              # VM ID
 --cmd <command>        # Command to execute
---file <path>          # File to execute
---timeout <seconds>    # Execution timeout
---env KEY=VALUE        # Environment variable
+--file <path>          # Optional file to stage inside /in
+--timeout <seconds>    # Execution timeout (required, must be > 0)
+
+# VM Exec
+--all                  # Execute on all ready VMs
+--vm <id>              # Target VM identifier (repeatable)
+--timeout <seconds>    # Execution timeout (required, must be > 0)
+
+# VM Temp
+--language <lang>      # Language: python, javascript, node, ruby, golang
+--cpu <count>          # CPU cores (default: 1)
+--mem <mib>            # Memory in MiB (default: 256)
+--network <mode>       # none (default), allow_all
+--persist              # Enable persistent volume
+--timeout <seconds>    # Execution timeout (required, must be > 0)
+
+# VM List
+--status <state>       # Filter by VM status
+--all                  # Include stopped VMs
 ```
 
 ## Troubleshooting
@@ -505,16 +528,16 @@ source ~/.bashrc
 
 ### "Port already in use"
 
-**Problem:** Port 8787 is occupied
+**Problem:** Port 8080 is occupied
 
 **Solution:**
 ```bash
 # Use different port
-PORT=9000 ./agent serve
+PORT=9000 ./agent server
 
 # Or kill existing process
-lsof -ti:8787 | xargs kill
-./agent serve
+lsof -ti:8080 | xargs kill
+./agent server
 ```
 
 ### Verbose Logging
@@ -526,7 +549,7 @@ Enable debug logging for troubleshooting:
 ./agent --log-level debug vm create --language python
 
 # HTTP Server
-AGENT_LOG_LEVEL=debug ./agent serve
+AGENT_LOG_LEVEL=debug ./agent server
 
 # MCP Server
 AGENT_LOG_LEVEL=debug ./agent mcp

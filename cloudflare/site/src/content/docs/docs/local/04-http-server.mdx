@@ -10,63 +10,74 @@ Run ERA Agent as an HTTP API server for programmatic access to all features. Per
 ### Start the Server
 
 ```bash
-# Default port 8787
-./agent serve
+# Default port 8080
+./agent server
 
 # Custom port
-PORT=9000 ./agent serve
+PORT=9000 ./agent server
 
 # With debug logging
-AGENT_LOG_LEVEL=debug ./agent serve
+AGENT_LOG_LEVEL=debug ./agent server
+
+# Or use explicit address
+./agent server --addr :9000
 ```
 
-The server will start and listen on `http://localhost:8787`
+The server will start and listen on `http://localhost:8080` (or configured port)
 
 ### Test the Server
 
 ```bash
-curl http://localhost:8787/health
+curl http://localhost:8080/api/vm/list
 ```
 
-Should return:
-```json
-{"status": "ok"}
-```
+Should return a JSON response with an empty list of VMs.
 
 ## API Endpoints
 
-The HTTP server exposes the same API as the Cloudflare Workers deployment. See the [API Reference](/docs/api-reference) for complete documentation.
+The HTTP server exposes VM management APIs. See the [API Reference](/docs/api-reference) for complete documentation.
 
 ### Quick Examples
 
-**Execute Code:**
+**Create VM:**
 ```bash
-curl -X POST http://localhost:8787/api/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "print(\"Hello from ERA Agent!\")",
-    "language": "python"
-  }'
-```
-
-**Create Session:**
-```bash
-curl -X POST http://localhost:8787/api/sessions \
+curl -X POST http://localhost:8080/api/vm/create \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
-    "cpu_count": 2,
-    "memory_mib": 512
+    "cpu": 2,
+    "memory": 512,
+    "network": "allow_all",
+    "persist": true
   }'
 ```
 
-**Run in Session:**
+**Execute Code in VM:**
 ```bash
-curl -X POST http://localhost:8787/api/sessions/{session_id}/run \
+curl -X POST http://localhost:8080/api/vm/execute \
   -H "Content-Type: application/json" \
   -d '{
-    "code": "print(2 + 2)"
+    "vm_id": "abc123",
+    "command": "python -c \"print(\\\"Hello from VM!\\\")\"",
+    "timeout": 30
   }'
+```
+
+**Execute Code in Temporary VM:**
+```bash
+curl -X POST http://localhost:8080/api/vm/temp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "command": "print(2 + 2)",
+    "cpu": 1,
+    "memory": 256
+  }'
+```
+
+**List VMs:**
+```bash
+curl http://localhost:8080/api/vm/list
 ```
 
 ## Configuration
@@ -75,8 +86,11 @@ curl -X POST http://localhost:8787/api/sessions/{session_id}/run \
 
 ```bash
 # Server Configuration
-export PORT=8787                    # Server port
+export PORT=8080                    # Server port (default: 8080)
 export AGENT_MODE=http              # Auto-start as HTTP server
+
+# Security
+export ERA_API_KEY=your-secret-key  # API key for authentication (optional)
 
 # Logging
 export AGENT_LOG_LEVEL=info         # Log level: debug, info, warn, error
@@ -101,10 +115,10 @@ After=network.target
 Type=simple
 User=era-agent
 WorkingDirectory=/opt/era-agent
-Environment="PORT=8787"
+Environment="PORT=8080"
 Environment="AGENT_LOG_LEVEL=info"
 Environment="AGENT_STATE_DIR=/var/lib/era-agent"
-ExecStart=/opt/era-agent/agent serve
+ExecStart=/opt/era-agent/agent server
 Restart=on-failure
 RestartSec=5s
 
@@ -135,12 +149,12 @@ Create `~/Library/LaunchAgents/com.era-agent.server.plist`:
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/agent</string>
-        <string>serve</string>
+        <string>server</string>
     </array>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PORT</key>
-        <string>8787</string>
+        <string>8080</string>
         <key>AGENT_LOG_LEVEL</key>
         <string>info</string>
     </dict>
@@ -171,67 +185,63 @@ launchctl start com.era-agent.server
 import requests
 
 class ERAAgentClient:
-    def __init__(self, base_url="http://localhost:8787"):
+    def __init__(self, base_url="http://localhost:8080"):
         self.base_url = base_url
 
-    def execute(self, code, language="python", **kwargs):
-        """Execute code ephemerally."""
+    def create_vm(self, language, **kwargs):
+        """Create a VM."""
         response = requests.post(
-            f"{self.base_url}/api/execute",
-            json={"code": code, "language": language, **kwargs}
-        )
-        return response.json()
-
-    def create_session(self, language, **kwargs):
-        """Create a persistent session."""
-        response = requests.post(
-            f"{self.base_url}/api/sessions",
+            f"{self.base_url}/api/vm/create",
             json={"language": language, **kwargs}
         )
         return response.json()
 
-    def run_in_session(self, session_id, code, **kwargs):
-        """Run code in existing session."""
+    def execute_in_vm(self, vm_id, command, **kwargs):
+        """Execute command in existing VM."""
         response = requests.post(
-            f"{self.base_url}/api/sessions/{session_id}/run",
-            json={"code": code, **kwargs}
+            f"{self.base_url}/api/vm/execute",
+            json={"vm_id": vm_id, "command": command, **kwargs}
         )
+        return response.json()
+
+    def execute_temp(self, language, command, **kwargs):
+        """Execute command in temporary VM."""
+        response = requests.post(
+            f"{self.base_url}/api/vm/temp",
+            json={"language": language, "command": command, **kwargs}
+        )
+        return response.json()
+
+    def list_vms(self):
+        """List all VMs."""
+        response = requests.get(f"{self.base_url}/api/vm/list")
         return response.json()
 
 # Usage
 client = ERAAgentClient()
 
-# Quick execution
-result = client.execute("print('Hello!')", "python")
+# Quick execution in temporary VM
+result = client.execute_temp("python", "print('Hello!')")
 print(result)
 
-# Session-based execution
-session = client.create_session("python", cpu_count=2)
-session_id = session["id"]
+# VM-based execution
+vm = client.create_vm("python", cpu=2, memory=512)
+vm_id = vm["data"]["id"]
 
-result1 = client.run_in_session(session_id, "x = 42")
-result2 = client.run_in_session(session_id, "print(x * 2)")
+result = client.execute_in_vm(vm_id, "python -c 'x = 42; print(x)'")
+print(result)
 ```
 
 ### Node.js
 
 ```javascript
 class ERAAgentClient {
-    constructor(baseURL = 'http://localhost:8787') {
+    constructor(baseURL = 'http://localhost:8080') {
         this.baseURL = baseURL;
     }
 
-    async execute(code, language = 'python', options = {}) {
-        const response = await fetch(`${this.baseURL}/api/execute`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, language, ...options })
-        });
-        return response.json();
-    }
-
-    async createSession(language, options = {}) {
-        const response = await fetch(`${this.baseURL}/api/sessions`, {
+    async createVM(language, options = {}) {
+        const response = await fetch(`${this.baseURL}/api/vm/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ language, ...options })
@@ -239,15 +249,26 @@ class ERAAgentClient {
         return response.json();
     }
 
-    async runInSession(sessionId, code, options = {}) {
-        const response = await fetch(
-            `${this.baseURL}/api/sessions/${sessionId}/run`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, ...options })
-            }
-        );
+    async executeInVM(vmId, command, options = {}) {
+        const response = await fetch(`${this.baseURL}/api/vm/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vm_id: vmId, command, ...options })
+        });
+        return response.json();
+    }
+
+    async executeTemp(language, command, options = {}) {
+        const response = await fetch(`${this.baseURL}/api/vm/temp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language, command, ...options })
+        });
+        return response.json();
+    }
+
+    async listVMs() {
+        const response = await fetch(`${this.baseURL}/api/vm/list`);
         return response.json();
     }
 }
@@ -256,13 +277,15 @@ class ERAAgentClient {
 const client = new ERAAgentClient();
 
 // Quick execution
-const result = await client.execute("console.log('Hello!')", "node");
+const result = await client.executeTemp("python", "print('Hello!')");
 console.log(result);
 
-// Session-based execution
-const session = await client.create Session("node");
-await client.runInSession(session.id, "let x = 42");
-await client.runInSession(session.id, "console.log(x * 2)");
+// VM-based execution
+const vm = await client.createVM("python", { cpu: 2, memory: 512 });
+const vmId = vm.data.id;
+
+const result2 = await client.executeInVM(vmId, "python -c 'x = 42; print(x)'");
+console.log(result2);
 ```
 
 ### Go
@@ -277,6 +300,20 @@ import (
     "net/http"
 )
 
+type CreateVMRequest struct {
+    Language string `json:"language"`
+    CPU      int    `json:"cpu"`
+    Memory   int    `json:"memory"`
+    Network  string `json:"network"`
+    Persist  bool   `json:"persist"`
+}
+
+type ExecuteInVMRequest struct {
+    VMID    string `json:"vm_id"`
+    Command string `json:"command"`
+    Timeout int    `json:"timeout"`
+}
+
 type ERAAgentClient struct {
     BaseURL string
 }
@@ -285,15 +322,27 @@ func NewClient(baseURL string) *ERAAgentClient {
     return &ERAAgentClient{BaseURL: baseURL}
 }
 
-func (c *ERAAgentClient) Execute(code, language string) (map[string]interface{}, error) {
-    payload := map[string]interface{}{
-        "code":     code,
-        "language": language,
-    }
-
-    data, _ := json.Marshal(payload)
+func (c *ERAAgentClient) CreateVM(req CreateVMRequest) (map[string]interface{}, error) {
+    data, _ := json.Marshal(req)
     resp, err := http.Post(
-        c.BaseURL+"/api/execute",
+        c.BaseURL+"/api/vm/create",
+        "application/json",
+        bytes.NewBuffer(data),
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+
+    var result map[string]interface{}
+    json.NewDecoder(resp.Body).Decode(&result)
+    return result, nil
+}
+
+func (c *ERAAgentClient) ExecuteInVM(req ExecuteInVMRequest) (map[string]interface{}, error) {
+    data, _ := json.Marshal(req)
+    resp, err := http.Post(
+        c.BaseURL+"/api/vm/execute",
         "application/json",
         bytes.NewBuffer(data),
     )
@@ -309,10 +358,16 @@ func (c *ERAAgentClient) Execute(code, language string) (map[string]interface{},
 
 // Usage
 func main() {
-    client := NewClient("http://localhost:8787")
+    client := NewClient("http://localhost:8080")
 
-    result, _ := client.Execute("print('Hello!')", "python")
-    fmt.Println(result)
+    vm, _ := client.CreateVM(CreateVMRequest{
+        Language: "python",
+        CPU:      1,
+        Memory:   256,
+        Network:  "none",
+        Persist:  false,
+    })
+    fmt.Println(vm)
 }
 ```
 
@@ -326,7 +381,7 @@ server {
     server_name era-agent.example.com;
 
     location / {
-        proxy_pass http://localhost:8787;
+        proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -344,7 +399,7 @@ server {
 
 ```
 era-agent.example.com {
-    reverse_proxy localhost:8787
+    reverse_proxy localhost:8080
 }
 ```
 
@@ -355,8 +410,8 @@ era-agent.example.com {
     ServerName era-agent.example.com
 
     ProxyPreserveHost On
-    ProxyPass / http://localhost:8787/
-    ProxyPassReverse / http://localhost:8787/
+    ProxyPass / http://localhost:8080/
+    ProxyPassReverse / http://localhost:8080/
 
     ProxyTimeout 300
 </VirtualHost>
@@ -366,44 +421,22 @@ era-agent.example.com {
 
 ### Authentication
 
-The local HTTP server does **not** include built-in authentication. For production use, add authentication via:
+The local HTTP server includes optional built-in authentication via the ERA_API_KEY environment variable. When set, API endpoints (those starting with `/api/`) require authentication via the Authorization header:
 
-1. **Reverse Proxy with Basic Auth:**
-
-```nginx
-server {
-    location / {
-        auth_basic "ERA Agent";
-        auth_basic_user_file /etc/nginx/.htpasswd;
-        proxy_pass http://localhost:8787;
-    }
-}
+```
+Authorization: Bearer <your-api-key>
 ```
 
-2. **API Gateway:**
-Use Kong, Traefik, or AWS API Gateway for advanced auth.
+Web interface routes (`/`, `/index.html`, `/web/`) do not require authentication.
 
-3. **Custom Wrapper:**
-Add your own authentication layer:
+```bash
+# With authentication
+export ERA_API_KEY=your-secret-key
+./agent server
 
-```python
-from flask import Flask, request
-import requests
-
-app = Flask(__name__)
-
-@app.route('/api/<path:path>', methods=['GET', 'POST'])
-def proxy(path):
-    # Your authentication logic
-    if not is_authenticated(request):
-        return {'error': 'Unauthorized'}, 401
-
-    # Forward to ERA Agent
-    return requests.request(
-        method=request.method,
-        url=f'http://localhost:8787/api/{path}',
-        json=request.json
-    ).json()
+# Test with authentication
+curl -H "Authorization: Bearer your-secret-key" \
+  http://localhost:8080/api/vm/list
 ```
 
 ### Firewall
@@ -412,13 +445,13 @@ Restrict access to localhost only:
 
 ```bash
 # iptables (Linux)
-sudo iptables -A INPUT -p tcp --dport 8787 -s 127.0.0.1 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 8787 -j DROP
+sudo iptables -A INPUT -p tcp --dport 8080 -s 127.0.0.1 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 8080 -j DROP
 
 # pf (macOS)
 # Add to /etc/pf.conf:
-block drop in proto tcp from any to any port 8787
-pass in proto tcp from 127.0.0.1 to any port 8787
+block drop in proto tcp from any to any port 8080
+pass in proto tcp from 127.0.0.1 to any port 8080
 ```
 
 ### TLS/HTTPS
@@ -427,7 +460,7 @@ Use a reverse proxy for TLS termination:
 
 ```bash
 # Caddy (automatic HTTPS)
-caddy reverse-proxy --from era-agent.example.com --to localhost:8787
+caddy reverse-proxy --from era-agent.example.com --to localhost:8080
 
 # Nginx with Let's Encrypt
 sudo certbot --nginx -d era-agent.example.com
@@ -437,11 +470,13 @@ sudo certbot --nginx -d era-agent.example.com
 
 ### Health Checks
 
+There is no specific health check endpoint in the current implementation. You can check the VM list endpoint:
+
 ```bash
 #!/bin/bash
 # health-check.sh
 
-RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8787/health)
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/vm/list)
 
 if [ "$RESPONSE" -eq 200 ]; then
     echo "ERA Agent: OK"
@@ -473,7 +508,7 @@ def proxy(path):
 
     start = time.time()
     response = requests.post(
-        f'http://localhost:8787/api/{path}',
+        f'http://localhost:8080/api/{path}',
         json=request.json
     )
     request_duration.observe(time.time() - start)
@@ -491,10 +526,10 @@ Structured JSON logging:
 
 ```bash
 # Run with JSON logs
-AGENT_LOG_LEVEL=info ./agent serve 2>&1 | jq -R 'fromjson? | .'
+AGENT_LOG_LEVEL=info ./agent server 2>&1 | jq -R 'fromjson? | .'
 
 # Log to file
-./agent serve >> /var/log/era-agent.log 2>&1
+./agent server >> /var/log/era-agent.log 2>&1
 
 # Rotate logs
 logrotate -f /etc/logrotate.d/era-agent
@@ -508,7 +543,7 @@ The server handles concurrent requests. Monitor with:
 
 ```bash
 # Check open connections
-netstat -an | grep 8787 | wc -l
+netstat -an | grep 8080 | wc -l
 
 # Check process resources
 top -p $(pgrep agent)
@@ -530,9 +565,9 @@ Run multiple instances behind a load balancer:
 
 ```nginx
 upstream era_agent {
-    server 127.0.0.1:8787;
-    server 127.0.0.1:8788;
-    server 127.0.0.1:8789;
+    server 127.0.0.1:8080;
+    server 127.0.0.1:8081;
+    server 127.0.0.1:8082;
 }
 
 server {
@@ -545,9 +580,9 @@ server {
 Start multiple instances:
 
 ```bash
-PORT=8787 ./agent serve &
-PORT=8788 ./agent serve &
-PORT=8789 ./agent serve &
+PORT=8080 ./agent server &
+PORT=8081 ./agent server &
+PORT=8082 ./agent server &
 ```
 
 ## Troubleshooting
@@ -556,37 +591,37 @@ PORT=8789 ./agent serve &
 
 ```bash
 # Find what's using the port
-lsof -i :8787
+lsof -i :8080
 
 # Kill the process
-kill $(lsof -t -i:8787)
+kill $(lsof -t -i:8080)
 
 # Or use different port
-PORT=9000 ./agent serve
+PORT=9000 ./agent server
 ```
 
 ### Permission Denied
 
 ```bash
 # Use port > 1024 (no sudo needed)
-PORT=8787 ./agent serve
+PORT=8080 ./agent server
 
 # Or give binary permission to bind to port 80
 sudo setcap CAP_NET_BIND_SERVICE=+eip ./agent
-./agent serve  # Can now use PORT=80
+./agent server  # Can now use PORT=80
 ```
 
 ### Connection Refused
 
 ```bash
 # Check if server is running
-curl http://localhost:8787/health
+curl http://localhost:8080/api/vm/list
 
 # Check firewall
-sudo iptables -L -n | grep 8787
+sudo iptables -L -n | grep 8080
 
 # Check if listening
-netstat -tulpn | grep 8787
+netstat -tulpn | grep 8080
 ```
 
 ## Comparison: Local vs Cloudflare Workers
@@ -598,7 +633,7 @@ netstat -tulpn | grep 8787
 | **Latency** | Local (fastest) | Global edge network |
 | **Scaling** | Manual | Automatic |
 | **Customization** | Full control | Limited |
-| **Auth** | DIY | Built-in options |
+| **Auth** | Built-in ERA_API_KEY | Built-in options |
 | **Best For** | Self-hosted, dev/test | Production, scale |
 
 ## Next Steps

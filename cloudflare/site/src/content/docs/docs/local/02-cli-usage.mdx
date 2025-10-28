@@ -40,9 +40,9 @@ agent --log-level info vm create --language python
 
 ## Available Commands
 
-### `agent vm create` - Create VM Session
+### `agent vm create` - Create VM
 
-Create a new isolated VM session for code execution.
+Create a new isolated VM for code execution.
 
 **Syntax:**
 ```bash
@@ -50,24 +50,24 @@ agent vm create --language <lang> [options]
 ```
 
 **Required:**
-- `--language <lang>` - Language: python, node, typescript, go, deno
+- `--language <lang>` - Language: python, javascript, node, ruby, golang
 
 **Optional:**
 - `--image <image>` - Custom rootfs image (advanced)
 - `--cpu <count>` - CPU count (default: 1)
 - `--mem <mib>` - Memory in MiB (default: 256)
 - `--network <mode>` - Network mode: none (default), allow_all
-- `--persist` - Enable persistence for this session
+- `--persist` - Enable persistent volume for this VM
 
 **Examples:**
 
-Basic Python session:
+Basic Python VM:
 ```bash
 agent vm create --language python
-# Output: Created session: abc-123-xyz
+# Output: INFO[vm created] id=abc123 language=python...
 ```
 
-High-resource Node.js session:
+High-resource Node.js VM:
 ```bash
 agent vm create \
   --language node \
@@ -75,14 +75,14 @@ agent vm create \
   --mem 512
 ```
 
-Session with network access:
+VM with network access:
 ```bash
 agent vm create \
   --language python \
   --network allow_all
 ```
 
-Persistent session:
+Persistent VM:
 ```bash
 agent vm create \
   --language python \
@@ -91,177 +91,243 @@ agent vm create \
 
 ### `agent vm run` - Execute Code
 
-Run code in an existing VM session.
+Run code in an existing VM.
 
 **Syntax:**
 ```bash
-agent vm run --vm <id> [--cmd <command>] [--file <path>] [options]
+agent vm run --vm <id> --cmd <command> [options]
 ```
 
 **Required:**
-- `--vm <id>` - Session ID from `vm create`
-
-**Execution Method** (choose one):
-- `--cmd <command>` - Direct command to execute
-- `--file <path>` - Path to file to execute
+- `--vm <id>` - VM ID from `vm create`
+- `--cmd <command>` - Command to execute inside the guest
+- `--timeout <seconds>` - Execution timeout (must be greater than zero)
 
 **Optional:**
-- `--timeout <seconds>` - Execution timeout (default: 30)
+- `--file <path>` - Optional file to stage inside /in
 
 **Examples:**
 
 Execute direct command:
 ```bash
 agent vm run \
-  --vm abc-123-xyz \
-  --cmd "python -c 'print(2 + 2)'"
+  --vm abc123 \
+  --cmd "python -c 'print(2 + 2)'" \
+  --timeout 30
 ```
 
 Execute from file:
 ```bash
 agent vm run \
-  --vm abc-123-xyz \
-  --file ./script.py
+  --vm abc123 \
+  --cmd "python script.py" \
+  --file ./script.py \
+  --timeout 30
 ```
 
-With timeout:
+### `agent vm exec` - Execute on Multiple VMs
+
+Execute code across multiple VMs.
+
+**Syntax:**
 ```bash
-agent vm run \
-  --vm abc-123-xyz \
-  --cmd "python long_running.py" \
+agent vm exec --cmd <command> [--vm <id> ... | --all] [options]
+```
+
+**Required:**
+- `--cmd <command>` - Command to execute inside the guest
+- `--timeout <seconds>` - Execution timeout (must be greater than zero)
+
+**Optional:**
+- `--file <path>` - Optional file to stage inside /in
+- `--vm <id>` - Target VM identifier (repeatable)
+- `--all` - Execute on all ready VMs
+
+**Examples:**
+
+Execute on specific VMs:
+```bash
+agent vm exec \
+  --vm abc123 \
+  --vm def456 \
+  --cmd "python -c 'print(\\\"Hello from VM\\\")'" \
+  --timeout 30
+```
+
+Execute on all VMs:
+```bash
+agent vm exec \
+  --all \
+  --cmd "python -c 'print(\\\"Hello from all VMs\\\")'" \
+  --timeout 30
+```
+
+### `agent vm temp` - Execute in Temporary VM
+
+Execute code in a temporary VM that is automatically cleaned up after execution.
+
+**Syntax:**
+```bash
+agent vm temp --language <lang> --cmd <command> [options]
+```
+
+**Required:**
+- `--language <lang>` - Language: python, javascript, node, ruby, golang
+- `--cmd <command>` - Command to execute inside the guest
+- `--timeout <seconds>` - Execution timeout (must be greater than zero)
+
+**Optional:**
+- `--image <image>` - Custom rootfs image
+- `--file <path>` - Optional file to stage inside /in
+- `--cpu <count>` - CPU count (default: 1)
+- `--mem <mib>` - Memory in MiB (default: 256)
+- `--network <mode>` - Network mode: none (default), allow_all
+- `--persist` - Enable persistent volume
+
+**Examples:**
+
+Temporary Python execution:
+```bash
+agent vm temp \
+  --language python \
+  --cmd "print('Hello from temp VM!')" \
+  --timeout 30
+```
+
+Temporary high-resource execution:
+```bash
+agent vm temp \
+  --language python \
+  --cmd "python script.py" \
+  --cpu 2 \
+  --mem 512 \
   --timeout 60
 ```
 
-**Output Format:**
-```
-Exit Code: 0
+### `agent vm shell` - Interactive Shell
 
-Stdout:
-4
-
-Stderr:
-(empty)
-
-Duration: 1.23s
-```
-
-### `agent vm list` - List Sessions
-
-List all active VM sessions.
+Get interactive shell access to a VM.
 
 **Syntax:**
 ```bash
-agent vm list
+agent vm shell --vm <id> [options]
 ```
+
+**Required:**
+- `--vm <id>` - VM ID from `vm create`
+
+**Optional:**
+- `--cmd <command>` - Shell command to execute (default: /bin/bash)
+
+**Example:**
+```bash
+agent vm shell --vm abc123
+```
+
+### `agent vm list` - List VMs
+
+List all active VMs.
+
+**Syntax:**
+```bash
+agent vm list [options]
+```
+
+**Optional:**
+- `--status <state>` - Filter by VM status
+- `--all` - Include stopped VMs
 
 **Example:**
 ```bash
 agent vm list
+# Output:
+# ID      Language  Status  CPU  Mem(MiB)  Persist  Created             Last Run
+# abc123  python    ready   1    256       no       2025-01-15 10:30:05 -
+#
+# Total: 1
+
+# Include stopped VMs:
+agent vm list --all
+
+# Filter by status:
+agent vm list --status ready
 ```
 
-**Output:**
-```json
-[
-  {
-    "id": "abc-123-xyz",
-    "language": "python",
-    "cpu_count": 1,
-    "memory_mib": 256,
-    "network_mode": "none",
-    "persist": false,
-    "status": "ready",
-    "created_at": "2025-01-15T10:30:00Z",
-    "last_run_at": "2025-01-15T10:35:00Z"
-  }
-]
-```
+### `agent vm stop` - Stop VM
 
-### `agent vm get` - Get Session Details
-
-Get detailed information about a specific session.
+Stop a running VM (keeps state for later restart).
 
 **Syntax:**
 ```bash
-agent vm get --vm <id>
+agent vm stop [--vm <id> ... | --all]
 ```
+
+**Optional:**
+- `--vm <id>` - VM identifier to stop (repeatable)
+- `--all` - Stop all VMs
 
 **Example:**
 ```bash
-agent vm get --vm abc-123-xyz
+agent vm stop --vm abc123
 ```
 
-**Output:**
-```json
-{
-  "id": "abc-123-xyz",
-  "language": "python",
-  "rootfs_image": "python:3.11",
-  "cpu_count": 1,
-  "memory_mib": 256,
-  "network_mode": "none",
-  "persist": false,
-  "status": "ready",
-  "created_at": "2025-01-15T10:30:00Z",
-  "last_run_at": "2025-01-15T10:35:00Z"
-}
-```
+### `agent vm clean` - Clean VM
 
-### `agent vm stop` - Stop Session
-
-Stop a running session (keeps state for later restart).
+Permanently delete a VM and clean up resources.
 
 **Syntax:**
 ```bash
-agent vm stop --vm <id>
+agent vm clean [--vm <id> ... | --all] [--keep-persist]
 ```
 
-**Example:**
-```bash
-agent vm stop --vm abc-123-xyz
-```
-
-### `agent vm clean` - Delete Session
-
-Permanently delete a session and clean up resources.
-
-**Syntax:**
-```bash
-agent vm clean --vm <id> [--keep-persist]
-```
-
-**Options:**
+**Optional:**
+- `--vm <id>` - VM identifier to clean (repeatable)
+- `--all` - Clean all VMs
 - `--keep-persist` - Keep persistent storage even after deletion
 
 **Examples:**
 
-Delete session completely:
+Clean specific VM:
 ```bash
-agent vm clean --vm abc-123-xyz
+agent vm clean --vm abc123
 ```
 
-Delete but keep persistent data:
+Clean but keep persistent data:
 ```bash
-agent vm clean --vm abc-123-xyz --keep-persist
+agent vm clean --vm abc123 --keep-persist
 ```
 
-### `agent serve` - Start HTTP Server
+Clean all VMs:
+```bash
+agent vm clean --all
+```
+
+### `agent server` - Start HTTP Server
 
 Start ERA Agent as an HTTP API server.
 
 **Syntax:**
 ```bash
-agent serve
+agent server [--addr :port]
+```
+
+**Optional:**
+```bash
+--addr :port            # Server address (default: :8080)
 ```
 
 **Environment Variables:**
 ```bash
-PORT=8787              # Server port (default: 8787)
+PORT=8787              # Server port (default: 8080)
 AGENT_LOG_LEVEL=info   # Log level
+ERA_API_KEY=secret     # API key for authentication (optional)
 ```
 
 **Example:**
 ```bash
-PORT=9000 agent serve
+PORT=9000 agent server
+# Or with explicit address
+agent server --addr :9000
 ```
 
 See [HTTP Server Mode](/docs/local/http-server) for complete API documentation.
@@ -303,14 +369,13 @@ agent --help
 Run a one-off Python script:
 
 ```bash
-# Create session
-SESSION_ID=$(agent vm create --language python | grep -o '[a-z0-9-]*')
+# Use temporary VM (automatically cleaned up)
+agent vm temp --language python --cmd "print('Hello from temp VM!')" --timeout 30
 
-# Run script
-agent vm run --vm $SESSION_ID --file script.py
-
-# Clean up
-agent vm clean --vm $SESSION_ID
+# Or create, run, and clean manually
+VM_ID=$(agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+agent vm run --vm $VM_ID --cmd "python script.py" --timeout 30
+agent vm clean --vm $VM_ID
 ```
 
 ### Stateful Multi-Step Execution
@@ -318,38 +383,38 @@ agent vm clean --vm $SESSION_ID
 Execute multiple steps with shared state:
 
 ```bash
-# Create persistent session
-SESSION_ID=$(agent vm create --language python --persist | grep -o '[a-z0-9-]*')
+# Create persistent VM
+VM_ID=$(agent vm create --language python --persist | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 # Step 1: Initialize data
-agent vm run --vm $SESSION_ID --cmd "python -c 'data = [1, 2, 3, 4, 5]; print(data)'"
+agent vm run --vm $VM_ID --cmd "python -c 'data = [1, 2, 3, 4, 5]; print(data)'" --timeout 30
 
 # Step 2: Process data (state persists)
-agent vm run --vm $SESSION_ID --cmd "python -c 'result = sum(data); print(f\"Sum: {result}\")'"
+agent vm run --vm $VM_ID --cmd "python -c 'result = sum(data); print(f\"Sum: {result}\")'" --timeout 30
 
 # Step 3: More processing
-agent vm run --vm $SESSION_ID --cmd "python -c 'avg = sum(data) / len(data); print(f\"Average: {avg}\")'"
+agent vm run --vm $VM_ID --cmd "python -c 'avg = sum(data) / len(data); print(f\"Average: {avg}\")'" --timeout 30
 
 # Clean up when done
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 ```
 
 ### Package Installation
 
-Install packages in a session:
+Install packages in a VM:
 
 ```bash
-# Create session
-SESSION_ID=$(agent vm create --language python --network allow_all | grep -o '[a-z0-9-]*')
+# Create VM with network access
+VM_ID=$(agent vm create --language python --network allow_all | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 # Install packages
-agent vm run --vm $SESSION_ID --cmd "pip install requests numpy"
+agent vm run --vm $VM_ID --cmd "pip install requests numpy" --timeout 60
 
 # Use packages
-agent vm run --vm $SESSION_ID --cmd "python -c 'import requests; print(requests.get(\"https://api.github.com\").status_code)'"
+agent vm run --vm $VM_ID --cmd "python -c 'import requests; print(requests.get(\"https://api.github.com\").status_code)'" --timeout 30
 
 # Clean up
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 ```
 
 ### Testing Multiple Languages
@@ -360,19 +425,19 @@ Test code across different runtimes:
 #!/bin/bash
 
 # Test in Python
-PY_ID=$(agent vm create --language python | grep -o '[a-z0-9-]*')
-agent vm run --vm $PY_ID --cmd "python -c 'print(\"Hello from Python\")'"
-agent vm clean --vm $PY_ID
+VM_ID=$(agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+agent vm run --vm $VM_ID --cmd "python -c 'print(\"Hello from Python\")'" --timeout 30
+agent vm clean --vm $VM_ID
 
 # Test in Node.js
-NODE_ID=$(agent vm create --language node | grep -o '[a-z0-9-]*')
-agent vm run --vm $NODE_ID --cmd "node -e 'console.log(\"Hello from Node.js\")'"
-agent vm clean --vm $NODE_ID
+VM_ID=$(agent vm create --language node | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+agent vm run --vm $VM_ID --cmd "node -e 'console.log(\"Hello from Node.js\")'" --timeout 30
+agent vm clean --vm $VM_ID
 
-# Test in Deno
-DENO_ID=$(agent vm create --language deno | grep -o '[a-z0-9-]*')
-agent vm run --vm $DENO_ID --cmd "deno eval 'console.log(\"Hello from Deno\")'"
-agent vm clean --vm $DENO_ID
+# Test in Ruby (if Ruby image is available)
+VM_ID=$(agent vm create --language ruby | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+agent vm run --vm $VM_ID --cmd "ruby -e 'puts \"Hello from Ruby\"'" --timeout 30
+agent vm clean --vm $VM_ID
 ```
 
 ## Shell Integration
@@ -384,34 +449,30 @@ Add to your `~/.bashrc` or `~/.bash_profile`:
 ```bash
 # Quick Python execution
 era-python() {
-    local session_id=$(agent vm create --language python | grep -o '[a-z0-9-]*')
-    agent vm run --vm $session_id --cmd "python -c '$1'"
-    agent vm clean --vm $session_id
+    agent vm temp --language python --cmd "$1" --timeout 30
 }
 
 # Quick Node.js execution
 era-node() {
-    local session_id=$(agent vm create --language node | grep -o '[a-z0-9-]*')
-    agent vm run --vm $session_id --cmd "node -e '$1'"
-    agent vm clean --vm $session_id
+    agent vm temp --language node --cmd "$1" --timeout 30
 }
 
-# Create and remember session
-era-session() {
+# Create and remember VM
+era-vm() {
     local language=$1
-    export ERA_SESSION=$(agent vm create --language $language | grep -o '[a-z0-9-]*')
-    echo "Created session: $ERA_SESSION"
+    export ERA_VM=$(agent vm create --language $language | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+    echo "Created VM: $ERA_VM"
 }
 
-# Run in current session
+# Run in current VM
 era-run() {
-    agent vm run --vm $ERA_SESSION --cmd "$1"
+    agent vm run --vm $ERA_VM --cmd "$1" --timeout 30
 }
 
-# Clean up current session
+# Clean up current VM
 era-done() {
-    agent vm clean --vm $ERA_SESSION
-    unset ERA_SESSION
+    agent vm clean --vm $ERA_VM
+    unset ERA_VM
 }
 ```
 
@@ -420,8 +481,8 @@ era-done() {
 # Quick execution
 era-python "print(2 + 2)"
 
-# Session workflow
-era-session python
+# VM workflow
+era-vm python
 era-run "python -c 'x = 42; print(x)'"
 era-run "python -c 'print(x * 2)'"  # State persists
 era-done
@@ -433,23 +494,21 @@ Add to your `~/.config/fish/config.fish`:
 
 ```fish
 function era-python
-    set session_id (agent vm create --language python | grep -o '[a-z0-9-]*')
-    agent vm run --vm $session_id --cmd "python -c '$argv'"
-    agent vm clean --vm $session_id
+    agent vm temp --language python --cmd "$argv" --timeout 30
 end
 
-function era-session
-    set -gx ERA_SESSION (agent vm create --language $argv[1] | grep -o '[a-z0-9-]*')
-    echo "Created session: $ERA_SESSION"
+function era-vm
+    set -gx ERA_VM (agent vm create --language $argv[1] | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
+    echo "Created VM: $ERA_VM"
 end
 
 function era-run
-    agent vm run --vm $ERA_SESSION --cmd "$argv"
+    agent vm run --vm $ERA_VM --cmd "$argv" --timeout 30
 end
 
 function era-done
-    agent vm clean --vm $ERA_SESSION
-    set -e ERA_SESSION
+    agent vm clean --vm $ERA_VM
+    set -e ERA_VM
 end
 ```
 
@@ -464,19 +523,19 @@ end
 set -e
 
 echo "Creating test environment..."
-SESSION_ID=$(agent vm create \
+VM_ID=$(agent vm create \
   --language python \
   --network allow_all \
-  | grep -o '[a-z0-9-]*')
+  | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 echo "Installing dependencies..."
-agent vm run --vm $SESSION_ID --cmd "pip install -r requirements.txt"
+agent vm run --vm $VM_ID --cmd "pip install -r requirements.txt" --timeout 60
 
 echo "Running tests..."
-agent vm run --vm $SESSION_ID --cmd "pytest tests/" --timeout 300
+agent vm run --vm $VM_ID --cmd "pytest tests/" --timeout 300
 
 echo "Cleaning up..."
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 
 echo "Tests passed! ✅"
 ```
@@ -487,17 +546,17 @@ echo "Tests passed! ✅"
 #!/bin/bash
 # process-files.sh - Process multiple files
 
-SESSION_ID=$(agent vm create --language python | grep -o '[a-z0-9-]*')
+VM_ID=$(agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 for file in data/*.csv; do
     echo "Processing $file..."
     agent vm run \
-      --vm $SESSION_ID \
-      --file process.py \
+      --vm $VM_ID \
+      --cmd "python process.py" \
       --timeout 60
 done
 
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 ```
 
 ### Scheduled Tasks
@@ -506,18 +565,18 @@ agent vm clean --vm $SESSION_ID
 #!/bin/bash
 # cron-task.sh - Run scheduled data processing
 
-SESSION_ID=$(agent vm create \
+VM_ID=$(agent vm create \
   --language python \
   --persist \
   --network allow_all \
-  | grep -o '[a-z0-9-]*')
+  | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 # Fetch and process data
-agent vm run --vm $SESSION_ID --cmd "python fetch_data.py"
-agent vm run --vm $SESSION_ID --cmd "python process_data.py"
-agent vm run --vm $SESSION_ID --cmd "python send_report.py"
+agent vm run --vm $VM_ID --cmd "python fetch_data.py" --timeout 60
+agent vm run --vm $VM_ID --cmd "python process_data.py" --timeout 60
+agent vm run --vm $VM_ID --cmd "python send_report.py" --timeout 60
 
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 ```
 
 Add to crontab:
@@ -528,16 +587,16 @@ Add to crontab:
 
 ## Tips and Tricks
 
-### Session ID Management
+### VM ID Management
 
-Save session IDs for later use:
+Save VM IDs for later use:
 
 ```bash
-# Save to file
-agent vm create --language python | grep -o '[a-z0-9-]*' > session.txt
+# Save to variable
+VM_ID=$(agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
-# Use later
-agent vm run --vm $(cat session.txt) --cmd "python script.py"
+# Use specific VM
+agent vm run --vm $VM_ID --cmd "python script.py" --timeout 30
 ```
 
 ### Output Parsing
@@ -545,11 +604,12 @@ agent vm run --vm $(cat session.txt) --cmd "python script.py"
 Extract specific output:
 
 ```bash
-# Get exit code
-agent vm run --vm $ID --cmd "python script.py" | grep "Exit Code:" | awk '{print $3}'
-
-# Get stdout only
-agent vm run --vm $ID --cmd "python script.py" | sed -n '/Stdout:/,/Stderr:/p' | grep -v "Stdout:" | grep -v "Stderr:"
+# Get command exit status (success/failure)
+if agent vm temp --language python --cmd "python script.py" --timeout 30; then
+    echo "Success!"
+else
+    echo "Failed!"
+fi
 ```
 
 ### Error Handling
@@ -557,17 +617,18 @@ agent vm run --vm $ID --cmd "python script.py" | sed -n '/Stdout:/,/Stderr:/p' |
 ```bash
 #!/bin/bash
 
-SESSION_ID=$(agent vm create --language python | grep -o '[a-z0-9-]*')
+VM_ID=$(agent vm create --language python | grep -o 'ID=[a-zA-Z0-9-]*' | cut -d'=' -f2 | head -n1 | cut -d' ' -f1)
 
 # Run with error checking
-if agent vm run --vm $SESSION_ID --cmd "python script.py" | grep -q "Exit Code: 0"; then
-    echo "Success!"
+if agent vm run --vm $VM_ID --cmd "python script.py" --timeout 30; then
+    echo "Command executed successfully!"
 else
-    echo "Failed!"
+    echo "Command failed!"
+    agent vm clean --vm $VM_ID
     exit 1
 fi
 
-agent vm clean --vm $SESSION_ID
+agent vm clean --vm $VM_ID
 ```
 
 ### Timeout Management
@@ -577,7 +638,7 @@ For long-running tasks:
 ```bash
 # Set generous timeout
 agent vm run \
-  --vm $SESSION_ID \
+  --vm $VM_ID \
   --cmd "python long_task.py" \
   --timeout 600  # 10 minutes
 ```
@@ -594,24 +655,21 @@ which agent
 /path/to/agent vm create --language python
 ```
 
-### Session Not Found
+### VM Not Found
 
 ```bash
-# List all sessions
+# List all VMs
 agent vm list
 
-# Verify session ID
-agent vm get --vm <id>
+# Verify VM ID exists
+agent vm list | grep <id>
 ```
 
 ### Timeout Errors
 
 ```bash
 # Increase timeout
-agent vm run --vm $ID --cmd "..." --timeout 120
-
-# Or create session with higher default
-agent vm create --language python  # Use session-level timeout via API
+agent vm run --vm <id> --cmd "..." --timeout 120
 ```
 
 ### Permission Denied

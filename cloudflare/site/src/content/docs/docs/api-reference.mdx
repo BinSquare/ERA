@@ -8,543 +8,302 @@ Complete reference for all ERA Agent API endpoints.
 ## Base URL
 
 ```
-https://era-agent.yawnxyz.workers.dev
+http://localhost:8787  # Default when running locally
 ```
 
 ## Endpoints
 
-### POST /api/execute
+### POST /api/vm/create
 
-Execute code in a one-shot session (non-persistent).
+Create a new virtual machine.
 
 **Request Body:**
 ```json
 {
-  "language": "python" | "node" | "typescript" | "go" | "deno",
-  "code": "string",
-  "timeout_ms": 30000  // optional, default 30000
+  "language": "python" | "javascript" | "node" | "ruby" | "golang",  // Required
+  "image": "string",              // Optional, override rootfs image
+  "cpu": 1,                      // Optional, virtual CPUs (default: 1)  
+  "memory": 256,                 // Optional, memory in MiB (default: 256)
+  "network": "none" | "allow_all", // Optional, network policy (default: "none")
+  "persist": false               // Optional, enable persistent volume (default: false)
 }
 ```
 
 **Response:**
 ```json
 {
-  "session_id": "string",
-  "stdout": "string",
-  "stderr": "string",
-  "exit_code": number,
-  "execution_time_ms": number
+  "success": true,
+  "data": {
+    "id": "string",
+    "language": "string",
+    "status": "string",
+    "cpu_count": number,
+    "memory_mib": number,
+    "network_mode": "string",
+    "persist": boolean,
+    "created_at": "timestamp",
+    "last_run_at": "timestamp"
+  },
+  "status_code": 201
 }
 ```
 
 **Example:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+curl -X POST http://localhost:8787/api/vm/create \
   -H "Content-Type: application/json" \
   -d '{
     "language": "python",
-    "code": "print(\"Hello World\")"
+    "cpu": 2,
+    "memory": 512,
+    "network": "allow_all",
+    "persist": true
   }'
 ```
 
 ---
 
-### POST /api/sessions
+### POST /api/vm/execute
 
-Create a new persistent session.
+Execute a command in an existing virtual machine.
 
 **Request Body:**
 ```json
 {
-  "language": "python" | "node" | "typescript" | "go" | "deno",
-  "persistent": boolean,           // optional, default true
-  "session_id": "string",          // optional, custom session ID
-  "data": object,                  // optional, custom metadata
-  "metadata": object               // optional, additional metadata
+  "vm_id": "string",              // Required, target VM identifier
+  "command": "string",            // Required, command to execute inside the guest
+  "file": "string",               // Optional, file to stage inside /in
+  "timeout": 30                   // Optional, execution timeout in seconds (default: 30)
 }
 ```
 
 **Response:**
 ```json
 {
-  "id": "string",
-  "created_at": "ISO 8601 datetime",
-  "last_run_at": "ISO 8601 datetime",
-  "language": "string",
-  "persistent": boolean,
-  "file_count": number,
-  "total_size_bytes": number,
-  "metadata": object,
-  "data": object
+  "success": true,
+  "data": {
+    "vm_id": "string",
+    "exit_code": number,
+    "stdout": "string",
+    "stderr": "string",
+    "duration": "string"
+  },
+  "status_code": 200
 }
 ```
 
 **Example:**
 ```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+curl -X POST http://localhost:8787/api/vm/execute \
   -H "Content-Type: application/json" \
   -d '{
-    "language": "python",
-    "persistent": true,
-    "session_id": "my-session",
-    "data": {"user": "developer"}
+    "vm_id": "abc123",
+    "command": "python -c \"print(\\\"Hello from VM!\\\")\"",
+    "timeout": 60
   }'
 ```
 
 ---
 
-### GET /api/sessions
+### POST /api/vm/temp
 
-List all active sessions.
+Execute a command in a temporary virtual machine (creates VM, runs command, then cleans up).
+
+**Request Body:**
+```json
+{
+  "language": "python" | "javascript" | "node" | "ruby" | "golang",  // Required
+  "command": "string",            // Required, command to execute inside the guest
+  "image": "string",              // Optional, override rootfs image
+  "file": "string",               // Optional, file to stage inside /in
+  "timeout": 30,                  // Optional, execution timeout in seconds (default: 30)
+  "cpu": 1,                      // Optional, virtual CPUs (default: 1)
+  "memory": 256,                 // Optional, memory in MiB (default: 256)
+  "network": "none" | "allow_all", // Optional, network policy (default: "none")
+  "persist": false               // Optional, enable persistent volume (default: false)
+}
+```
 
 **Response:**
 ```json
 {
-  "sessions": [
+  "success": true,
+  "data": {
+    "vm_id": "string",
+    "exit_code": number,
+    "stdout": "string",
+    "stderr": "string",
+    "duration": "string"
+  },
+  "status_code": 200
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:8787/api/vm/temp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "command": "print(2 + 2)",
+    "cpu": 1,
+    "memory": 256
+  }'
+```
+
+---
+
+### GET /api/vm/list
+
+List all virtual machines.
+
+**Query Parameters:**
+- `status` (optional) - Filter by VM status
+- `all` (optional) - Include stopped VMs (true/1 to include, default is false)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
     {
       "id": "string",
-      "created_at": "ISO 8601 datetime",
-      "last_run_at": "ISO 8601 datetime",
       "language": "string",
-      "persistent": boolean,
-      "file_count": number,
-      "total_size_bytes": number
+      "status": "string",
+      "cpu_count": number,
+      "memory_mib": number,
+      "network_mode": "string",
+      "persist": boolean,
+      "created_at": "timestamp",
+      "last_run_at": "timestamp"
     }
   ],
-  "count": number
+  "status_code": 200
 }
 ```
 
 **Example:**
 ```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions
+curl http://localhost:8787/api/vm/list
+# Include stopped VMs:
+curl "http://localhost:8787/api/vm/list?all=true"
+# Filter by status:
+curl "http://localhost:8787/api/vm/list?status=ready"
 ```
 
 ---
 
-### GET /api/sessions/\{id\}
+### POST /api/vm/stop
 
-Get session metadata and status.
-
-**Response:**
-```json
-{
-  "id": "string",
-  "created_at": "ISO 8601 datetime",
-  "last_run_at": "ISO 8601 datetime",
-  "language": "string",
-  "persistent": boolean,
-  "file_count": number,
-  "total_size_bytes": number,
-  "metadata": object,
-  "data": object,
-  "files": [
-    {
-      "path": "string",
-      "size": number,
-      "modified_at": "ISO 8601 datetime"
-    }
-  ]
-}
-```
-
-**Example:**
-```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
-```
-
----
-
-### POST /api/sessions/\{id\}/run
-
-Execute code in an existing session.
+Stop virtual machine(s).
 
 **Request Body:**
 ```json
 {
-  "code": "string",
-  "timeout_ms": 30000,     // optional, execution timeout
-  "update_data": object,   // optional, merge into session data
-  "env": {                 // optional, environment variables (NOT persisted)
-    "API_KEY": "string",
-    "DATABASE_URL": "string"
-  }
+  "vm_id": "string"               // Optional, target VM identifier
 }
 ```
 
-**Default Environment Variables:**
-
-ERA Agent automatically provides these environment variables:
-- `ERA_SESSION`: Always set to `"true"`
-- `ERA_SESSION_ID`: The session ID
-- `ERA_LANGUAGE`: The language runtime (python, node, typescript, go, deno)
-
-**Response:**
-```json
-{
-  "stdout": "string",
-  "stderr": "string",
-  "exit_code": number,
-  "execution_time_ms": number,
-  "files_modified": number
-}
-```
-
-**Example:**
-```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "import os; print(f\"Session: {os.environ.get('\''ERA_SESSION_ID'\'')}\"); print(f\"API Key: {os.environ.get('\''API_KEY'\'')}\")",
-    "env": {
-      "API_KEY": "secret123"
-    }
-  }'
-```
-
-**⚠️ Important:** Environment variables are NOT persisted. You must pass them with every `/run` request.
-
-**→ See [Environment Variables Guide](/docs/guides/environment-variables) for complete documentation**
-
----
-
-### POST /api/sessions/\{id\}/stream
-
-Execute code with real-time streaming output using Server-Sent Events (SSE). Perfect for LLM generation, progress tracking, and long-running tasks.
-
-**Request Body:**
-```json
-{
-  "code": "string",
-  "timeout": 30,           // optional, execution timeout in seconds
-  "env": {                 // optional, environment variables
-    "API_KEY": "string"
-  }
-}
-```
-
-**Response:** Server-Sent Events stream
-
-**SSE Event Format:**
-```
-event: stdout
-data: {"type":"stdout","content":"Line 1\n"}
-
-event: stdout
-data: {"type":"stdout","content":"Line 2\n"}
-
-event: stderr
-data: {"type":"stderr","content":"Error message\n"}
-
-event: done
-data: {"type":"done","exit_code":0,"duration":"5.23s"}
-```
-
-**Event Types:**
-- `stdout` - Standard output line
-- `stderr` - Standard error line
-- `done` - Execution complete (includes exit_code and duration)
-- `error` - Execution error
-
-**Example (curl with SSE parsing):**
-```bash
-# Simple streaming example
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "import time; [print(f\"Processing {i}\") or time.sleep(0.5) for i in range(5)]"
-  }'
-```
-
-**Example (JavaScript with EventSource):**
-```javascript
-// Note: EventSource doesn't support POST, so use fetch with streaming
-const response = await fetch('https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    code: 'import time\\nfor i in range(10):\\n    print(f"Token {i}")\\n    time.sleep(0.2)'
-  })
-});
-
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-
-  const chunk = decoder.decode(value);
-  const lines = chunk.split('\\n');
-
-  for (const line of lines) {
-    if (line.startsWith('data: ')) {
-      const data = JSON.parse(line.slice(6));
-      if (data.type === 'stdout') {
-        console.log(data.content);
-      }
-    }
-  }
-}
-```
-
-**Use Cases:**
-- **LLM Generation**: Stream tokens in real-time
-- **Progress Tracking**: Show progress bars and status updates
-- **Long Computations**: Monitor long-running tasks
-- **Log Monitoring**: Real-time log streaming
-
----
-
-### POST /api/sessions/\{id\}/duplicate
-
-Clone an existing session with all its files and state.
-
-**Request Body:**
-```json
-{
-  "new_id": "string",      // optional, custom ID for clone
-  "data": object           // optional, override data
-}
-```
-
-**Response:**
-```json
-{
-  "id": "string",
-  "created_at": "ISO 8601 datetime",
-  "language": "string",
-  "persistent": boolean,
-  "file_count": number,
-  "total_size_bytes": number,
-  "source_session_id": "string"
-}
-```
-
-**Example:**
-```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/duplicate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "new_id": "my-session-backup"
-  }'
-```
-
----
-
-### PATCH /api/sessions/\{id\}
-
-Update session configuration (timeout, network access, etc.).
-
-**Request Body:**
-```json
-{
-  "default_timeout": 120,          // optional, default timeout in seconds
-  "allowInternetAccess": false,    // optional, enable/disable outbound requests
-  "allowPublicAccess": false       // optional, enable/disable inbound proxy requests
-}
-```
+**Query Parameters:**
+- `all` (optional) - Stop all VMs (true/1 to stop all)
 
 **Response:**
 ```json
 {
   "success": true,
-  "id": "string",
-  "metadata": {
-    "default_timeout": 120,
-    "allowInternetAccess": false,
-    "allowPublicAccess": false,
-    ...
+  "data": {
+    "stopped": number
   },
-  "updated_at": "ISO 8601 datetime"
+  "status_code": 200
 }
 ```
 
 **Example:**
 ```bash
-# Update default timeout to 5 minutes
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/my-session \
+# Stop a specific VM
+curl -X POST http://localhost:8787/api/vm/stop \
   -H "Content-Type: application/json" \
   -d '{
-    "default_timeout": 300
+    "vm_id": "abc123"
   }'
 
-# Disable internet access
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/my-session \
-  -H "Content-Type: application/json" \
-  -d '{
-    "allowInternetAccess": false
-  }'
-
-# Update multiple fields at once
-curl -X PATCH https://era-agent.yawnxyz.workers.dev/api/sessions/my-session \
-  -H "Content-Type: application/json" \
-  -d '{
-    "default_timeout": 600,
-    "allowInternetAccess": true
-  }'
+# Stop all VMs
+curl -X POST "http://localhost:8787/api/vm/stop?all=true"
 ```
-
-**→ See [Timeout Configuration Guide](/docs/guides/timeout-configuration) for more details**
 
 ---
 
-### GET /api/sessions/\{id\}/files
+### POST /api/vm/clean
 
-List all files in a session.
+Clean up virtual machine(s) (permanently delete).
 
-**Response:**
+**Request Body:**
 ```json
 {
-  "files": [
-    {
-      "path": "string",
-      "size": number,
-      "modified_at": "ISO 8601 datetime"
-    }
-  ],
-  "total_count": number,
-  "total_size_bytes": number
+  "vm_id": "string",              // Optional, target VM identifier
+  "keep_persist": false           // Optional, retain persistent volume (default: false)
 }
 ```
 
-**Example:**
-```bash
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files
-```
-
----
-
-### GET /api/sessions/\{id\}/files/\{path\}
-
-Download a specific file from a session.
-
-**Response:** File contents (binary or text)
-
-**Example:**
-```bash
-# Download a file
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/data.json -o data.json
-
-# View text file content
-curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/output.txt
-```
-
----
-
-### PUT /api/sessions/\{id\}/files/\{path\}
-
-Upload a file to a session. File will be available on next code execution.
-
-**Request Body:** File contents (binary or text)
-
-**Response:**
-```json
-{
-  "path": "string",
-  "size": number
-}
-```
-
-**Example:**
-```bash
-# Upload JSON file
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/data.json \
-  -H "Content-Type: application/json" \
-  --data-binary @data.json
-
-# Upload text file
-echo "Hello World" | curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/hello.txt \
-  --data-binary @-
-
-# Upload binary file
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/files/image.png \
-  -H "Content-Type: image/png" \
-  --data-binary @image.png
-```
-
----
-
-### DELETE /api/sessions/\{id\}
-
-Delete a session and all its data.
+**Query Parameters:**
+- `all` (optional) - Clean all VMs (true/1 to clean all)
 
 **Response:**
 ```json
 {
   "success": true,
-  "id": "string",
-  "deleted_at": "ISO 8601 datetime"
+  "data": {
+    "cleaned": number
+  },
+  "status_code": 200
 }
 ```
 
 **Example:**
 ```bash
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/my-session
+# Clean a specific VM
+curl -X POST http://localhost:8787/api/vm/clean \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vm_id": "abc123"
+  }'
+
+# Clean all VMs
+curl -X POST "http://localhost:8787/api/vm/clean?all=true"
+
+# Clean VM but keep persistent data
+curl -X POST http://localhost:8787/api/vm/clean \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vm_id": "abc123",
+    "keep_persist": true
+  }'
 ```
 
 ---
 
-### DELETE /api/sessions
+### GET /
 
-Delete all sessions and their data (bulk cleanup).
+Serve the main web interface.
 
-**⚠️ Warning:** This permanently deletes ALL sessions and their files. Use with caution!
-
-**Response:**
-```json
-{
-  "success": true,
-  "deleted_count": number,
-  "deleted_sessions": ["string"],
-  "deleted_at": "ISO 8601 datetime"
-}
-```
+**Response:** HTML page
 
 **Example:**
 ```bash
-# Delete all sessions
-curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions
-
-# Response
-{
-  "success": true,
-  "deleted_count": 3,
-  "deleted_sessions": ["session-1", "session-2", "session-3"],
-  "deleted_at": "2025-01-15T10:30:00Z"
-}
+curl http://localhost:8787/
 ```
-
-**Use Cases:**
-- Development/testing cleanup
-- Batch operations cleanup
-- Server maintenance
-
-**⚠️ Timeout Limitation:**
-- Worker CPU time limits apply (30 seconds on paid plans)
-- With 50+ sessions, the request may timeout
-- If timeout occurs, simply retry - it will delete the remaining sessions
-- For very large cleanups, call this endpoint multiple times
 
 ---
 
-### GET /health
+## Authentication
 
-Health check endpoint.
+If the ERA_API_KEY environment variable is set, API endpoints (those starting with `/api/`) require authentication via the Authorization header:
 
-**Response:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "ISO 8601 datetime",
-  "version": "string"
-}
+```
+Authorization: Bearer <your-api-key>
 ```
 
-**Example:**
-```bash
-curl https://era-agent.yawnxyz.workers.dev/health
-```
+Web interface routes (`/`, `/index.html`, `/web/`) do not require authentication.
 
 ## Error Responses
 
@@ -552,399 +311,48 @@ All endpoints return standard error responses:
 
 ```json
 {
+  "success": false,
   "error": "string",
-  "message": "string",
-  "code": "ERROR_CODE"
+  "status_code": number
 }
 ```
 
 **Common HTTP Status Codes:**
 - `200` - Success
-- `201` - Created (new session)
+- `201` - Created (new VM)
 - `400` - Bad Request (invalid input)
-- `404` - Not Found (session doesn't exist)
-- `408` - Request Timeout (execution timeout)
+- `401` - Unauthorized (authentication required)
 - `500` - Internal Server Error
 
 ## Rate Limits
 
-Currently no rate limits are enforced, but sessions are subject to:
-- **Execution timeout:** 30 seconds (default, configurable)
-- **File storage:** No hard limit (reasonable use)
-- **Session lifetime:** Persistent until explicitly deleted
+No rate limits are enforced by the server.
 
 ## Language Runtimes
 
 ### Python
-- Version: Python 3.x
+- Version: Python 3.x (from base image)
 - Standard library available
-- No network access
-- File I/O to session directory
+- Network access: Controlled by `network` parameter
+- File I/O to VM filesystem
 
 ### Node.js
-- Version: Node.js 18+
+- Version: Node.js (from base image)
 - Core modules available
-- No network access
-- File I/O to session directory
+- Network access: Controlled by `network` parameter
+- File I/O to VM filesystem
 
-### TypeScript
-- Automatic transpilation to JavaScript
-- Runs on Node.js runtime
-- All Node.js features available
+### JavaScript
+- Same as Node.js
+
+### Ruby
+- Version: Ruby (from base image)
+- Standard library available
+- Network access: Controlled by `network` parameter
+- File I/O to VM filesystem
 
 ### Go
-- Version: Go 1.21+
+- Version: Go (from base image)
 - Standard library available
-- No network access
-- File I/O to session directory
-
-### Deno
-- Version: Deno 1.40+
-- Native TypeScript and JavaScript support
-- Standard library and Web APIs available
-- Permissions: `--allow-read --allow-write` for file operations
-- No network access
-- File I/O to session directory
-
----
-
-## Storage Proxy API
-
-Access KV, D1, and R2 storage from your sandboxed code. The SDK is automatically injected into every session.
-
-### GET /api/storage/kv/:namespace/:key
-
-Get a value from KV storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Key to retrieve
-
-**Response:**
-```json
-{
-  "value": "string"
-}
-```
-
-**Example:**
-```bash
-curl https://era-agent.yawnxyz.workers.dev/api/storage/kv/myapp/config
-```
-
----
-
-### PUT /api/storage/kv/:namespace/:key
-
-Set a value in KV storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Key to set
-
-**Request Body:**
-```json
-{
-  "value": "string",
-  "metadata": {
-    "custom": "data"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true
-}
-```
-
-**Example:**
-```bash
-curl -X PUT https://era-agent.yawnxyz.workers.dev/api/storage/kv/myapp/config \
-  -H "Content-Type: application/json" \
-  -d '{"value": "{\"theme\":\"dark\"}"}'
-```
-
----
-
-### DELETE /api/storage/kv/:namespace/:key
-
-Delete a key from KV storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Key to delete
-
-**Response:**
-```json
-{
-  "success": true
-}
-```
-
----
-
-### GET /api/storage/kv/:namespace
-
-List keys in a KV namespace.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `prefix` (query) - Optional key prefix filter
-- `limit` (query) - Optional limit (default: 100)
-
-**Response:**
-```json
-{
-  "keys": [
-    {
-      "name": "config",
-      "metadata": {}
-    }
-  ],
-  "list_complete": true,
-  "cursor": "string"
-}
-```
-
-**Example:**
-```bash
-curl "https://era-agent.yawnxyz.workers.dev/api/storage/kv/myapp?prefix=user:&limit=50"
-```
-
----
-
-### POST /api/storage/d1/:namespace/query
-
-Execute a SELECT query on D1 database.
-
-**Parameters:**
-- `namespace` (path) - Database namespace
-
-**Request Body:**
-```json
-{
-  "sql": "SELECT * FROM users WHERE id = ?",
-  "params": [123]
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "results": [
-    {"id": 123, "name": "Alice"}
-  ],
-  "meta": {
-    "duration": 12
-  }
-}
-```
-
-**Example:**
-```bash
-curl -X POST https://era-agent.yawnxyz.workers.dev/api/storage/d1/myapp/query \
-  -H "Content-Type: application/json" \
-  -d '{"sql": "SELECT * FROM users", "params": []}'
-```
-
----
-
-### POST /api/storage/d1/:namespace/exec
-
-Execute a statement (INSERT, UPDATE, DELETE, CREATE TABLE, etc.) on D1 database.
-
-**Parameters:**
-- `namespace` (path) - Database namespace
-
-**Request Body:**
-```json
-{
-  "sql": "INSERT INTO users (name) VALUES (?)",
-  "params": ["Bob"]
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "meta": {
-    "duration": 8,
-    "changes": 1
-  }
-}
-```
-
----
-
-### GET /api/storage/r2/:namespace/:key
-
-Get an object from R2 storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Object key
-
-**Response:**
-```json
-{
-  "content": "base64_encoded_content",
-  "size": 1024,
-  "httpMetadata": {},
-  "customMetadata": {}
-}
-```
-
----
-
-### PUT /api/storage/r2/:namespace/:key
-
-Put an object in R2 storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Object key
-
-**Request Body:**
-```json
-{
-  "content": "base64_encoded_content",
-  "metadata": {
-    "type": "image/jpeg"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "size": 1024
-}
-```
-
----
-
-### DELETE /api/storage/r2/:namespace/:key
-
-Delete an object from R2 storage.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `key` (path) - Object key
-
-**Response:**
-```json
-{
-  "success": true
-}
-```
-
----
-
-### GET /api/storage/r2/:namespace
-
-List objects in an R2 namespace.
-
-**Parameters:**
-- `namespace` (path) - Storage namespace
-- `prefix` (query) - Optional key prefix filter
-- `limit` (query) - Optional limit (default: 100)
-
-**Response:**
-```json
-{
-  "objects": [
-    {
-      "key": "file.txt",
-      "size": 1024,
-      "uploaded": "2025-10-25T10:00:00Z"
-    }
-  ],
-  "truncated": false,
-  "cursor": "string"
-}
-```
-
----
-
-## Resource Registry API
-
-Discover and manage all storage resources.
-
-### GET /api/resources/list
-
-List all storage resources with optional filters.
-
-**Query Parameters:**
-- `type` (optional) - Filter by type: `kv`, `d1`, `r2`, `do`
-- `namespace` (optional) - Filter by namespace
-- `key_prefix` (optional) - Filter by key prefix
-- `limit` (optional) - Results per page (default: 100)
-- `offset` (optional) - Pagination offset (default: 0)
-
-**Response:**
-```json
-{
-  "resources": [
-    {
-      "type": "kv",
-      "namespace": "myapp",
-      "key": "config",
-      "created_at": "2025-10-25T10:00:00Z",
-      "updated_at": "2025-10-25T11:00:00Z",
-      "size": 45,
-      "metadata": {}
-    }
-  ],
-  "total": 42,
-  "offset": 0,
-  "limit": 100,
-  "has_more": false
-}
-```
-
-**Example:**
-```bash
-# List all resources
-curl https://era-agent.yawnxyz.workers.dev/api/resources/list
-
-# Filter by namespace
-curl "https://era-agent.yawnxyz.workers.dev/api/resources/list?namespace=myapp"
-
-# Filter by type
-curl "https://era-agent.yawnxyz.workers.dev/api/resources/list?type=kv"
-```
-
----
-
-### GET /api/resources/stats
-
-Get statistics about storage resource usage.
-
-**Response:**
-```json
-{
-  "total": 42,
-  "by_type": {
-    "kv": 15,
-    "d1": 3,
-    "r2": 24,
-    "do": 0
-  },
-  "by_namespace": {
-    "myapp": 20,
-    "cache": 15,
-    "shared": 7
-  },
-  "total_size": 1048576
-}
-```
-
-**Example:**
-```bash
-curl https://era-agent.yawnxyz.workers.dev/api/resources/stats
-```
+- Network access: Controlled by `network` parameter
+- File I/O to VM filesystem
