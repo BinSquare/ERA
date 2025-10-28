@@ -209,8 +209,10 @@ echo "KRUNVM_DATA_DIR: $KRUNVM_DATA_DIR"
 - `launcher_krunvm.go` — thin wrapper that shells out to `krunvm`.
 - `launcher_libkrun.go` — libkrun implementation (when built with libkrun support).
 - `launcher_libkrun_stub.go` — stub implementation when libkrun support is not compiled in.
+- `api_server.go` — HTTP API server for remote access to agent functionality.
 - `vm_runtime.go` — interface definition for VM launcher implementations.
 - `ffi/` — legacy Rust scaffolding kept for experimentation.
 - `guest/` — minimal Python entrypoint stub used inside guest images.
+- `sdk/` — client SDKs for various languages (Node.js, etc.).
 - `vendor/` — vendored Go modules, including BoltDB for durable state.
 - `Makefile` — helper targets for building the Go binary.
