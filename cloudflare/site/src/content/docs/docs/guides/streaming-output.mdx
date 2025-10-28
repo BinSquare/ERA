@@ -1,0 +1,371 @@
+---
+title: Streaming Output
+description: Real-time output streaming with Server-Sent Events (SSE)
+---
+
+ERA Agent supports real-time output streaming using Server-Sent Events (SSE). This is perfect for LLM generation, progress tracking, long-running computations, and any scenario where you need immediate feedback as code executes.
+
+## Why Streaming?
+
+**Traditional (Buffered) Execution:**
+```bash
+# Wait 30 seconds...
+# Then get all output at once
+{"stdout": "Line 1\nLine 2\n...Line 100\n", "exit_code": 0}
+```
+
+**Streaming Execution:**
+```bash
+# Get output immediately as it's generated
+event: stdout
+data: {"type":"stdout","content":"Line 1\n"}
+
+event: stdout
+data: {"type":"stdout","content":"Line 2\n"}
+
+# ...continues in real-time
+```
+
+## Quick Start
+
+### Basic Streaming Request
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import time\nfor i in range(10):\n    print(f\"Processing {i}\")\n    time.sleep(0.5)"
+  }'
+```
+
+**Output (real-time):**
+```
+event: stdout
+data: {"type":"stdout","content":"Processing 0\n"}
+
+event: stdout
+data: {"type":"stdout","content":"Processing 1\n"}
+
+event: stdout
+data: {"type":"stdout","content":"Processing 2\n"}
+
+...
+
+event: done
+data: {"type":"done","exit_code":0,"duration":"5.123s"}
+```
+
+## SSE Event Types
+
+| Event Type | Description | Data Fields |
+|------------|-------------|-------------|
+| `stdout` | Standard output line | `type`, `content` |
+| `stderr` | Standard error line | `type`, `content` |
+| `done` | Execution complete | `type`, `exit_code`, `duration` |
+| `error` | Execution error | `type`, `error` |
+
+## Client Examples
+
+### JavaScript (Browser/Node.js)
+
+```javascript
+async function streamExecution(sessionId, code) {
+  const response = await fetch(
+    `https://era-agent.yawnxyz.workers.dev/api/sessions/${sessionId}/stream`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    }
+  );
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const event = JSON.parse(line.slice(6));
+
+        switch (event.type) {
+          case 'stdout':
+            console.log('[OUT]', event.content);
+            break;
+          case 'stderr':
+            console.error('[ERR]', event.content);
+            break;
+          case 'done':
+            console.log(`Completed with exit code ${event.exit_code}`);
+            break;
+          case 'error':
+            console.error('Error:', event.error);
+            break;
+        }
+      }
+    }
+  }
+}
+
+// Usage
+await streamExecution('my-session', `
+import time
+for i in range(10):
+    print(f"Token {i}")
+    time.sleep(0.2)
+`);
+```
+
+### Python
+
+```python
+import requests
+import json
+
+def stream_execution(session_id, code):
+    url = f"https://era-agent.yawnxyz.workers.dev/api/sessions/{session_id}/stream"
+
+    response = requests.post(
+        url,
+        json={"code": code},
+        stream=True
+    )
+
+    for line in response.iter_lines():
+        if line:
+            line = line.decode('utf-8')
+            if line.startswith('data: '):
+                event = json.loads(line[6:])
+
+                if event['type'] == 'stdout':
+                    print('[OUT]', event['content'], end='')
+                elif event['type'] == 'stderr':
+                    print('[ERR]', event['content'], end='')
+                elif event['type'] == 'done':
+                    print(f"\\nCompleted: exit_code={event['exit_code']}")
+
+# Usage
+stream_execution('my-session', '''
+import time
+for i in range(10):
+    print(f"Processing {i}")
+    time.sleep(0.5)
+''')
+```
+
+### Bash (with jq)
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/stream \
+  -H "Content-Type: application/json" \
+  -d '{"code": "import time; [print(f\"Line {i}\") or time.sleep(0.3) for i in range(10)]"}' \
+  2>/dev/null | while IFS= read -r line; do
+  if [[ $line == data:* ]]; then
+    JSON="${line#data: }"
+    TYPE=$(echo "$JSON" | jq -r '.type')
+
+    if [ "$TYPE" = "stdout" ]; then
+      CONTENT=$(echo "$JSON" | jq -r '.content')
+      echo "[OUT] $CONTENT"
+    elif [ "$TYPE" = "done" ]; then
+      EXIT_CODE=$(echo "$JSON" | jq -r '.exit_code')
+      echo "Completed with exit code: $EXIT_CODE"
+    fi
+  fi
+done
+```
+
+## Use Cases
+
+### 1. LLM Token Streaming
+
+Stream AI-generated text token by token:
+
+```python
+code = '''
+import time
+import sys
+
+tokens = ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog"]
+
+for token in tokens:
+    print(token, end=" ", flush=True)
+    time.sleep(0.2)
+
+print()  # Final newline
+'''
+```
+
+### 2. Progress Bar / Status Updates
+
+```python
+code = '''
+import time
+
+tasks = ["Loading data", "Processing", "Analyzing", "Generating report", "Done"]
+
+for i, task in enumerate(tasks, 1):
+    print(f"[{i}/{len(tasks)}] {task}...")
+    time.sleep(1)
+'''
+```
+
+### 3. Long-Running Computation
+
+```python
+code = '''
+import time
+
+def expensive_computation(n):
+    print(f"Starting computation for n={n}")
+    for i in range(n):
+        result = i ** 2
+        if i % 100 == 0:
+            print(f"Progress: {i}/{n} ({i/n*100:.1f}%)")
+        time.sleep(0.01)
+    print("Computation complete!")
+    return result
+
+expensive_computation(1000)
+'''
+```
+
+### 4. Live Log Monitoring
+
+```python
+code = '''
+import time
+import random
+
+events = ["INFO", "DEBUG", "WARNING", "ERROR"]
+
+for i in range(20):
+    level = random.choice(events)
+    print(f"[{level}] Event {i}: Something happened")
+    time.sleep(0.2)
+'''
+```
+
+## Best Practices
+
+### 1. Flush Output Immediately
+
+```python
+# Python - use flush=True
+print("Immediate output", flush=True)
+
+# Or flush stdout manually
+import sys
+print("Message")
+sys.stdout.flush()
+```
+
+```javascript
+// Node.js - console.log flushes automatically
+console.log("Immediate output");
+```
+
+### 2. Handle Errors Gracefully
+
+```javascript
+try {
+  for await (const event of streamEvents(sessionId, code)) {
+    if (event.type === 'error') {
+      console.error('Execution error:', event.error);
+      break;
+    }
+    // Process event
+  }
+} catch (error) {
+  console.error('Stream error:', error);
+}
+```
+
+### 3. Set Appropriate Timeouts
+
+```bash
+# For long-running streaming tasks, increase timeout
+curl -X POST .../stream \
+  -d '{
+    "code": "...",
+    "timeout": 300
+  }'
+```
+
+### 4. Buffer Management
+
+When consuming streams, always handle partial lines:
+
+```javascript
+let buffer = '';
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  buffer += decoder.decode(value, { stream: true });
+  const lines = buffer.split('\n');
+  buffer = lines.pop() || '';  // Keep incomplete line in buffer
+
+  for (const line of lines) {
+    // Process complete lines
+  }
+}
+```
+
+## Streaming vs Regular Execution
+
+| Feature | Regular `/run` | Streaming `/stream` |
+|---------|----------------|---------------------|
+| **Output** | Buffered, all at once | Real-time, line-by-line |
+| **Response Format** | JSON | Server-Sent Events |
+| **Best For** | Quick tasks, batch jobs | LLMs, progress tracking, long tasks |
+| **Timeout** | Configurable | Configurable |
+| **Error Handling** | JSON error response | SSE error event |
+| **Client Complexity** | Simple | Moderate (SSE parsing) |
+
+## Troubleshooting
+
+### Not Receiving Events
+
+1. **Check output is flushed**:
+   ```python
+   print("Message", flush=True)  # Python
+   ```
+
+2. **Verify content type**:
+   ```bash
+   curl -v .../stream  # Check for "Content-Type: text/event-stream"
+   ```
+
+3. **Test with simple code**:
+   ```python
+   print("Test 1")
+   print("Test 2")
+   print("Test 3")
+   ```
+
+### Slow Streaming
+
+- Increase buffer size in client
+- Check network latency
+- Ensure code isn't blocking
+
+### Connection Closed Early
+
+- Check timeout settings
+- Monitor for network interruptions
+- Implement retry logic on client
+
+## See Also
+
+- [API Reference](/docs/api-reference) - Complete API documentation
+- [Environment Variables](/docs/guides/environment-variables) - Setting environment variables
+- [Timeout Configuration](/docs/guides/timeout-configuration) - Configuring execution timeouts

@@ -1,0 +1,16 @@
+{
+  "name": "groq-chat",
+  "title": "Groq Chat API",
+  "description": "Fast inference with Groq's optimized LLM infrastructure using open-source models",
+  "language": "node",
+  "entrypoint": "index.js",
+  "env_file": ".env.example",
+  "dependencies": {
+    "npm": ["openai"]
+  },
+  "tags": ["llm", "chat", "groq", "fast-inference"],
+  "env_required": ["GROQ_API_KEY"],
+  "env_optional": ["PROMPT", "MODEL", "TEMPERATURE", "MAX_TOKENS"],
+  "estimated_runtime": "2-5s",
+  "api_docs": "https://console.groq.com/docs/quickstart"
+}

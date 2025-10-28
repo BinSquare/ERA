@@ -1,0 +1,732 @@
+---
+title: Multi-File Projects & Deployment
+description: Deploy complete projects with multiple files, dependencies, and directory structures
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+# Multi-File Projects & Deployment
+
+ERA Agent supports deploying complete projects with multiple files, dependencies, and complex directory structures. Upload your entire codebase and run it just like you would locally.
+
+<Aside type="tip">
+  **Key Feature:** Use the `setup` parameter to install dependencies (npm, pip, go modules) automatically. ERA extracts installed packages and makes them available across all runs!
+</Aside>
+
+## Quick Start
+
+### 1. Simple Project with Utils
+
+**Project Structure:**
+```
+my-project/
+├── index.js       # Main entry point
+└── utils.js       # Helper utilities
+```
+
+**Deploy:**
+
+```bash
+# Create session
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "my-utils-project",
+    "persistent": true
+  }'
+
+# Upload utils.js
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/files/utils.js \
+  -H "Content-Type: application/javascript" \
+  --data-binary @- <<'EOF'
+module.exports = {
+  double: (x) => x * 2,
+  greet: (name) => `Hello, ${name}!`
+};
+EOF
+
+# Upload index.js
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/files/index.js \
+  -H "Content-Type: application/javascript" \
+  --data-binary @- <<'EOF'
+const utils = require('./utils');
+
+console.log(utils.double(5));       // 10
+console.log(utils.greet('World'));  // Hello, World!
+EOF
+
+# Run it
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-utils-project/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./index.js\")"}'
+```
+
+### 2. Project with Dependencies
+
+**Project with package.json:**
+```json
+{
+  "name": "my-api",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "axios": "^1.6.0"
+  }
+}
+```
+
+**Deploy:**
+
+```bash
+# Create session with automatic package installation
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "my-api",
+    "persistent": true,
+    "setup": {
+      "npm": {
+        "packageJson": "{\"dependencies\": {\"lodash\": \"^4.17.21\", \"axios\": \"^1.6.0\"}}"
+      }
+    }
+  }'
+
+# Wait for setup to complete (typically 10-30 seconds)
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-api | jq '.setup_status'
+# Should return: "completed"
+
+# Upload your code
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/files/index.js \
+  --data-binary @- <<'EOF'
+const _ = require('lodash');
+const axios = require('axios');
+
+const data = [1, 2, 3, 4, 5, 6];
+const chunks = _.chunk(data, 2);
+console.log('Chunked:', chunks);
+EOF
+
+# Run it - lodash and axios are already installed!
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-api/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./index.js\")"}'
+```
+
+<Aside type="note">
+  **Setup Process:** When you provide `setup`, ERA creates a temporary VM, installs packages, and extracts everything (including `node_modules/`) to persistent storage. This happens once during session creation.
+</Aside>
+
+## Complete Project Deployment
+
+### Node.js/TypeScript Project
+
+**Local Project Structure:**
+```
+my-app/
+├── package.json
+├── src/
+│   ├── index.ts
+│   ├── utils/
+│   │   ├── helpers.ts
+│   │   └── validators.ts
+│   └── services/
+│       └── api.ts
+└── config/
+    └── settings.json
+```
+
+**Step 1: Create Session with Dependencies**
+
+```bash
+# Read your local package.json
+PACKAGE_JSON=$(cat package.json | jq -c .)
+
+# Create session with setup
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "typescript",
+    "session_id": "my-app",
+    "persistent": true,
+    "setup": {
+      "npm": {
+        "packageJson": "'"$PACKAGE_JSON"'"
+      }
+    }
+  }'
+```
+
+**Step 2: Upload All Source Files**
+
+```bash
+# Upload files while maintaining directory structure
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/index.ts \
+  --data-binary @src/index.ts
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/utils/helpers.ts \
+  --data-binary @src/utils/helpers.ts
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/utils/validators.ts \
+  --data-binary @src/utils/validators.ts
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/src/services/api.ts \
+  --data-binary @src/services/api.ts
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/files/config/settings.json \
+  --data-binary @config/settings.json
+```
+
+**Step 3: Run Your Application**
+
+```bash
+# TypeScript files run via tsx automatically
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./src/index.ts\")"}'
+```
+
+### Python Project
+
+**Local Project Structure:**
+```
+data-processor/
+├── requirements.txt
+├── main.py
+├── processors/
+│   ├── __init__.py
+│   ├── cleaner.py
+│   └── analyzer.py
+└── utils/
+    ├── __init__.py
+    └── helpers.py
+```
+
+**requirements.txt:**
+```
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+```
+
+**Deploy:**
+
+```bash
+# Step 1: Create session with dependencies
+REQUIREMENTS=$(cat requirements.txt)
+
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "data-processor",
+    "persistent": true,
+    "setup": {
+      "pip": {
+        "requirements": "'"$REQUIREMENTS"'"
+      }
+    }
+  }'
+
+# Step 2: Upload Python modules
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/__init__.py \
+  --data-binary @processors/__init__.py
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/cleaner.py \
+  --data-binary @processors/cleaner.py
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/processors/analyzer.py \
+  --data-binary @processors/analyzer.py
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/utils/__init__.py \
+  --data-binary @utils/__init__.py
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/utils/helpers.py \
+  --data-binary @utils/helpers.py
+
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/files/main.py \
+  --data-binary @main.py
+
+# Step 3: Run
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-processor/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "exec(open(\"main.py\").read())"}'
+```
+
+## Helper Scripts
+
+### Bash Script for Project Upload
+
+Save this as `era-upload.sh`:
+
+<Code code={`#!/bin/bash
+# ERA Agent Project Upload Script
+# Usage: ./era-upload.sh <session_id> <project_directory>
+
+set -e
+
+SESSION_ID="$1"
+PROJECT_DIR="$2"
+API_URL="\${ERA_API_URL:-https://era-agent.yawnxyz.workers.dev}"
+
+if [ -z "$SESSION_ID" ] || [ -z "$PROJECT_DIR" ]; then
+  echo "Usage: $0 <session_id> <project_directory>"
+  echo "Example: $0 my-project ./my-app"
+  exit 1
+fi
+
+if [ ! -d "$PROJECT_DIR" ]; then
+  echo "Error: Directory '$PROJECT_DIR' does not exist"
+  exit 1
+fi
+
+echo "📦 Uploading project from $PROJECT_DIR to session $SESSION_ID"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Patterns to exclude
+EXCLUDE_PATTERNS=(
+  "node_modules"
+  ".git"
+  ".venv"
+  "__pycache__"
+  "dist"
+  "build"
+  ".next"
+  ".cache"
+  "coverage"
+  ".DS_Store"
+  "*.pyc"
+  ".env"
+  ".env.local"
+)
+
+# Build find command with exclusions
+FIND_CMD="find \"$PROJECT_DIR\" -type f"
+for pattern in "\${EXCLUDE_PATTERNS[@]}"; do
+  FIND_CMD="$FIND_CMD ! -path \"*/$pattern/*\" ! -name \"$pattern\""
+done
+
+# Count total files
+TOTAL_FILES=$(eval "$FIND_CMD" | wc -l | tr -d ' ')
+echo "📁 Found $TOTAL_FILES files to upload"
+echo ""
+
+# Upload files
+UPLOADED=0
+FAILED=0
+
+eval "$FIND_CMD" -print0 | while IFS= read -r -d '' file; do
+  # Get relative path
+  rel_path="\${file#$PROJECT_DIR/}"
+
+  # Skip if path is exactly the project dir (shouldn't happen, but safety)
+  if [ "$file" = "$PROJECT_DIR" ]; then
+    continue
+  fi
+
+  # Upload file
+  response=$(curl -s -w "\\n%{http_code}" -X PUT \\
+    "$API_URL/api/sessions/$SESSION_ID/files/$rel_path" \\
+    --data-binary "@$file" \\
+    -H "Content-Type: application/octet-stream")
+
+  http_code=$(echo "$response" | tail -n1)
+
+  if [ "$http_code" = "200" ]; then
+    UPLOADED=$((UPLOADED + 1))
+    echo "✅ [$UPLOADED/$TOTAL_FILES] $rel_path"
+  else
+    FAILED=$((FAILED + 1))
+    echo "❌ Failed: $rel_path (HTTP $http_code)"
+  fi
+done
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✨ Upload complete!"
+echo "   Uploaded: $UPLOADED files"
+if [ $FAILED -gt 0 ]; then
+  echo "   Failed: $FAILED files"
+fi
+`} lang="bash" title="era-upload.sh" />
+
+**Usage:**
+
+```bash
+# Make executable
+chmod +x era-upload.sh
+
+# Upload project
+./era-upload.sh my-session ./my-project
+```
+
+### Python Script for Project Upload
+
+Save this as `era_upload.py`:
+
+<Code code={`#!/usr/bin/env python3
+"""
+ERA Agent Project Upload Script
+Usage: python era_upload.py <session_id> <project_directory>
+"""
+
+import os
+import sys
+import mimetypes
+from pathlib import Path
+from typing import List
+import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Configuration
+API_URL = os.environ.get('ERA_API_URL', 'https://era-agent.yawnxyz.workers.dev')
+MAX_WORKERS = 10  # Parallel uploads
+
+# Patterns to exclude
+EXCLUDE_PATTERNS = [
+    'node_modules',
+    '.git',
+    '.venv',
+    'venv',
+    '__pycache__',
+    'dist',
+    'build',
+    '.next',
+    '.cache',
+    'coverage',
+    '.DS_Store',
+    '.pyc',
+    '.env',
+    '.env.local',
+]
+
+def should_exclude(path: Path) -> bool:
+    """Check if path should be excluded."""
+    parts = path.parts
+    for pattern in EXCLUDE_PATTERNS:
+        if pattern in parts or path.name.endswith(pattern):
+            return True
+    return False
+
+def get_files(project_dir: Path) -> List[Path]:
+    """Get all files to upload, excluding patterns."""
+    files = []
+    for file_path in project_dir.rglob('*'):
+        if file_path.is_file() and not should_exclude(file_path):
+            files.append(file_path)
+    return files
+
+def upload_file(session_id: str, project_dir: Path, file_path: Path) -> tuple:
+    """Upload a single file."""
+    rel_path = file_path.relative_to(project_dir)
+    url = f"{API_URL}/api/sessions/{session_id}/files/{rel_path}"
+
+    # Detect content type
+    content_type, _ = mimetypes.guess_type(str(file_path))
+    headers = {'Content-Type': content_type or 'application/octet-stream'}
+
+    try:
+        with open(file_path, 'rb') as f:
+            response = requests.put(url, data=f, headers=headers, timeout=30)
+
+        if response.status_code == 200:
+            return (str(rel_path), True, None)
+        else:
+            return (str(rel_path), False, f"HTTP {response.status_code}")
+    except Exception as e:
+        return (str(rel_path), False, str(e))
+
+def main():
+    if len(sys.argv) != 3:
+        print("Usage: python era_upload.py <session_id> <project_directory>")
+        print("Example: python era_upload.py my-project ./my-app")
+        sys.exit(1)
+
+    session_id = sys.argv[1]
+    project_dir = Path(sys.argv[2])
+
+    if not project_dir.exists():
+        print(f"Error: Directory '{project_dir}' does not exist")
+        sys.exit(1)
+
+    print(f"📦 Uploading project from {project_dir} to session {session_id}")
+    print("━" * 60)
+
+    # Get files to upload
+    files = get_files(project_dir)
+    total_files = len(files)
+
+    if total_files == 0:
+        print("No files to upload!")
+        return
+
+    print(f"📁 Found {total_files} files to upload")
+    print()
+
+    # Upload files in parallel
+    uploaded = 0
+    failed = 0
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(upload_file, session_id, project_dir, file_path): file_path
+            for file_path in files
+        }
+
+        for future in as_completed(futures):
+            rel_path, success, error = future.result()
+
+            if success:
+                uploaded += 1
+                print(f"✅ [{uploaded}/{total_files}] {rel_path}")
+            else:
+                failed += 1
+                print(f"❌ Failed: {rel_path} ({error})")
+
+    print()
+    print("━" * 60)
+    print("✨ Upload complete!")
+    print(f"   Uploaded: {uploaded} files")
+    if failed > 0:
+        print(f"   Failed: {failed} files")
+
+if __name__ == '__main__':
+    main()
+`} lang="python" title="era_upload.py" />
+
+**Usage:**
+
+```bash
+# Install requests
+pip install requests
+
+# Upload project
+python era_upload.py my-session ./my-project
+```
+
+## Complete Workflow Example
+
+### Deploying a Real Express.js API
+
+**Local Project:**
+```
+express-api/
+├── package.json
+├── server.js
+├── routes/
+│   ├── users.js
+│   └── posts.js
+└── middleware/
+    └── auth.js
+```
+
+**Complete Deployment:**
+
+```bash
+# 1. Create session with dependencies
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "express-api",
+    "persistent": true,
+    "allowInternetAccess": true,
+    "allowPublicAccess": true,
+    "setup": {
+      "npm": ["express", "body-parser", "cors"]
+    }
+  }'
+
+# 2. Wait for setup completion
+while [ "$(curl -s https://era-agent.yawnxyz.workers.dev/api/sessions/express-api | jq -r '.setup_status')" != "completed" ]; do
+  echo "Waiting for package installation..."
+  sleep 2
+done
+echo "Packages installed!"
+
+# 3. Upload project files
+./era-upload.sh express-api ./express-api
+
+# 4. Store the server code
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/code \
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "code": "require('./server.js')",
+  "description": "Express API server"
+}
+EOF
+
+# 5. Get public URL
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/host?port=3000
+# Returns: {"url": "https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000"}
+
+# 6. Test the API
+curl https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000/api/users
+```
+
+## Best Practices
+
+### 1. Use Setup for Dependencies
+
+**✅ Good:**
+```json
+{
+  "setup": {
+    "npm": ["express", "lodash", "axios"]
+  }
+}
+```
+
+**❌ Avoid:**
+```bash
+# Don't upload node_modules manually
+curl -X PUT .../files/node_modules/express/index.js ...
+```
+
+### 2. Maintain Directory Structure
+
+**✅ Good:**
+```bash
+# Preserve structure
+.../files/src/utils/helper.js
+.../files/src/services/api.js
+```
+
+**❌ Avoid:**
+```bash
+# Flat structure breaks imports
+.../files/helper.js
+.../files/api.js
+```
+
+### 3. Exclude Build Artifacts
+
+```bash
+# Exclude these when uploading:
+- node_modules/  (install via setup instead)
+- dist/, build/
+- .git/
+- __pycache__/
+- .env files
+```
+
+### 4. Check Setup Status
+
+```bash
+# Always verify setup completed
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.setup_status'
+
+# Possible values:
+# "pending"   - Setup queued
+# "running"   - Installing packages
+# "completed" - Ready to use
+# "failed"    - Check setup_result for errors
+```
+
+### 5. Test Locally First
+
+```bash
+# Make sure it works locally
+cd my-project
+npm install
+node index.js  # Should work
+
+# Then deploy to ERA
+```
+
+## Advanced: CI/CD Integration
+
+### GitHub Actions Deployment
+
+<Code code={`name: Deploy to ERA Agent
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create ERA Session
+        run: |
+          PACKAGE_JSON=$(cat package.json | jq -c .)
+
+          curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \\
+            -H "Content-Type: application/json" \\
+            -d '{
+              "language": "node",
+              "session_id": "prod-api",
+              "persistent": true,
+              "setup": {
+                "npm": {
+                  "packageJson": "'"$PACKAGE_JSON"'"
+                }
+              }
+            }'
+
+      - name: Upload Project
+        run: |
+          chmod +x ./era-upload.sh
+          ./era-upload.sh prod-api .
+
+      - name: Update Code
+        run: |
+          curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/prod-api/code \\
+            -H "Content-Type: application/json" \\
+            -d '{"code": "require(\"./server.js\")"}'
+
+      - name: Get Public URL
+        run: |
+          curl https://era-agent.yawnxyz.workers.dev/api/sessions/prod-api/host?port=3000
+`} lang="yaml" title=".github/workflows/deploy.yml" />
+
+## Troubleshooting
+
+### Import/Require Not Working
+
+**Problem:** `Error: Cannot find module './utils'`
+
+**Solution:** Check file paths match your imports:
+```bash
+# If code has: require('./src/utils')
+# Upload to: .../files/src/utils.js
+
+# If code has: from utils import helper
+# Upload to: .../files/utils/__init__.py
+```
+
+### Packages Not Found After Setup
+
+**Problem:** `Error: Cannot find module 'lodash'`
+
+**Solution:** Check setup status:
+```bash
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.setup_result'
+```
+
+If failed, recreate session with correct package names.
+
+### Large Project Upload Fails
+
+**Problem:** Upload times out or fails midway
+
+**Solution:**
+1. Use the Python upload script (supports parallel uploads)
+2. Upload in batches
+3. Exclude unnecessary files (tests, docs, etc.)
+
+## Limitations
+
+- **File Size:** Individual files limited by R2 (typically 5GB, but be reasonable)
+- **Setup Timeout:** Package installation has 5-minute timeout
+- **No Streaming:** Files uploaded one at a time via API (use helper scripts for parallel uploads)
+
+## Next Steps
+
+- Learn about [Code Management](/docs/guides/code-management) for updating deployed code
+- See [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for making projects accessible via URLs
+- Check [Environment Variables](/docs/guides/environment-variables) for runtime configuration

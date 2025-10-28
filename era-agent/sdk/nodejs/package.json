@@ -1,0 +1,24 @@
+{
+  "name": "@era/agent-sdk",
+  "version": "1.0.0",
+  "description": "Node.js SDK for ERA Agent microVM orchestration",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "vm",
+    "sandbox",
+    "security",
+    "microvm",
+    "krunvm"
+  ],
+  "author": "ERA",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

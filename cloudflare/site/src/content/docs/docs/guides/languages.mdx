@@ -1,0 +1,788 @@
+---
+title: Language Examples
+description: Code examples for Python, Node.js, TypeScript, and Go
+---
+
+ERA Agent supports multiple programming languages. Each language runs in an isolated VM with its own runtime environment. This guide provides examples for each supported language.
+
+:::tip[Using REST Clients (Postman, Insomnia, Restfox)]
+When copying JSON examples to paste into REST clients, look for the **"JSON Body"** sections below each curl example. These provide single-line JSON that's ready to paste.
+
+**Important:** Make sure newlines appear as `\n` (two characters: backslash + n) in your REST client, not as actual line breaks. If you're getting JSON parse errors about "control characters," check that `\n` isn't being converted to actual newlines.
+
+**Example that works in REST clients:**
+```json
+{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}
+```
+:::
+
+## Python
+
+Python 3.x with the standard library.
+
+### One-Shot Execution
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","code":"print(\"Hello from Python!\")\nprint(2 + 2)"}'
+```
+
+**JSON Body:**
+```json
+{"language":"python","code":"print(\"Hello from Python!\")\nprint(2 + 2)"}
+```
+
+**Output:**
+```
+Hello from Python!
+4
+```
+
+### Math and Standard Library
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","code":"import math\nprint(f\"Pi: {math.pi}\")\nprint(f\"Sqrt(16): {math.sqrt(16)}\")"}'
+```
+
+**JSON Body:**
+```json
+{"language":"python","code":"import math\nprint(f\"Pi: {math.pi}\")\nprint(f\"Sqrt(16): {math.sqrt(16)}\")"}
+```
+
+**Output:**
+```
+Pi: 3.141592653589793
+Sqrt(16): 4.0
+```
+
+### Session-Based Execution
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","persistent":true,"session_id":"python-workspace"}'
+```
+
+**JSON Body:**
+```json
+{"language":"python","persistent":true,"session_id":"python-workspace"}
+```
+
+**Initialize variables:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/python-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter = 0\nprint(f\"Counter initialized: {counter}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter = 0\nprint(f\"Counter initialized: {counter}\")"}
+```
+
+**Variables persist:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/python-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter += 1\nprint(f\"Counter value: {counter}\")"}
+```
+
+**Clean up:**
+```bash
+curl -X DELETE https://era-agent.yawnxyz.workers.dev/api/sessions/python-workspace
+```
+
+**Outputs:**
+```
+Counter initialized: 0
+Counter value: 1
+```
+
+### File Operations
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","persistent":true,"session_id":"python-files"}'
+```
+
+**JSON Body:**
+```json
+{"language":"python","persistent":true,"session_id":"python-files"}
+```
+
+**Write file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/python-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"data.txt\", \"w\") as f:\n    f.write(\"Line 1\\nLine 2\\nLine 3\")\nprint(\"File created!\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"with open(\"data.txt\", \"w\") as f:\n    f.write(\"Line 1\\nLine 2\\nLine 3\")\nprint(\"File created!\")"}
+```
+
+**Read file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/python-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"with open(\"data.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"File contents:\\n{content}\")"}'
+```
+
+**JSON Body:**
+```json
+{"code":"with open(\"data.txt\", \"r\") as f:\n    content = f.read()\nprint(f\"File contents:\\n{content}\")"}
+```
+
+## Node.js
+
+JavaScript runtime with Node.js APIs.
+
+### One-Shot Execution
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"node","code":"console.log(\"Hello from Node.js!\"); console.log(Math.PI);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"node","code":"console.log(\"Hello from Node.js!\"); console.log(Math.PI);"}
+```
+
+**Output:**
+```
+Hello from Node.js!
+3.141592653589793
+```
+
+### Math and Built-ins
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"node","code":"console.log(\"Pi:\", Math.PI);\nconsole.log(\"Sqrt(16):\", Math.sqrt(16));\nconsole.log(\"Random:\", Math.random());"}'
+```
+
+**JSON Body:**
+```json
+{"language":"node","code":"console.log(\"Pi:\", Math.PI);\nconsole.log(\"Sqrt(16):\", Math.sqrt(16));\nconsole.log(\"Random:\", Math.random());"}
+```
+
+**Output:**
+```
+Pi: 3.141592653589793
+Sqrt(16): 4
+Random: 0.123456789
+```
+
+### Session-Based Execution
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"node","persistent":true,"session_id":"node-workspace"}'
+```
+
+**JSON Body:**
+```json
+{"language":"node","persistent":true,"session_id":"node-workspace"}
+```
+
+**Initialize variables:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/node-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"let counter = 0;\nconsole.log(`Counter initialized: ${counter}`);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"let counter = 0;\nconsole.log(`Counter initialized: ${counter}`);"}
+```
+
+**Variables persist:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/node-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter += 1;\nconsole.log(`Counter value: ${counter}`);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter += 1;\nconsole.log(`Counter value: ${counter}`);"}
+```
+
+**Outputs:**
+```
+Counter initialized: 0
+Counter value: 1
+```
+
+### Working with JSON
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"node","code":"const data = { name: \"ERA Agent\", version: \"1.0\" };\nconsole.log(\"JSON:\", JSON.stringify(data, null, 2));"}'
+```
+
+**JSON Body:**
+```json
+{"language":"node","code":"const data = { name: \"ERA Agent\", version: \"1.0\" };\nconsole.log(\"JSON:\", JSON.stringify(data, null, 2));"}
+```
+
+## TypeScript
+
+TypeScript with automatic transpilation using `tsx`.
+
+### One-Shot Execution
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"typescript","code":"const message: string = \"Hello from TypeScript!\";\nconsole.log(message);\nconst sum: number = 2 + 2;\nconsole.log(sum);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"typescript","code":"const message: string = \"Hello from TypeScript!\";\nconsole.log(message);\nconst sum: number = 2 + 2;\nconsole.log(sum);"}
+```
+
+**Output:**
+```
+Hello from TypeScript!
+4
+```
+
+### Type-Safe Math
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"typescript","code":"const pi: number = Math.PI;\nconst sqrt: number = Math.sqrt(16);\nconsole.log(`Pi: ${pi}`);\nconsole.log(`Sqrt(16): ${sqrt}`);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"typescript","code":"const pi: number = Math.PI;\nconst sqrt: number = Math.sqrt(16);\nconsole.log(`Pi: ${pi}`);\nconsole.log(`Sqrt(16): ${sqrt}`);"}
+```
+
+**Output:**
+```
+Pi: 3.141592653589793
+Sqrt(16): 4
+```
+
+### Session-Based Execution
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"typescript","persistent":true,"session_id":"typescript-workspace"}'
+```
+
+**JSON Body:**
+```json
+{"language":"typescript","persistent":true,"session_id":"typescript-workspace"}
+```
+
+**Initialize with types:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/typescript-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"let counter: number = 0;\nconsole.log(`Counter initialized: ${counter}`);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"let counter: number = 0;\nconsole.log(`Counter initialized: ${counter}`);"}
+```
+
+**Type-safe operations:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/typescript-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"counter += 1;\nconsole.log(`Counter value: ${counter}`);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"counter += 1;\nconsole.log(`Counter value: ${counter}`);"}
+```
+
+**Outputs:**
+```
+Counter initialized: 0
+Counter value: 1
+```
+
+### Interfaces and Types
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"typescript","code":"interface User { name: string; age: number; }\nconst user: User = { name: \"Alice\", age: 30 };\nconsole.log(`User: ${user.name}, Age: ${user.age}`);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"typescript","code":"interface User { name: string; age: number; }\nconst user: User = { name: \"Alice\", age: 30 };\nconsole.log(`User: ${user.name}, Age: ${user.age}`);"}
+```
+
+## Go
+
+Go 1.21+ with the standard library.
+
+### One-Shot Execution
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}'
+```
+
+**JSON Body:**
+```json
+{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello from Go!\") }"}
+```
+
+**Output:**
+```
+Hello from Go!
+```
+
+### Math and Standard Library
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","code":"package main\nimport (\n\t\"fmt\"\n\t\"math\"\n)\nfunc main() {\n\tfmt.Println(\"Pi:\", math.Pi)\n\tfmt.Println(\"Sqrt(16):\", math.Sqrt(16))\n}"}'
+```
+
+**JSON Body:**
+```json
+{"language":"go","code":"package main\nimport (\n\t\"fmt\"\n\t\"math\"\n)\nfunc main() {\n\tfmt.Println(\"Pi:\", math.Pi)\n\tfmt.Println(\"Sqrt(16):\", math.Sqrt(16))\n}"}
+```
+
+**Output:**
+```
+Pi: 3.141592653589793
+Sqrt(16): 4
+```
+
+### Session-Based Execution
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","persistent":true,"session_id":"go-workspace"}'
+```
+
+**JSON Body:**
+```json
+{"language":"go","persistent":true,"session_id":"go-workspace"}
+```
+
+**Run Go code:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/go-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Running in Go session!\") }"}'
+```
+
+**JSON Body:**
+```json
+{"code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Running in Go session!\") }"}
+```
+
+**Math example:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/go-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"package main\nimport (\n\t\"fmt\"\n\t\"math\"\n)\nfunc main() {\n\tfmt.Println(\"Pi:\", math.Pi)\n\tfmt.Println(\"Sqrt(16):\", math.Sqrt(16))\n}"}'
+```
+
+**JSON Body:**
+```json
+{"code":"package main\nimport (\n\t\"fmt\"\n\t\"math\"\n)\nfunc main() {\n\tfmt.Println(\"Pi:\", math.Pi)\n\tfmt.Println(\"Sqrt(16):\", math.Sqrt(16))\n}"}
+```
+
+**Outputs:**
+```
+Running in Go session!
+Pi: 3.141592653589793
+Sqrt(16): 4
+```
+
+### Structs and Functions
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","code":"package main\nimport \"fmt\"\ntype User struct {\n\tName string\n\tAge  int\n}\nfunc main() {\n\tuser := User{Name: \"Alice\", Age: 30}\n\tfmt.Printf(\"User: %s, Age: %d\\n\", user.Name, user.Age)\n}"}'
+```
+
+**JSON Body:**
+```json
+{"language":"go","code":"package main\nimport \"fmt\"\ntype User struct {\n\tName string\n\tAge  int\n}\nfunc main() {\n\tuser := User{Name: \"Alice\", Age: 30}\n\tfmt.Printf(\"User: %s, Age: %d\\n\", user.Name, user.Age)\n}"}
+```
+
+### File Operations
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"go","persistent":true,"session_id":"go-files"}'
+```
+
+**JSON Body:**
+```json
+{"language":"go","persistent":true,"session_id":"go-files"}
+```
+
+**Write file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/go-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"package main\nimport (\n\t\"fmt\"\n\t\"os\"\n)\nfunc main() {\n\terr := os.WriteFile(\"data.txt\", []byte(\"Hello from Go!\"), 0644)\n\tif err != nil {\n\t\tfmt.Println(\"Error:\", err)\n\t\treturn\n\t}\n\tfmt.Println(\"File created!\")\n}"}'
+```
+
+**JSON Body:**
+```json
+{"code":"package main\nimport (\n\t\"fmt\"\n\t\"os\"\n)\nfunc main() {\n\terr := os.WriteFile(\"data.txt\", []byte(\"Hello from Go!\"), 0644)\n\tif err != nil {\n\t\tfmt.Println(\"Error:\", err)\n\t\treturn\n\t}\n\tfmt.Println(\"File created!\")\n}"}
+```
+
+**Read file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/go-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"package main\nimport (\n\t\"fmt\"\n\t\"os\"\n)\nfunc main() {\n\tdata, err := os.ReadFile(\"data.txt\")\n\tif err != nil {\n\t\tfmt.Println(\"Error:\", err)\n\t\treturn\n\t}\n\tfmt.Printf(\"File contents: %s\\n\", data)\n}"}'
+```
+
+**JSON Body:**
+```json
+{"code":"package main\nimport (\n\t\"fmt\"\n\t\"os\"\n)\nfunc main() {\n\tdata, err := os.ReadFile(\"data.txt\")\n\tif err != nil {\n\t\tfmt.Println(\"Error:\", err)\n\t\treturn\n\t}\n\tfmt.Printf(\"File contents: %s\\n\", data)\n}"}
+```
+
+## Deno
+
+Deno 1.40+ with native TypeScript and JavaScript support.
+
+### One-Shot Execution
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","code":"console.log(\"Hello from Deno!\");\nconsole.log(\"Deno version:\", Deno.version.deno);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","code":"console.log(\"Hello from Deno!\");\nconsole.log(\"Deno version:\", Deno.version.deno);"}
+```
+
+**Output:**
+```
+Hello from Deno!
+Deno version: 1.40.0
+```
+
+### TypeScript Support
+
+Deno runs TypeScript natively without any transpilation step:
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","code":"const message: string = \"Hello from Deno TypeScript!\";\nconst num: number = 42;\nconsole.log(`${message} The answer is ${num}`);"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","code":"const message: string = \"Hello from Deno TypeScript!\";\nconst num: number = 42;\nconsole.log(`${message} The answer is ${num}`);"}
+```
+
+**Output:**
+```
+Hello from Deno TypeScript! The answer is 42
+```
+
+### Session-Based Execution
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","persistent":true,"session_id":"deno-workspace"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","persistent":true,"session_id":"deno-workspace"}
+```
+
+**Run Deno code:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"console.log(\"Running in Deno session!\");\nconsole.log(\"Runtime:\", Deno.version.deno);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"console.log(\"Running in Deno session!\");\nconsole.log(\"Runtime:\", Deno.version.deno);"}
+```
+
+**TypeScript in session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-workspace/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"interface User {\n  name: string;\n  age: number;\n}\nconst user: User = { name: \"Alice\", age: 30 };\nconsole.log(`User: ${user.name}, Age: ${user.age}`);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"interface User {\n  name: string;\n  age: number;\n}\nconst user: User = { name: \"Alice\", age: 30 };\nconsole.log(`User: ${user.name}, Age: ${user.age}`);"}
+```
+
+**Outputs:**
+```
+Running in Deno session!
+Runtime: 1.40.0
+User: Alice, Age: 30
+```
+
+### Standard Library
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","code":"console.log(\"Pi:\", Math.PI);\nconsole.log(\"Sqrt(16):\", Math.sqrt(16));\nconsole.log(\"Random:\", Math.random());"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","code":"console.log(\"Pi:\", Math.PI);\nconsole.log(\"Sqrt(16):\", Math.sqrt(16));\nconsole.log(\"Random:\", Math.random());"}
+```
+
+**Output:**
+```
+Pi: 3.141592653589793
+Sqrt(16): 4
+Random: 0.123456789
+```
+
+### File Operations
+
+**Create session:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","persistent":true,"session_id":"deno-files"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","persistent":true,"session_id":"deno-files"}
+```
+
+**Write file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"const encoder = new TextEncoder();\nconst data = encoder.encode(\"Hello from Deno!\");\nDeno.writeFileSync(\"data.txt\", data);\nconsole.log(\"File created!\");"}'
+```
+
+**JSON Body:**
+```json
+{"code":"const encoder = new TextEncoder();\nconst data = encoder.encode(\"Hello from Deno!\");\nDeno.writeFileSync(\"data.txt\", data);\nconsole.log(\"File created!\");"}
+```
+
+**Read file:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-files/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"const decoder = new TextDecoder();\nconst data = Deno.readFileSync(\"data.txt\");\nconst text = decoder.decode(data);\nconsole.log(\"File contents:\", text);"}'
+```
+
+**JSON Body:**
+```json
+{"code":"const decoder = new TextDecoder();\nconst data = Deno.readFileSync(\"data.txt\");\nconst text = decoder.decode(data);\nconsole.log(\"File contents:\", text);"}
+```
+
+### Working with JSON
+
+**curl:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{"language":"deno","code":"const data = { name: \"ERA Agent\", runtime: \"Deno\", version: Deno.version.deno };\nconsole.log(JSON.stringify(data, null, 2));"}'
+```
+
+**JSON Body:**
+```json
+{"language":"deno","code":"const data = { name: \"ERA Agent\", runtime: \"Deno\", version: Deno.version.deno };\nconsole.log(JSON.stringify(data, null, 2));"}
+```
+
+## Language Comparison
+
+| Feature | Python | Node.js | TypeScript | Go | Deno |
+|---------|--------|---------|------------|-----|------|
+| **Runtime** | Python 3.x | Node.js | tsx | Go 1.21+ | Deno 1.40+ |
+| **Typing** | Dynamic | Dynamic | Static | Static | Static/Dynamic |
+| **Execution** | Interpreter | Interpreter | Transpiled | Compiled | Native TS/JS |
+| **Speed** | Medium | Fast | Fast | Very Fast | Fast |
+| **Use Cases** | Data analysis, scripting | APIs, async tasks | Type-safe Node.js | Systems, performance | Modern TS/JS, secure by default |
+
+## Best Practices
+
+### Choosing a Language
+
+- **Python**: Data processing, scientific computing, general scripting
+- **Node.js**: Async operations, JSON processing, web scraping
+- **TypeScript**: Type-safe applications, large codebases
+- **Go**: Performance-critical code, concurrent operations
+- **Deno**: Modern TypeScript/JavaScript with native support, secure by default
+
+### Code Organization
+
+For complex code, use sessions with multiple runs:
+
+**Setup phase:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"# Import libraries and initialize"}'
+```
+
+**JSON Body:**
+```json
+{"code":"# Import libraries and initialize"}
+```
+
+**Processing phase:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"# Process data using initialized state"}'
+```
+
+**JSON Body:**
+```json
+{"code":"# Process data using initialized state"}
+```
+
+**Output phase:**
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-app/run \
+  -H "Content-Type: application/json" \
+  -d '{"code":"# Generate and save results"}'
+```
+
+**JSON Body:**
+```json
+{"code":"# Generate and save results"}
+```
+
+### Error Handling
+
+All languages support standard error handling:
+
+**Python:**
+```python
+try:
+    result = risky_operation()
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+**Node.js:**
+```javascript
+try {
+    const result = riskyOperation();
+} catch (error) {
+    console.log(`Error: ${error.message}`);
+}
+```
+
+**TypeScript:**
+```typescript
+try {
+    const result: number = riskyOperation();
+} catch (error) {
+    console.log(`Error: ${error}`);
+}
+```
+
+**Go:**
+```go
+result, err := riskyOperation()
+if err != nil {
+    fmt.Printf("Error: %v\n", err)
+    return
+}
+```
+
+## Quick Reference
+
+**Python example:**
+```json
+{"language":"python","code":"print('Hello World')"}
+```
+
+**Node.js example:**
+```json
+{"language":"node","code":"console.log('Hello World');"}
+```
+
+**TypeScript example:**
+```json
+{"language":"typescript","code":"const msg: string = 'Hello World';\nconsole.log(msg);"}
+```
+
+**Go example:**
+```json
+{"language":"go","code":"package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello World\") }"}
+```
+
+**Deno example:**
+```json
+{"language":"deno","code":"console.log('Hello World from Deno!');"}
+```
+
+## Next Steps
+
+- [Session Management](/docs/guides/sessions/) - Working with persistent sessions
+- [File Operations](/docs/guides/files/) - Managing files in sessions
+- [API Reference](/docs/api-reference/) - Complete API documentation

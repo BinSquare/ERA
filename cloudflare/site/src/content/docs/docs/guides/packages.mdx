@@ -1,0 +1,417 @@
+---
+title: Package Installation
+description: Install packages automatically when creating sessions
+---
+
+ERA Agent supports automatic package installation during session creation for all supported languages. Packages are installed once and persisted to R2 storage, making them instantly available for all future code executions.
+
+## Why This Is Awesome
+
+- ✅ **Install once, use forever** - Packages persist via R2 storage across all runs
+- ✅ **Reuse sessions** - Come back hours, days, or weeks later and packages are still there
+- ✅ **No timeout limits** - Setup runs asynchronously using Cloudflare Workers `ctx.waitUntil()`
+- ✅ **All languages supported** - Python, Node.js, TypeScript, Go, and Deno
+
+## Quick Start
+
+```bash
+# Create Python session with packages
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "my-data-session",
+    "persistent": true,
+    "setup": {
+      "pip": ["requests", "pandas", "numpy"]
+    }
+  }'
+
+# Returns immediately with setup_status: "pending"
+# Poll for completion, then run code!
+```
+
+## Supported Package Managers
+
+| Language | Package Manager | Installation Time |
+|----------|----------------|-------------------|
+| **Python** | pip | Fast (< 30s for most packages) |
+| **Node.js** | npm | Fast to moderate |
+| **TypeScript** | npm | Fast to moderate |
+| **Go** | go modules | Fast |
+| **Deno** | npm: imports | No setup needed! |
+
+## Python (pip)
+
+### Install Packages
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "python-ml",
+    "persistent": true,
+    "setup": {
+      "pip": ["requests", "pandas", "numpy", "scikit-learn"]
+    }
+  }'
+```
+
+### Using requirements.txt Format
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "setup": {
+      "pip": {
+        "requirements": "requests>=2.28.0\npandas==2.0.0\nnumpy"
+      }
+    }
+  }'
+```
+
+## Node.js (npm)
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "node-app",
+    "persistent": true,
+    "setup": {
+      "npm": ["axios", "express", "ms", "chalk"]
+    }
+  }'
+```
+
+Then use in your code:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/node-app/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "const axios = require(\"axios\");\nconst ms = require(\"ms\");\nconsole.log(\"5 days in ms:\", ms(\"5 days\"));"
+  }'
+```
+
+## TypeScript (npm)
+
+TypeScript sessions use Node.js + tsx under the hood:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "typescript",
+    "session_id": "ts-app",
+    "persistent": true,
+    "setup": {
+      "npm": ["ms", "chalk", "@types/ms"]
+    }
+  }'
+```
+
+**Note:** TypeScript has module resolution limitations. For TypeScript projects, we recommend using **Deno** instead (see below).
+
+## Go (go modules)
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "go",
+    "session_id": "go-api",
+    "persistent": true,
+    "setup": {
+      "go": ["github.com/gin-gonic/gin@v1.9.1"]
+    }
+  }'
+```
+
+## Deno (npm: imports)
+
+**No setup needed!** Deno can import npm packages directly:
+
+```bash
+# Create regular Deno session (no setup)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "deno",
+    "session_id": "deno-app",
+    "persistent": false
+  }'
+
+# Use npm packages directly
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-app/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import { format } from \"npm:date-fns@3.0.0\";\nimport { z } from \"npm:zod@3.22.0\";\nconst date = format(new Date(), \"yyyy-MM-dd\");\nconsole.log(\"Formatted:\", date);"
+  }'
+```
+
+## Custom Setup Commands
+
+Run arbitrary commands during setup:
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "persistent": true,
+    "setup": {
+      "pip": ["requests"],
+      "commands": [
+        "mkdir -p /tmp/data",
+        "echo '\''test,data'\'' > /tmp/data/test.csv"
+      ]
+    }
+  }'
+```
+
+## Async Setup Flow
+
+Package installation runs asynchronously to avoid Worker timeout limits:
+
+### 1. Create Session (Returns Immediately)
+
+```bash
+response=$(curl -s -X POST "https://era-agent.yawnxyz.workers.dev/api/sessions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "my-session",
+    "persistent": true,
+    "setup": {
+      "pip": ["requests", "pandas"]
+    }
+  }')
+
+echo "$response" | jq '{id, setup_status}'
+# Output: {"id": "my-session", "setup_status": "pending"}
+```
+
+### 2. Poll for Completion
+
+```bash
+# Check setup status
+curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/my-session" | jq '{setup_status, setup_result}'
+```
+
+Status values:
+- `"pending"` - Setup hasn't started yet
+- `"running"` - Setup is in progress
+- `"completed"` - Setup finished successfully ✅
+- `"failed"` - Setup encountered an error ❌
+
+### 3. Run Code (After Setup Completes)
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import requests\nimport pandas as pd\nprint(f\"requests: {requests.__version__}\")\nprint(f\"pandas: {pd.__version__}\")"
+  }'
+```
+
+## Reusing Sessions
+
+**This is the killer feature!** Once packages are installed, they persist forever:
+
+```bash
+# Day 1: Create session with packages (wait 2-3 minutes for setup)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "prod-analytics",
+    "persistent": true,
+    "setup": {
+      "pip": ["pandas", "numpy", "scikit-learn"]
+    }
+  }'
+
+# Days/weeks later: Use same session ID - packages are INSTANTLY available!
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/prod-analytics/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import pandas as pd\nimport numpy as np\nprint(\"Packages loaded instantly!\")"
+  }'
+```
+
+**The one-time setup cost enables instant package access forever!**
+
+## Large Packages
+
+Packages with **many files** (500+) take longer to extract to R2:
+
+| Package | Files | Size | Setup Time |
+|---------|-------|------|------------|
+| `requests` | ~100 | 500 KB | < 30 seconds |
+| `pandas` | ~400 | 12 MB | 1-2 minutes |
+| `ai` (Vercel AI SDK) | ~300 | 3 MB | 2-4 minutes |
+| `lodash` | 1,054 | 1.4 MB | 3-5 minutes ⚠️ |
+
+**The bottleneck is file count, not package size.**
+
+### Recommendations for Large Packages
+
+1. **Use Deno with `npm:` imports** (recommended for packages with 500+ files)
+   ```javascript
+   import _ from "npm:lodash@4.17.21";
+   ```
+
+2. **Use modular alternatives**
+   - Instead of `lodash` → use `lodash-es` or specific functions like `lodash.chunk`
+   - Instead of full frameworks → use lightweight alternatives
+
+3. **Accept the one-time cost**
+   - Remember: 5 minutes once vs instant forever
+   - Perfect for long-running production sessions
+
+## Security: Environment Variables
+
+**⚠️ IMPORTANT:** Do NOT use the setup `envs` field for secrets!
+
+Setup `envs` are only for non-sensitive configuration during package installation. For runtime secrets, pass them with each `/run` request.
+
+```bash
+# ❌ BAD - Don't store secrets in setup
+{
+  "setup": {
+    "envs": {
+      "API_KEY": "secret123"  # DON'T DO THIS!
+    }
+  }
+}
+
+# ✅ GOOD - Pass secrets at runtime
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os\napi_key = os.environ.get(\"API_KEY\")\nprint(f\"Using API key: {api_key[:4]}...\")",
+    "env": {
+      "API_KEY": "secret123"
+    }
+  }'
+```
+
+**→ See [Environment Variables Guide](/docs/guides/environment-variables) for complete documentation**
+
+## Complete Example
+
+```bash
+#!/bin/bash
+API_URL="https://era-agent.yawnxyz.workers.dev"
+SESSION_ID="ml-project-$(date +%s)"
+
+# 1. Create session with packages
+echo "Creating session with ML packages..."
+curl -X POST "$API_URL/api/sessions" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"language\": \"python\",
+    \"session_id\": \"$SESSION_ID\",
+    \"persistent\": true,
+    \"setup\": {
+      \"pip\": [\"pandas\", \"numpy\", \"scikit-learn\"]
+    }
+  }"
+
+# 2. Wait for setup
+echo "Waiting for package installation..."
+for i in {1..60}; do
+  sleep 5
+  status=$(curl -s "$API_URL/api/sessions/$SESSION_ID" | jq -r '.setup_status')
+  echo "Status: $status (${i}x5s elapsed)"
+
+  if [ "$status" = "completed" ]; then
+    echo "✅ Setup completed!"
+    break
+  elif [ "$status" = "failed" ]; then
+    echo "❌ Setup failed"
+    curl -s "$API_URL/api/sessions/$SESSION_ID" | jq '.setup_result'
+    exit 1
+  fi
+done
+
+# 3. Run ML code
+echo "Running ML code..."
+curl -X POST "$API_URL/api/sessions/$SESSION_ID/run" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import pandas as pd\nimport numpy as np\nfrom sklearn.linear_model import LinearRegression\nprint(\"All packages loaded successfully!\")"
+  }' | jq -r '.stdout'
+
+echo "✅ Done!"
+```
+
+## Troubleshooting
+
+### Setup Status Stuck on "running"
+
+If setup takes longer than expected (> 5-7 minutes), it likely hit the Container runtime limit. Try:
+
+1. **Use fewer packages** - Install only what you need
+2. **Use Deno** - For packages with many files, use `npm:` imports
+3. **Split installations** - Create multiple sessions with different package sets
+
+### Setup Failed
+
+Check the setup result for error details:
+
+```bash
+curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/my-session" | jq '.setup_result'
+```
+
+Common issues:
+- Package doesn't exist or typo in name
+- Version conflict or incompatibility
+- Network timeout during download
+
+### Package Not Found at Runtime
+
+Make sure:
+1. Setup status is "completed" before running code
+2. Package name matches exactly (case-sensitive)
+3. Using correct import statement for the language
+
+## Best Practices
+
+1. **Use descriptive session IDs** for sessions with packages
+   ```bash
+   session_id="prod-ml-pipeline-v2"
+   ```
+
+2. **Keep package lists focused** - Only install what you need
+   ```bash
+   # Good - focused
+   {"pip": ["requests", "pydantic"]}
+
+   # Overkill - too many packages
+   {"pip": ["pandas", "numpy", "scipy", "matplotlib", "seaborn", "sklearn", "tensorflow"]}
+   ```
+
+3. **Reuse sessions** - The whole point of package persistence!
+   ```bash
+   # Create once with packages
+   SESSION_ID="analytics-prod"
+   # Use for weeks/months - packages always available
+   ```
+
+4. **For TypeScript, prefer Deno** - Better module resolution
+   ```bash
+   # Instead of TypeScript session + npm packages
+   # Use Deno session + npm: imports
+   ```
+
+5. **Monitor setup status** - Don't run code before setup completes
+   ```bash
+   # Always check setup_status == "completed" first!
+   ```

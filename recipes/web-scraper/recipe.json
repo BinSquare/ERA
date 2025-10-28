@@ -1,0 +1,16 @@
+{
+  "name": "web-scraper",
+  "title": "Web Scraper",
+  "description": "Fetch and parse web content with requests and BeautifulSoup",
+  "language": "python",
+  "entrypoint": "index.py",
+  "env_file": ".env.example",
+  "dependencies": {
+    "pip": ["requests", "beautifulsoup4", "lxml"]
+  },
+  "tags": ["scraping", "web", "parsing", "data-extraction"],
+  "env_required": [],
+  "env_optional": ["URL"],
+  "estimated_runtime": "3-6s",
+  "api_docs": "https://www.crummy.com/software/BeautifulSoup/bs4/doc/"
+}

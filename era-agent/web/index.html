@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERA Agent Console</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --light: #f8fafc;
+            --dark: #0f172a;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-800: #1e293b;
+            --border-radius: 6px;
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f1f5f9;
+            color: var(--gray-800);
+            line-height: 1.5;
+            display: flex;
+            min-height: 100vh;
+            font-size: 15px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: white;
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            font-size: 1.4rem;
+        }
+
+        .nav-links {
+            padding: 16px 0;
+        }
+
+        .nav-item {
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--gray-800);
+            text-decoration: none;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover {
+            background-color: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background-color: var(--gray-100);
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 1rem 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            border-radius: var(--border-radius);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .server-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success);
+        }
+
+        .section {
+            scroll-margin-top: 80px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 24px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--gray-800);
+            font-size: 0.95rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: var(--transition);
+            background-color: white;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea {
+            min-height: 100px;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: var(--border-radius);
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        .result.success {
+            background-color: #d1fae5;
+            border: 1px solid var(--success);
+            color: #065f46;
+        }
+
+        .result.error {
+            background-color: #fee2e2;
+            border: 1px solid var(--danger);
+            color: #991b1b;
+        }
+
+        .result.info {
+            background-color: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .sample-commands {
+            background-color: var(--gray-100);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .sample-commands h4 {
+            margin-bottom: 12px;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .command-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .command-example {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 14px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .command-example h5 {
+            margin-bottom: 10px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+
+        .command-code {
+            background-color: var(--dark);
+            color: white;
+            padding: 10px;
+            border-radius: var(--border-radius);
+            font-family: monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            overflow-x: auto;
+            margin-bottom: 8px;
+        }
+
+        .command-code:hover {
+            opacity: 0.9;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 10px 0;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+
+        /* Results Box */
+        .results-box {
+            background-color: var(--gray-100);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .results-box h4 {
+            margin-bottom: 12px;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .results-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 200px;
+            }
+            
+            .main-content {
+                margin-left: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <span>ERA Agent</span>
+            </div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="#dashboard" class="nav-item active" onclick="navigateToSection('dashboard')">
+                <i class="fas fa-chart-bar"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#create-vm" class="nav-item" onclick="navigateToSection('create-vm')">
+                <i class="fas fa-plus-circle"></i>
+                <span>Create VM</span>
+            </a>
+            <a href="#execute-command" class="nav-item" onclick="navigateToSection('execute-command')">
+                <i class="fas fa-terminal"></i>
+                <span>Execute Command</span>
+            </a>
+            <a href="#temp-execution" class="nav-item" onclick="navigateToSection('temp-execution')">
+                <i class="fas fa-bolt"></i>
+                <span>Temporary Execution</span>
+            </a>
+            <a href="#vm-management" class="nav-item" onclick="navigateToSection('vm-management')">
+                <i class="fas fa-server"></i>
+                <span>VM Management</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <div class="header-content">
+                <h1>ERA Agent Console</h1>
+                <div class="server-info">
+                    <div class="status-indicator">
+                        <div class="status-dot"></div>
+                        <span>Connected</span>
+                    </div>
+                    <span>API Server: localhost:8080</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <i class="fas fa-server fa-2x"></i>
+                    <div class="stat-value" id="vm-count">0</div>
+                    <div class="stat-label">Virtual Machines</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-microchip fa-2x"></i>
+                    <div class="stat-value" id="cpu-total">0</div>
+                    <div class="stat-label">Total CPU Cores</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-memory fa-2x"></i>
+                    <div class="stat-value" id="mem-total">0</div>
+                    <div class="stat-label">Total Memory (MB)</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-code fa-2x"></i>
+                    <div class="stat-value" id="lang-count">0</div>
+                    <div class="stat-label">Languages Supported</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Create VM Section -->
+        <section id="create-vm" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-plus-circle"></i> Create Virtual Machine</h2>
+                </div>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="create-language"><i class="fas fa-code"></i> Language Runtime</label>
+                        <select id="create-language">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript/Node</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="golang">Go</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="create-cpu"><i class="fas fa-microchip"></i> CPU Cores</label>
+                        <input type="number" id="create-cpu" value="1" min="1" max="16">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="create-mem"><i class="fas fa-memory"></i> Memory (MB)</label>
+                        <input type="number" id="create-mem" value="256" min="128" max="8192">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="create-persist"> 
+                        <i class="fas fa-save"></i> Enable Persistent Volume
+                    </label>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="createVM()">
+                        <i class="fas fa-plus"></i> Create VM
+                    </button>
+                </div>
+                
+                <div id="create-result" class="result" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- Execute Command Section -->
+        <section id="execute-command" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-terminal"></i> Execute Command in VM</h2>
+                </div>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="exec-vmid"><i class="fas fa-hashtag"></i> VM ID</label>
+                        <input type="text" id="exec-vmid" placeholder="Enter VM ID">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="exec-timeout"><i class="fas fa-clock"></i> Timeout (seconds)</label>
+                        <input type="number" id="exec-timeout" value="30" min="1" max="300">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="exec-command"><i class="fas fa-code"></i> Command</label>
+                    <textarea id="exec-command" placeholder="Enter command to execute"></textarea>
+                </div>
+                
+                <div class="sample-commands">
+                    <h4><i class="fas fa-lightbulb"></i> Sample Commands by Language</h4>
+                    <div class="command-examples">
+                        <div class="command-example">
+                            <h5><i class="fab fa-python"></i> Python</h5>
+                            <div class="command-code" onclick="copyCommand(this)">python -c "print('Hello from Python!')"</div>
+                            <div class="command-code" onclick="copyCommand(this)">python -c "print(500+13)"</div>
+                            <div class="command-code" onclick="copyCommand(this)">python -c "import sys; print(sys.version)"</div>
+                        </div>
+                        <div class="command-example">
+                            <h5><i class="fab fa-node-js"></i> JavaScript/Node</h5>
+                            <div class="command-code" onclick="copyCommand(this)">node -e "console.log('Hello from Node.js!')"</div>
+                            <div class="command-code" onclick="copyCommand(this)">node -e "console.log(500+13)"</div>
+                            <div class="command-code" onclick="copyCommand(this)">node -e "console.log(process.version)"</div>
+                        </div>
+                        <div class="command-example">
+                            <h5><i class="fas fa-gem"></i> Ruby</h5>
+                            <div class="command-code" onclick="copyCommand(this)">ruby -e "puts 'Hello from Ruby!'"</div>
+                            <div class="command-code" onclick="copyCommand(this)">ruby -e "puts 500+13"</div>
+                            <div class="command-code" onclick="copyCommand(this)">ruby -e "puts RUBY_VERSION"</div>
+                        </div>
+                        <div class="command-example">
+                            <h5><i class="fab fa-golang"></i> Go</h5>
+                            <div class="command-code" onclick="copyCommand(this)">go run -c "package main; import \"fmt\"; func main() { fmt.Println(\"Hello from Go!\") }"</div>
+                            <div class="command-code" onclick="copyCommand(this)">go run -c "package main; import \"fmt\"; func main() { fmt.Println(500+13) }"</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-group" style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="executeInVM()">
+                        <i class="fas fa-play"></i> Execute Command
+                    </button>
+                </div>
+                
+                <div id="exec-result" class="result" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- Temporary Execution Section -->
+        <section id="temp-execution" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-bolt"></i> Temporary Execution</h2>
+                </div>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="temp-language"><i class="fas fa-code"></i> Language Runtime</label>
+                        <select id="temp-language">
+                            <option value="python">Python</option>
+                            <option value="javascript">JavaScript/Node</option>
+                            <option value="ruby">Ruby</option>
+                            <option value="golang">Go</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="temp-cpu"><i class="fas fa-microchip"></i> CPU Cores</label>
+                        <input type="number" id="temp-cpu" value="1" min="1" max="16">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="temp-timeout"><i class="fas fa-clock"></i> Timeout (seconds)</label>
+                        <input type="number" id="temp-timeout" value="30" min="1" max="300">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="temp-command"><i class="fas fa-terminal"></i> Command</label>
+                    <textarea id="temp-command" placeholder="Enter command to execute in temporary VM"></textarea>
+                </div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-success" onclick="runTemporary()">
+                        <i class="fas fa-play"></i> Run in Temporary VM
+                    </button>
+                </div>
+                
+                <div id="temp-result" class="result" style="display:none;"></div>
+            </div>
+        </section>
+
+        <!-- VM Management Section -->
+        <section id="vm-management" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-server"></i> Virtual Machines</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="listVMs()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="list-result">
+                    <div style="text-align: center; padding: 40px; color: var(--secondary);">
+                        <i class="fas fa-server fa-3x" style="margin-bottom: 16px; opacity: 0.5;"></i>
+                        <p>Loading virtual machines...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>ERA Agent Console &copy; 2025 | Secure MicroVM Orchestration Platform</p>
+        </footer>
+    </div>
+
+    <script>
+        // Base API URL - configurable for different environments
+        const API_BASE = '/api';
+        
+        // Navigation function
+        function navigateToSection(sectionId) {
+            // Update active nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.closest('.nav-item').classList.add('active');
+            
+            // Scroll to section
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        // Copy command to clipboard
+        function copyCommand(element) {
+            const command = element.textContent;
+            navigator.clipboard.writeText(command).then(() => {
+                const originalText = element.textContent;
+                element.textContent = '✓ Copied to clipboard!';
+                setTimeout(() => {
+                    element.textContent = originalText;
+                }, 1500);
+            });
+        }
+
+        // Utility functions
+        function showNotification(message, isError = false) {
+            // Simple notification using alert for now
+            if (isError) {
+                console.error(message);
+            } else {
+                console.log(message);
+            }
+        }
+
+        function showResult(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = content;
+            element.className = 'result ' + (isError ? 'error' : 'success');
+        }
+
+        function clearResults(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'none';
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = 'Processing...';
+            element.className = 'result info';
+        }
+
+        // API call helper
+        async function apiCall(endpoint, method = 'POST', data = null) {
+            try {
+                const config = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data) {
+                    config.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(API_BASE + endpoint, config);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP error! status: ${response.status}`);
+                }
+
+                return result;
+            } catch (error) {
+                console.error('API call error:', error);
+                throw error;
+            }
+        }
+
+        // Update dashboard stats
+        function updateDashboardStats(vms) {
+            document.getElementById('vm-count').textContent = vms.length;
+            
+            let totalCPU = 0;
+            let totalMem = 0;
+            const languages = new Set();
+            
+            vms.forEach(vm => {
+                totalCPU += vm.cpu_count || 0;
+                totalMem += vm.memory_mib || 0;
+                if (vm.language) languages.add(vm.language);
+            });
+            
+            document.getElementById('cpu-total').textContent = totalCPU;
+            document.getElementById('mem-total').textContent = totalMem;
+            document.getElementById('lang-count').textContent = languages.size;
+        }
+
+        // VM Creation
+        async function createVM() {
+            const language = document.getElementById('create-language').value;
+            const cpu = parseInt(document.getElementById('create-cpu').value);
+            const mem = parseInt(document.getElementById('create-mem').value);
+            const persist = document.getElementById('create-persist').checked;
+
+            const data = {
+                language: language,
+                cpu: cpu,
+                memory: mem,
+                network: 'none',
+                persist: persist
+            };
+
+            try {
+                showLoading('create-result');
+                const result = await apiCall('/vm/create', 'POST', data);
+                showResult('create-result', `VM created successfully!\nID: ${result.data.id}\nLanguage: ${result.data.language}\nStatus: ${result.data.status}`, false);
+                listVMs(); // Refresh VM list
+            } catch (error) {
+                showResult('create-result', `Error creating VM: ${error.message}`, true);
+            }
+        }
+
+        // Execute Command in VM
+        async function executeInVM() {
+            const vmId = document.getElementById('exec-vmid').value;
+            const command = document.getElementById('exec-command').value;
+            const timeout = parseInt(document.getElementById('exec-timeout').value);
+
+            if (!vmId || !command) {
+                showResult('exec-result', 'VM ID and Command are required!', true);
+                return;
+            }
+
+            const data = {
+                vm_id: vmId,
+                command: command,
+                timeout: timeout
+            };
+
+            try {
+                showLoading('exec-result');
+                const result = await apiCall('/vm/execute', 'POST', data);
+                let output = `Execution completed!\nExit code: ${result.data.exit_code}\n`;
+                if (result.data.stdout) output += `\nOutput:\n${result.data.stdout}`;
+                if (result.data.stderr) output += `\nError:\n${result.data.stderr}`;
+                showResult('exec-result', output, false);
+            } catch (error) {
+                showResult('exec-result', `Error executing command: ${error.message}`, true);
+            }
+        }
+
+        // List VMs
+        async function listVMs() {
+            try {
+                const result = await apiCall('/vm/list', 'GET');
+                const listElement = document.getElementById('list-result');
+                
+                updateDashboardStats(result.data);
+
+                if (result.data && result.data.length > 0) {
+                    let html = '';
+                    result.data.forEach(vm => {
+                        html += `
+                            <div class="card" style="margin-bottom: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                    <div style="font-size: 1.2rem; font-weight: 600;">${vm.id}</div>
+                                    <div style="padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; background-color: ${vm.status === 'ready' ? '#dcfce7' : vm.status === 'running' ? '#dbeafe' : '#fecaca'}; color: ${vm.status === 'ready' ? '#166534' : vm.status === 'running' ? '#1e40af' : '#991b1b'};">
+                                        ${vm.status}
+                                    </div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                    <div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary);">Language</div>
+                                        <div style="font-weight: 500; margin-top: 4px;">${vm.language}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary);">CPU</div>
+                                        <div style="font-weight: 500; margin-top: 4px;">${vm.cpu_count} cores</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary);">Memory</div>
+                                        <div style="font-weight: 500; margin-top: 4px;">${vm.memory_mib} MB</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary);">Created</div>
+                                        <div style="font-weight: 500; margin-top: 4px;">${new Date(vm.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 0.8rem; color: var(--secondary);">Last Run</div>
+                                        <div style="font-weight: 500; margin-top: 4px;">${new Date(vm.last_run_at).toLocaleTimeString()}</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button class="btn btn-primary btn-sm" onclick="executeInVMQuick('${vm.id}')">
+                                        <i class="fas fa-terminal"></i> Execute
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="cleanVM('${vm.id}')">
+                                        <i class="fas fa-trash"></i> Clean
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    listElement.innerHTML = html;
+                } else {
+                    listElement.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--secondary);">
+                            <i class="fas fa-server fa-3x" style="margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p>No virtual machines found</p>
+                            <p style="margin-top: 8px;">Create a VM or run temporary execution to get started</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                listElement.innerHTML = `<div class="result error">Error listing VMs: ${error.message}</div>`;
+            }
+        }
+
+        // Execute command quickly in specific VM
+        function executeInVMQuick(vmId) {
+            document.getElementById('exec-vmid').value = vmId;
+            // Scroll to execute command section
+            document.getElementById('execute-command').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('exec-command').focus();
+        }
+
+        // Clean VM
+        async function cleanVM(vmId) {
+            if (!confirm(`Clean VM ${vmId}? This will permanently delete the VM and its data.`)) return;
+
+            try {
+                const result = await apiCall('/vm/clean', 'POST', { vm_id: vmId });
+                listVMs(); // Refresh the list
+            } catch (error) {
+                alert(`Error cleaning VM: ${error.message}`);
+            }
+        }
+
+        // Temporary Execution
+        async function runTemporary() {
+            const language = document.getElementById('temp-language').value;
+            const command = document.getElementById('temp-command').value;
+            const cpu = parseInt(document.getElementById('temp-cpu').value);
+            const timeout = parseInt(document.getElementById('temp-timeout').value);
+
+            if (!command) {
+                showResult('temp-result', 'Command is required!', true);
+                return;
+            }
+
+            const data = {
+                language: language,
+                command: command,
+                cpu: cpu,
+                memory: 256,
+                timeout: timeout,
+                network: 'none'
+            };
+
+            try {
+                showLoading('temp-result');
+                const result = await apiCall('/vm/temp', 'POST', data);
+                let output = `Temporary execution completed!\nExit code: ${result.data.exit_code}\nVM ID: ${result.data.vm_id}\n`;
+                if (result.data.stdout) output += `\nOutput:\n${result.data.stdout}`;
+                if (result.data.stderr) output += `\nError:\n${result.data.stderr}`;
+                showResult('temp-result', output, false);
+                listVMs(); // Refresh VM list
+            } catch (error) {
+                showResult('temp-result', `Error in temporary execution: ${error.message}`, true);
+            }
+        }
+
+        // Load initial data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            listVMs();
+            
+            // Auto-refresh VM list every 30 seconds
+            setInterval(() => {
+                listVMs();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

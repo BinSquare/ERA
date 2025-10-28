@@ -1,0 +1,609 @@
+---
+title: HTTP Server Mode
+description: Run ERA Agent as a local HTTP API server
+---
+
+Run ERA Agent as an HTTP API server for programmatic access to all features. Perfect for integrations, custom frontends, and self-hosted deployments.
+
+## Quick Start
+
+### Start the Server
+
+```bash
+# Default port 8787
+./agent serve
+
+# Custom port
+PORT=9000 ./agent serve
+
+# With debug logging
+AGENT_LOG_LEVEL=debug ./agent serve
+```
+
+The server will start and listen on `http://localhost:8787`
+
+### Test the Server
+
+```bash
+curl http://localhost:8787/health
+```
+
+Should return:
+```json
+{"status": "ok"}
+```
+
+## API Endpoints
+
+The HTTP server exposes the same API as the Cloudflare Workers deployment. See the [API Reference](/docs/api-reference) for complete documentation.
+
+### Quick Examples
+
+**Execute Code:**
+```bash
+curl -X POST http://localhost:8787/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(\"Hello from ERA Agent!\")",
+    "language": "python"
+  }'
+```
+
+**Create Session:**
+```bash
+curl -X POST http://localhost:8787/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "cpu_count": 2,
+    "memory_mib": 512
+  }'
+```
+
+**Run in Session:**
+```bash
+curl -X POST http://localhost:8787/api/sessions/{session_id}/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "print(2 + 2)"
+  }'
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Server Configuration
+export PORT=8787                    # Server port
+export AGENT_MODE=http              # Auto-start as HTTP server
+
+# Logging
+export AGENT_LOG_LEVEL=info         # Log level: debug, info, warn, error
+
+# Storage
+export AGENT_STATE_DIR=/custom/path # State directory
+
+# Then start
+./agent
+```
+
+### Systemd Service (Linux)
+
+Create `/etc/systemd/system/era-agent.service`:
+
+```ini
+[Unit]
+Description=ERA Agent HTTP Server
+After=network.target
+
+[Service]
+Type=simple
+User=era-agent
+WorkingDirectory=/opt/era-agent
+Environment="PORT=8787"
+Environment="AGENT_LOG_LEVEL=info"
+Environment="AGENT_STATE_DIR=/var/lib/era-agent"
+ExecStart=/opt/era-agent/agent serve
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable era-agent
+sudo systemctl start era-agent
+sudo systemctl status era-agent
+```
+
+### Launchd Service (macOS)
+
+Create `~/Library/LaunchAgents/com.era-agent.server.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.era-agent.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/agent</string>
+        <string>serve</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PORT</key>
+        <string>8787</string>
+        <key>AGENT_LOG_LEVEL</key>
+        <string>info</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/era-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/era-agent-error.log</string>
+</dict>
+</plist>
+```
+
+Load the service:
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.era-agent.server.plist
+launchctl start com.era-agent.server
+```
+
+## Client Libraries
+
+### Python
+
+```python
+import requests
+
+class ERAAgentClient:
+    def __init__(self, base_url="http://localhost:8787"):
+        self.base_url = base_url
+
+    def execute(self, code, language="python", **kwargs):
+        """Execute code ephemerally."""
+        response = requests.post(
+            f"{self.base_url}/api/execute",
+            json={"code": code, "language": language, **kwargs}
+        )
+        return response.json()
+
+    def create_session(self, language, **kwargs):
+        """Create a persistent session."""
+        response = requests.post(
+            f"{self.base_url}/api/sessions",
+            json={"language": language, **kwargs}
+        )
+        return response.json()
+
+    def run_in_session(self, session_id, code, **kwargs):
+        """Run code in existing session."""
+        response = requests.post(
+            f"{self.base_url}/api/sessions/{session_id}/run",
+            json={"code": code, **kwargs}
+        )
+        return response.json()
+
+# Usage
+client = ERAAgentClient()
+
+# Quick execution
+result = client.execute("print('Hello!')", "python")
+print(result)
+
+# Session-based execution
+session = client.create_session("python", cpu_count=2)
+session_id = session["id"]
+
+result1 = client.run_in_session(session_id, "x = 42")
+result2 = client.run_in_session(session_id, "print(x * 2)")
+```
+
+### Node.js
+
+```javascript
+class ERAAgentClient {
+    constructor(baseURL = 'http://localhost:8787') {
+        this.baseURL = baseURL;
+    }
+
+    async execute(code, language = 'python', options = {}) {
+        const response = await fetch(`${this.baseURL}/api/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, language, ...options })
+        });
+        return response.json();
+    }
+
+    async createSession(language, options = {}) {
+        const response = await fetch(`${this.baseURL}/api/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language, ...options })
+        });
+        return response.json();
+    }
+
+    async runInSession(sessionId, code, options = {}) {
+        const response = await fetch(
+            `${this.baseURL}/api/sessions/${sessionId}/run`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code, ...options })
+            }
+        );
+        return response.json();
+    }
+}
+
+// Usage
+const client = new ERAAgentClient();
+
+// Quick execution
+const result = await client.execute("console.log('Hello!')", "node");
+console.log(result);
+
+// Session-based execution
+const session = await client.create Session("node");
+await client.runInSession(session.id, "let x = 42");
+await client.runInSession(session.id, "console.log(x * 2)");
+```
+
+### Go
+
+```go
+package main
+
+import (
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type ERAAgentClient struct {
+    BaseURL string
+}
+
+func NewClient(baseURL string) *ERAAgentClient {
+    return &ERAAgentClient{BaseURL: baseURL}
+}
+
+func (c *ERAAgentClient) Execute(code, language string) (map[string]interface{}, error) {
+    payload := map[string]interface{}{
+        "code":     code,
+        "language": language,
+    }
+
+    data, _ := json.Marshal(payload)
+    resp, err := http.Post(
+        c.BaseURL+"/api/execute",
+        "application/json",
+        bytes.NewBuffer(data),
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+
+    var result map[string]interface{}
+    json.NewDecoder(resp.Body).Decode(&result)
+    return result, nil
+}
+
+// Usage
+func main() {
+    client := NewClient("http://localhost:8787")
+
+    result, _ := client.Execute("print('Hello!')", "python")
+    fmt.Println(result)
+}
+```
+
+## Reverse Proxy Setup
+
+### Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name era-agent.example.com;
+
+    location / {
+        proxy_pass http://localhost:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeouts for long-running code
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+}
+```
+
+### Caddy
+
+```
+era-agent.example.com {
+    reverse_proxy localhost:8787
+}
+```
+
+### Apache
+
+```apache
+<VirtualHost *:80>
+    ServerName era-agent.example.com
+
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:8787/
+    ProxyPassReverse / http://localhost:8787/
+
+    ProxyTimeout 300
+</VirtualHost>
+```
+
+## Security
+
+### Authentication
+
+The local HTTP server does **not** include built-in authentication. For production use, add authentication via:
+
+1. **Reverse Proxy with Basic Auth:**
+
+```nginx
+server {
+    location / {
+        auth_basic "ERA Agent";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+        proxy_pass http://localhost:8787;
+    }
+}
+```
+
+2. **API Gateway:**
+Use Kong, Traefik, or AWS API Gateway for advanced auth.
+
+3. **Custom Wrapper:**
+Add your own authentication layer:
+
+```python
+from flask import Flask, request
+import requests
+
+app = Flask(__name__)
+
+@app.route('/api/<path:path>', methods=['GET', 'POST'])
+def proxy(path):
+    # Your authentication logic
+    if not is_authenticated(request):
+        return {'error': 'Unauthorized'}, 401
+
+    # Forward to ERA Agent
+    return requests.request(
+        method=request.method,
+        url=f'http://localhost:8787/api/{path}',
+        json=request.json
+    ).json()
+```
+
+### Firewall
+
+Restrict access to localhost only:
+
+```bash
+# iptables (Linux)
+sudo iptables -A INPUT -p tcp --dport 8787 -s 127.0.0.1 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 8787 -j DROP
+
+# pf (macOS)
+# Add to /etc/pf.conf:
+block drop in proto tcp from any to any port 8787
+pass in proto tcp from 127.0.0.1 to any port 8787
+```
+
+### TLS/HTTPS
+
+Use a reverse proxy for TLS termination:
+
+```bash
+# Caddy (automatic HTTPS)
+caddy reverse-proxy --from era-agent.example.com --to localhost:8787
+
+# Nginx with Let's Encrypt
+sudo certbot --nginx -d era-agent.example.com
+```
+
+## Monitoring
+
+### Health Checks
+
+```bash
+#!/bin/bash
+# health-check.sh
+
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8787/health)
+
+if [ "$RESPONSE" -eq 200 ]; then
+    echo "ERA Agent: OK"
+    exit 0
+else
+    echo "ERA Agent: FAILED (HTTP $RESPONSE)"
+    exit 1
+fi
+```
+
+### Prometheus Metrics
+
+Add metrics endpoint wrapper:
+
+```python
+from prometheus_client import Counter, Histogram, generate_latest
+from flask import Flask, Response
+import requests
+import time
+
+app = Flask(__name__)
+
+request_count = Counter('era_requests_total', 'Total requests')
+request_duration = Histogram('era_request_duration_seconds', 'Request duration')
+
+@app.route('/api/<path:path>', methods=['POST'])
+def proxy(path):
+    request_count.inc()
+
+    start = time.time()
+    response = requests.post(
+        f'http://localhost:8787/api/{path}',
+        json=request.json
+    )
+    request_duration.observe(time.time() - start)
+
+    return response.json()
+
+@app.route('/metrics')
+def metrics():
+    return Response(generate_latest(), mimetype='text/plain')
+```
+
+### Logging
+
+Structured JSON logging:
+
+```bash
+# Run with JSON logs
+AGENT_LOG_LEVEL=info ./agent serve 2>&1 | jq -R 'fromjson? | .'
+
+# Log to file
+./agent serve >> /var/log/era-agent.log 2>&1
+
+# Rotate logs
+logrotate -f /etc/logrotate.d/era-agent
+```
+
+## Performance Tuning
+
+### Concurrent Connections
+
+The server handles concurrent requests. Monitor with:
+
+```bash
+# Check open connections
+netstat -an | grep 8787 | wc -l
+
+# Check process resources
+top -p $(pgrep agent)
+```
+
+### Resource Limits
+
+Set system limits:
+
+```bash
+# /etc/security/limits.conf
+era-agent soft nofile 4096
+era-agent hard nofile 8192
+```
+
+### Load Balancing
+
+Run multiple instances behind a load balancer:
+
+```nginx
+upstream era_agent {
+    server 127.0.0.1:8787;
+    server 127.0.0.1:8788;
+    server 127.0.0.1:8789;
+}
+
+server {
+    location / {
+        proxy_pass http://era_agent;
+    }
+}
+```
+
+Start multiple instances:
+
+```bash
+PORT=8787 ./agent serve &
+PORT=8788 ./agent serve &
+PORT=8789 ./agent serve &
+```
+
+## Troubleshooting
+
+### Port Already in Use
+
+```bash
+# Find what's using the port
+lsof -i :8787
+
+# Kill the process
+kill $(lsof -t -i:8787)
+
+# Or use different port
+PORT=9000 ./agent serve
+```
+
+### Permission Denied
+
+```bash
+# Use port > 1024 (no sudo needed)
+PORT=8787 ./agent serve
+
+# Or give binary permission to bind to port 80
+sudo setcap CAP_NET_BIND_SERVICE=+eip ./agent
+./agent serve  # Can now use PORT=80
+```
+
+### Connection Refused
+
+```bash
+# Check if server is running
+curl http://localhost:8787/health
+
+# Check firewall
+sudo iptables -L -n | grep 8787
+
+# Check if listening
+netstat -tulpn | grep 8787
+```
+
+## Comparison: Local vs Cloudflare Workers
+
+| Feature | Local HTTP Server | Cloudflare Workers |
+|---------|------------------|-------------------|
+| **Setup** | One command | Deploy with Wrangler |
+| **Cost** | Free (your hardware) | Pay per request |
+| **Latency** | Local (fastest) | Global edge network |
+| **Scaling** | Manual | Automatic |
+| **Customization** | Full control | Limited |
+| **Auth** | DIY | Built-in options |
+| **Best For** | Self-hosted, dev/test | Production, scale |
+
+## Next Steps
+
+- [API Reference](/docs/api-reference) - Complete API documentation
+- [CLI Usage](/docs/local/cli-usage) - Command-line interface
+- [MCP Server](/docs/local/mcp-server) - Claude Desktop integration
+- [Docker Deployment](/docs/local/docker-deployment) - Containerized deployment

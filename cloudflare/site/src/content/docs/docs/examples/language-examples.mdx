@@ -1,0 +1,701 @@
+---
+title: Language Examples
+description: Complete working examples for JavaScript, TypeScript, Python, and Deno projects
+---
+
+import { Aside, Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+# Language Examples
+
+Complete, tested examples showing multi-file project deployment for each supported language. Each example includes the full project structure, deployment commands, and execution.
+
+<Aside type="tip">
+  **All examples tested!** These are real working examples that have been tested with ERA Agent. Copy and use them directly.
+</Aside>
+
+## JavaScript (Node.js)
+
+### Project Structure
+
+```
+js-project/
+├── package.json
+├── index.js
+└── utils/
+    └── math.js
+```
+
+### Files
+
+<Tabs>
+<TabItem label="package.json">
+<Code code={`{
+  "name": "js-test",
+  "version": "1.0.0",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
+`} lang="json" />
+</TabItem>
+
+<TabItem label="utils/math.js">
+<Code code={`module.exports = {
+  add: (a, b) => a + b,
+  multiply: (a, b) => a * b,
+  square: (x) => x * x
+};
+`} lang="javascript" />
+</TabItem>
+
+<TabItem label="index.js">
+<Code code={`const _ = require('lodash');
+const math = require('./utils/math');
+
+console.log('=== JS Multi-File Test ===');
+console.log('Math.add(2, 3):', math.add(2, 3));
+console.log('Math.square(4):', math.square(4));
+console.log('Lodash chunk:', JSON.stringify(_.chunk([1,2,3,4], 2)));
+console.log('✅ JS test passed!');
+`} lang="javascript" />
+</TabItem>
+</Tabs>
+
+### Deployment
+
+```bash
+# 1. Create session with dependencies
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "js-project",
+    "persistent": true,
+    "setup": {
+      "npm": ["lodash"]
+    }
+  }'
+
+# 2. Wait for setup to complete (20-30 seconds)
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/js-project | jq '.setup_status'
+# Should return: "completed"
+
+# 3. Upload files
+./era-upload.sh js-project ./js-project
+
+# 4. Run the code
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/js-project/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./index.js\")"}'
+```
+
+**Expected Output:**
+```
+=== JS Multi-File Test ===
+Math.add(2, 3): 5
+Math.square(4): 16
+Lodash chunk: [[1,2],[3,4]]
+✅ JS test passed!
+```
+
+---
+
+## TypeScript
+
+### Project Structure
+
+```
+ts-project/
+├── package.json
+├── index.ts
+└── utils/
+    └── string.ts
+```
+
+### Files
+
+<Tabs>
+<TabItem label="package.json">
+<Code code={`{
+  "name": "ts-test",
+  "version": "1.0.0",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
+`} lang="json" />
+</TabItem>
+
+<TabItem label="utils/string.ts">
+<Code code={`export function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export function reverse(str: string): string {
+  return str.split('').reverse().join('');
+}
+`} lang="typescript" />
+</TabItem>
+
+<TabItem label="index.ts">
+<Code code={`import { capitalize, reverse } from './utils/string';
+
+console.log('=== TS Multi-File Test ===');
+console.log('Capitalize:', capitalize('hello'));
+console.log('Reverse:', reverse('world'));
+console.log('Type check works:', typeof capitalize === 'function');
+console.log('✅ TS test passed!');
+`} lang="typescript" />
+</TabItem>
+</Tabs>
+
+### Deployment
+
+```bash
+# 1. Create session with dependencies
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "typescript",
+    "session_id": "ts-project",
+    "persistent": true,
+    "setup": {
+      "npm": ["axios"]
+    }
+  }'
+
+# 2. Wait for setup
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/ts-project | jq '.setup_status'
+
+# 3. Upload files (Python script is faster for multiple files)
+python3 era_upload.py ts-project ./ts-project
+
+# 4. Run the code (tsx is used automatically for .ts files)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/ts-project/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./index.ts\")"}'
+```
+
+**Expected Output:**
+```
+=== TS Multi-File Test ===
+Capitalize: Hello
+Reverse: dlrow
+Type check works: true
+✅ TS test passed!
+```
+
+<Aside type="note">
+  TypeScript files are executed via `tsx` which is installed in the Node.js container. No compilation step needed!
+</Aside>
+
+---
+
+## Python
+
+### Project Structure
+
+```
+py-project/
+├── requirements.txt
+├── main.py
+└── utils/
+    ├── __init__.py
+    ├── math.py
+    └── string.py
+```
+
+### Files
+
+<Tabs>
+<TabItem label="requirements.txt">
+<Code code={`requests>=2.31.0
+`} lang="text" />
+</TabItem>
+
+<TabItem label="utils/__init__.py">
+<Code code={`from .math import add, multiply
+from .string import upper, lower
+
+__all__ = ['add', 'multiply', 'upper', 'lower']
+`} lang="python" />
+</TabItem>
+
+<TabItem label="utils/math.py">
+<Code code={`def add(a, b):
+    return a + b
+
+def multiply(a, b):
+    return a * b
+`} lang="python" />
+</TabItem>
+
+<TabItem label="utils/string.py">
+<Code code={`def upper(s):
+    return s.upper()
+
+def lower(s):
+    return s.lower()
+`} lang="python" />
+</TabItem>
+
+<TabItem label="main.py">
+<Code code={`from utils import add, multiply, upper, lower
+import requests
+
+print('=== Python Multi-File Test ===')
+print(f'Add(2, 3): {add(2, 3)}')
+print(f'Multiply(4, 5): {multiply(4, 5)}')
+print(f'Upper("hello"): {upper("hello")}')
+print(f'Requests available: {requests.__version__}')
+print('✅ Python test passed!')
+`} lang="python" />
+</TabItem>
+</Tabs>
+
+### Deployment
+
+```bash
+# 1. Create session with requirements.txt
+REQUIREMENTS=$(cat requirements.txt)
+
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "py-project",
+    "persistent": true,
+    "setup": {
+      "pip": {
+        "requirements": "'"$REQUIREMENTS"'"
+      }
+    }
+  }'
+
+# 2. Wait for pip install to complete
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/py-project | jq '.setup_status'
+
+# 3. Upload files
+python3 era_upload.py py-project ./py-project
+
+# 4. Run the main script
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/py-project/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "exec(open(\"main.py\").read())"}'
+```
+
+**Expected Output:**
+```
+=== Python Multi-File Test ===
+Add(2, 3): 5
+Multiply(4, 5): 20
+Upper("hello"): HELLO
+Requests available: 2.31.0
+✅ Python test passed!
+```
+
+---
+
+## Deno
+
+### Project Structure
+
+```
+deno-project/
+├── main.ts
+└── utils/
+    └── helpers.ts
+```
+
+### Files
+
+<Tabs>
+<TabItem label="utils/helpers.ts">
+<Code code={`export function greet(name: string): string {
+  return \`Hello, \${name}!\`;
+}
+
+export function double(n: number): number {
+  return n * 2;
+}
+`} lang="typescript" />
+</TabItem>
+
+<TabItem label="main.ts">
+<Code code={`import { greet, double } from './utils/helpers.ts';
+
+console.log('=== Deno Multi-File Test ===');
+console.log('Greet:', greet('Deno'));
+console.log('Double 5:', double(5));
+console.log('Deno version:', Deno.version.deno);
+console.log('✅ Deno test passed!');
+`} lang="typescript" />
+</TabItem>
+</Tabs>
+
+### Deployment
+
+```bash
+# 1. Create session (no dependencies needed)
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "deno",
+    "session_id": "deno-project",
+    "persistent": true
+  }'
+
+# 2. Upload files
+./era-upload.sh deno-project ./deno-project
+
+# 3. Run with Deno
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/deno-project/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "/usr/local/bin/deno run --allow-read main.ts"}'
+```
+
+**Expected Output:**
+```
+=== Deno Multi-File Test ===
+Greet: Hello, Deno!
+Double 5: 10
+Deno version: 1.40.0
+✅ Deno test passed!
+```
+
+<Aside type="note">
+  Deno uses TypeScript natively and has its own import syntax (`.ts` extensions required).
+</Aside>
+
+---
+
+## Advanced Examples
+
+### Express.js API
+
+Complete REST API with multiple routes:
+
+<Tabs>
+<TabItem label="package.json">
+<Code code={`{
+  "name": "express-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "express": "^4.18.0",
+    "body-parser": "^1.20.0",
+    "cors": "^2.8.5"
+  }
+}
+`} lang="json" />
+</TabItem>
+
+<TabItem label="server.js">
+<Code code={`const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const usersRouter = require('./routes/users');
+const postsRouter = require('./routes/posts');
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(bodyParser.json());
+
+app.get('/', (req, res) => {
+  res.json({ message: 'ERA Express API', version: '1.0.0' });
+});
+
+app.use('/api/users', usersRouter);
+app.use('/api/posts', postsRouter);
+
+app.listen(port, () => {
+  console.log(\`Server running on port \${port}\`);
+});
+`} lang="javascript" />
+</TabItem>
+
+<TabItem label="routes/users.js">
+<Code code={`const express = require('express');
+const router = express.Router();
+
+// In-memory store
+const users = [
+  { id: 1, name: 'Alice', email: 'alice@example.com' },
+  { id: 2, name: 'Bob', email: 'bob@example.com' }
+];
+
+router.get('/', (req, res) => {
+  res.json(users);
+});
+
+router.get('/:id', (req, res) => {
+  const user = users.find(u => u.id === parseInt(req.params.id));
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user);
+});
+
+router.post('/', (req, res) => {
+  const newUser = {
+    id: users.length + 1,
+    name: req.body.name,
+    email: req.body.email
+  };
+  users.push(newUser);
+  res.status(201).json(newUser);
+});
+
+module.exports = router;
+`} lang="javascript" />
+</TabItem>
+
+<TabItem label="routes/posts.js">
+<Code code={`const express = require('express');
+const router = express.Router();
+
+const posts = [
+  { id: 1, title: 'First Post', author: 'Alice' },
+  { id: 2, title: 'Second Post', author: 'Bob' }
+];
+
+router.get('/', (req, res) => {
+  res.json(posts);
+});
+
+router.get('/:id', (req, res) => {
+  const post = posts.find(p => p.id === parseInt(req.params.id));
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  res.json(post);
+});
+
+module.exports = router;
+`} lang="javascript" />
+</TabItem>
+</Tabs>
+
+**Deployment:**
+```bash
+# Create with dependencies
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "node",
+    "session_id": "express-api",
+    "persistent": true,
+    "allowPublicAccess": true,
+    "setup": {
+      "npm": ["express", "body-parser", "cors"]
+    }
+  }'
+
+# Upload project
+./era-upload.sh express-api ./express-api
+
+# Store server code
+curl -X PUT https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/code \
+  -H "Content-Type: application/json" \
+  -d '{"code": "require(\"./server.js\")"}'
+
+# Get public URL
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/express-api/host?port=3000
+
+# Access API
+curl https://era-agent.yawnxyz.workers.dev/proxy/express-api/3000/api/users
+```
+
+### Python Data Processing Pipeline
+
+<Tabs>
+<TabItem label="requirements.txt">
+<Code code={`pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+`} lang="text" />
+</TabItem>
+
+<TabItem label="pipeline.py">
+<Code code={`import pandas as pd
+import numpy as np
+from processors.cleaner import clean_data
+from processors.analyzer import analyze_data
+from utils.logger import log
+
+def main():
+    log("Starting data pipeline...")
+
+    # Generate sample data
+    data = pd.DataFrame({
+        'id': range(1, 101),
+        'value': np.random.randint(1, 100, 100),
+        'category': np.random.choice(['A', 'B', 'C'], 100)
+    })
+
+    log(f"Generated {len(data)} records")
+
+    # Clean data
+    cleaned = clean_data(data)
+    log(f"Cleaned: {len(cleaned)} records")
+
+    # Analyze
+    results = analyze_data(cleaned)
+    log(f"Analysis complete: {results}")
+
+    print("✅ Pipeline completed successfully!")
+
+if __name__ == "__main__":
+    main()
+`} lang="python" />
+</TabItem>
+
+<TabItem label="processors/cleaner.py">
+<Code code={`import pandas as pd
+
+def clean_data(df):
+    """Remove duplicates and null values."""
+    return df.dropna().drop_duplicates()
+`} lang="python" />
+</TabItem>
+
+<TabItem label="processors/analyzer.py">
+<Code code={`def analyze_data(df):
+    """Compute basic statistics."""
+    return {
+        'count': len(df),
+        'mean_value': df['value'].mean(),
+        'categories': df['category'].value_counts().to_dict()
+    }
+`} lang="python" />
+</TabItem>
+
+<TabItem label="utils/logger.py">
+<Code code={`from datetime import datetime
+
+def log(message):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] {message}")
+`} lang="python" />
+</TabItem>
+</Tabs>
+
+**Deployment:**
+```bash
+# Create with data science packages
+REQUIREMENTS=$(cat requirements.txt)
+
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "data-pipeline",
+    "persistent": true,
+    "setup": {
+      "pip": {
+        "requirements": "'"$REQUIREMENTS"'"
+      }
+    }
+  }'
+
+# Upload project
+python3 era_upload.py data-pipeline ./data-pipeline
+
+# Run pipeline
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-pipeline/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "exec(open(\"pipeline.py\").read())"}'
+```
+
+---
+
+## Testing Your Project
+
+Use these test scripts to validate your deployment:
+
+### Quick Test Script
+
+<Code code={`#!/bin/bash
+# test-project.sh
+SESSION_ID="$1"
+ENTRY_POINT="$2"
+
+echo "Testing session: $SESSION_ID"
+
+# Check files
+echo "Files uploaded:"
+curl -s "https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/files" | jq '.files[].path'
+
+# Run code
+echo "Running code..."
+curl -s -X POST "https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run" \\
+  -H "Content-Type: application/json" \\
+  -d "{\"code\": \"$ENTRY_POINT\"}" | jq '.'
+`} lang="bash" title="test-project.sh" />
+
+**Usage:**
+```bash
+chmod +x test-project.sh
+./test-project.sh my-project "require('./index.js')"
+```
+
+---
+
+## Common Patterns
+
+### Importing Local Modules
+
+**JavaScript/TypeScript:**
+```javascript
+// Relative imports work as expected
+const utils = require('./utils/helpers');
+import { func } from './lib/module';
+```
+
+**Python:**
+```python
+# Package imports work as expected
+from utils import helper
+from .local_module import function
+```
+
+**Deno:**
+```typescript
+// Must include .ts extension
+import { func } from './utils/helpers.ts';
+```
+
+### Working with Data Files
+
+```javascript
+// JavaScript
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('./data/config.json', 'utf8'));
+```
+
+```python
+# Python
+import json
+with open('data/config.json') as f:
+    data = json.load(f)
+```
+
+### Environment Variables
+
+```javascript
+// Access ERA environment variables
+const sessionId = process.env.ERA_SESSION_ID;
+const language = process.env.ERA_LANGUAGE;
+```
+
+```python
+# Python
+import os
+session_id = os.getenv('ERA_SESSION_ID')
+language = os.getenv('ERA_LANGUAGE')
+```
+
+---
+
+## Next Steps
+
+- See [Multi-File Projects](/docs/guides/multi-file-projects) for complete deployment workflows
+- Learn about [Code Management](/docs/guides/code-management) for updating code
+- Check [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for making projects accessible via URLs

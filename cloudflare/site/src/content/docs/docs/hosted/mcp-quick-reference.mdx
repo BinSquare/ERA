@@ -1,0 +1,218 @@
+---
+title: Hosted MCP Quick Reference
+description: Quick reference for ERA Agent hosted MCP with Claude Desktop
+---
+
+Quick reference for using ERA Agent's hosted/cloud MCP server with Claude Desktop.
+
+## Setup (One-Time)
+
+```json title="Claude Desktop Config"
+{
+  "mcpServers": {
+    "era-agent": {
+      "url": "https://era-agent.yawnxyz.workers.dev/mcp/v1"
+    }
+  }
+}
+```
+
+**Config Locations:**
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Then:** Restart Claude Desktop (Cmd+Q, not just close)
+
+## Quick Tool Reference
+
+### Language Tools (Instant Execution)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_python` | Python scripts | FizzBuzz, data analysis |
+| `era_node` | JavaScript/Node.js | Array operations, algorithms |
+| `era_typescript` | TypeScript code | Type-safe execution |
+| `era_deno` | Deno runtime | Modern JS/TS with Deno APIs |
+| `era_shell` | System commands | `pip install`, `npm install` |
+
+### Session Tools (Stateful Work)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_create_session` | Start persistent environment | Create Python session |
+| `era_run_in_session` | Run code in session | Execute with state |
+| `era_list_sessions` | View all sessions | Check active sessions |
+| `era_get_session` | Get session details | Check session status |
+| `era_update_session` | Update session config | Change timeout, network access |
+| `era_delete_session` | Clean up session | Remove unused session |
+
+### File Operations (Session Only)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_upload_file` | Add files to session | Upload CSV, config |
+| `era_read_file` | Read session files | View results |
+| `era_list_files` | List session files | Check workspace |
+
+## Common Patterns
+
+### Quick Python Script
+```
+Run this Python code:
+print("Hello World")
+print([x**2 for x in range(10)])
+```
+
+### Install Packages & Run
+```
+1. Create a Python session
+2. In that session, run: pip install pandas requests
+3. Then run your code using those packages
+```
+
+### Web Scraping (Network Included!)
+```
+Create a Python session, install requests and beautifulsoup4,
+then scrape the top stories from Hacker News
+```
+
+### Multi-Language Testing
+```
+Test this sorting algorithm in both Python and JavaScript
+```
+
+### Data Pipeline
+```
+1. Create a Python session
+2. Upload data.csv with [your data]
+3. Install pandas
+4. Analyze the data and save results
+5. Read the results file
+```
+
+### Long-Running Task (Update Timeout)
+```
+1. Create a session for ML training
+2. Update the session to extend timeout to 10 minutes
+3. Run training code that takes 8 minutes
+4. Check results
+```
+
+## Key Differences: Hosted vs Local
+
+| Feature | Hosted (Cloud) | Local (Self-Hosted) |
+|---------|----------------|---------------------|
+| **Setup** | Just add URL ✅ | Need Docker/Firecracker |
+| **Network** | Always enabled ✅ | Disabled by default |
+| **Config** | URL only | Binary path + env vars |
+| **State** | Cloud (Durable Objects) | Local filesystem |
+| **Scaling** | Automatic ✅ | Manual |
+| **Maintenance** | Zero ✅ | You manage it |
+| **Internet Access** | Built-in ✅ | Must enable per session |
+
+## Gotchas
+
+### ✅ Works Great
+- F-strings: `print(f'{x}: {y}')`
+- Multi-line code with indentation
+- Special characters in strings
+- Complex nested structures
+- **Internet access** (enabled by default!)
+
+### ⚠️ Watch Out
+- **No State Between Tools:** Use sessions for stateful work
+- **Packages Not Installed:** Use `era_shell` to install first
+- **File Paths:** Use relative paths in sessions, upload files first
+
+## Default Limits
+
+| Resource | Default | Notes |
+|----------|---------|-------|
+| CPU | 1 core | Per execution |
+| Memory | 256 MiB | Configurable |
+| Timeout | 30 sec | Configurable |
+| Network | Enabled | Always available |
+| Storage | Cloud (R2) | Persistent across requests |
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Tools not showing | Restart Claude Desktop (Cmd+Q) |
+| Execution fails | Check package dependencies |
+| Package not found | Use `era_shell` to install |
+| File not found | Upload file first with `era_upload_file` |
+| Network error | Should work automatically (enabled by default) |
+
+## Best Practices
+
+### When to Use What
+
+**Use Language Tools (`era_python`, etc.):**
+- Quick one-off scripts
+- Simple calculations
+- Testing snippets
+- Independent executions
+
+**Use Sessions:**
+- Installing packages
+- Multi-step workflows
+- Stateful computations
+- File processing pipelines
+
+**Use `era_shell`:**
+- Package installation (`pip`, `npm`)
+- System commands (`ls`, `mkdir`)
+- Environment setup
+- NOT for running code (use language tools)
+
+### Performance Tips
+
+1. **Network Included:** No need to enable - perfect for web scraping!
+2. **Cloud State:** Sessions persist across requests
+3. **Reuse Sessions:** Create once, use multiple times
+4. **Install Once:** Install packages at session start
+
+## Example Prompts
+
+### Data Science
+```
+Create a Python session, install pandas and matplotlib,
+analyze this CSV data, create a visualization, and save it
+```
+
+### API Integration
+```
+Use era_python to fetch data from this API, process it,
+and display the results (network access included!)
+```
+
+### Algorithm Development
+```
+Implement binary search in Python with logging,
+test it with various inputs, then implement in JavaScript and compare
+```
+
+### Web Development
+```
+Create a Node.js session, install express,
+create a simple REST API, and test it
+```
+
+## Cloud Benefits
+
+✅ **Zero Infrastructure:** No Docker or Firecracker to manage
+✅ **Global Edge:** Cloudflare's network for low latency
+✅ **Auto Scaling:** Handles load automatically
+✅ **Persistent State:** Sessions survive across requests
+✅ **Cloud Storage:** Files stored in R2
+✅ **Always Online:** No local agent to start/stop
+✅ **Network Enabled:** Internet access built-in
+
+## Quick Links
+
+- [Full Hosted Documentation](/docs/hosted/mcp-server)
+- [Compare with Local MCP](/docs/local/mcp-server)
+- [REST API](/docs/hosted/api)
+- [Deployment Guide](/docs/hosted/deployment)

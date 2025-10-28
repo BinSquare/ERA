@@ -1,0 +1,202 @@
+---
+title: MCP Quick Reference
+description: Quick reference guide for ERA Agent MCP tools and common patterns
+---
+
+Quick reference for using ERA Agent with Claude Desktop via MCP.
+
+## Setup (One-Time)
+
+```bash
+# 1. Build agent
+cd era-agent && go build -o agent
+
+# 2. Configure Claude Desktop
+# Edit: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)
+# Edit: ~/.config/Claude/claude_desktop_config.json (Linux)
+```
+
+```json
+{
+  "mcpServers": {
+    "era-agent": {
+      "command": "/absolute/path/to/agent",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+```bash
+# 3. Restart Claude Desktop (Cmd+Q, then reopen)
+```
+
+## Quick Tool Reference
+
+### Language Tools (No Session Required)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_python` | Python scripts | Run FizzBuzz, data analysis |
+| `era_node` | JavaScript/Node.js | Array operations, algorithms |
+| `era_typescript` | TypeScript code | Type-safe code execution |
+| `era_deno` | Deno runtime | Modern JS/TS with Deno APIs |
+| `era_shell` | System commands | Package install, file ops |
+
+### Session Tools (For Stateful Work)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_create_session` | Start persistent environment | Create Python session |
+| `era_run_in_session` | Run code in session | Execute with state |
+| `era_list_sessions` | View all sessions | Check active VMs |
+| `era_get_session` | Get session details | Check session status |
+| `era_delete_session` | Clean up session | Remove unused VM |
+
+### File Operations (Session Only)
+
+| Tool | Use For | Example |
+|------|---------|---------|
+| `era_upload_file` | Add files to session | Upload CSV, config |
+| `era_read_file` | Read session files | View results |
+| `era_list_files` | List session files | Check workspace |
+
+## Common Patterns
+
+### Quick Python Script
+```
+Run this Python code:
+print("Hello World")
+print([x**2 for x in range(10)])
+```
+
+### Install Packages
+```
+1. Create a Python session
+2. In that session, run: pip install pandas requests
+3. Then run your Python code using those packages
+```
+
+### Multi-Step Analysis
+```
+1. Create a Python session
+2. Upload data.csv with [your data]
+3. Install pandas
+4. Analyze the data
+5. Read the results file
+```
+
+### Multi-Language Testing
+```
+Test this sorting algorithm in both Python and JavaScript
+```
+
+### Web Scraping
+```
+Create a Python session with network access, install beautifulsoup4 and requests,
+then scrape the top stories from Hacker News
+```
+
+## Gotchas
+
+### ✅ Works Great
+- F-strings: `print(f'{x}: {y}')`
+- Multi-line code with proper indentation
+- Special characters in strings
+- Complex nested structures
+
+### ⚠️ Watch Out
+- **No State Between Tools:** Use sessions for stateful work
+- **Packages Not Installed:** Use `era_shell` to install first
+- **Network Disabled:** Request "with network access" when needed
+- **File Paths:** Use relative paths in sessions, upload files first
+
+## Default Limits
+
+| Resource | Default | Override |
+|----------|---------|----------|
+| CPU | 1 core | "with 4 CPUs" |
+| Memory | 256 MiB | "with 2GB memory" |
+| Timeout | 30 sec | "with 60 second timeout" |
+| Network | Disabled | "with network access" |
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Tools not showing | Restart Claude Desktop (Cmd+Q) |
+| "Command not found" | Use absolute path in config |
+| Code execution fails | Check Docker is running |
+| Package not found | Use `era_shell` to install |
+| Network error | Request session "with network access" |
+
+## Best Practices
+
+### When to Use What
+
+**Use Language Tools (`era_python`, etc.):**
+- Quick one-off scripts
+- Simple calculations
+- Testing snippets
+- No package dependencies
+
+**Use Sessions:**
+- Installing packages
+- Multi-step workflows
+- Stateful computations
+- File processing pipelines
+
+**Use `era_shell`:**
+- Package installation (pip, npm)
+- System commands (ls, mkdir)
+- Environment setup
+- NOT for running code (use language tools instead)
+
+### Performance Tips
+
+1. **Reuse Sessions:** Create once, use multiple times
+2. **Choose Right Tool:** Language-specific tools are faster than generic
+3. **Install Once:** Install packages at session start, not each run
+4. **Load Once:** Load large data once in session, process multiple times
+
+## Example Prompts
+
+### Data Science
+```
+Create a Python session, install pandas and matplotlib, upload this CSV,
+analyze the data, create a visualization, and save it as a PNG
+```
+
+### Algorithm Development
+```
+Implement quicksort in Python with logging, test it with random data,
+then implement the same algorithm in JavaScript and compare performance
+```
+
+### API Integration
+```
+Create a Python session with network access, install requests,
+fetch data from this API, process it, and save as JSON
+```
+
+### Multi-File Project
+```
+Create a Node.js session, create package.json, install dependencies,
+create index.js with an Express server, and test it
+```
+
+## Security Notes
+
+- ✅ All code runs in isolated VMs
+- ✅ Network disabled by default
+- ✅ Filesystem isolation per session
+- ✅ Resource limits enforced
+- ⚠️ Enable network only when needed
+- ⚠️ Sessions are local to your machine
+
+## Quick Links
+
+- [Full MCP Documentation](/docs/local/mcp-server)
+- [CLI Usage](/docs/local/cli-usage)
+- [HTTP Server](/docs/local/http-server)
+- [API Reference](/docs/api-reference)

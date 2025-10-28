@@ -1,0 +1,718 @@
+---
+title: Docker Deployment
+description: Deploy ERA Agent using Docker for consistent, portable deployments
+---
+
+Deploy ERA Agent in Docker containers for easy portability, consistent environments, and simplified deployment across different platforms.
+
+## Quick Start
+
+### Build the Image
+
+```bash
+cd era-agent
+docker build -t era-agent .
+```
+
+### Run the Container
+
+```bash
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  --privileged \
+  era-agent
+```
+
+### Test It
+
+```bash
+curl http://localhost:8787/health
+```
+
+## Dockerfile
+
+Create `Dockerfile` in the era-agent directory:
+
+```dockerfile
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apk add --no-cache git make
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o agent
+
+FROM alpine:latest
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    docker-cli
+
+# Create non-root user
+RUN addgroup -g 1000 era-agent && \
+    adduser -D -u 1000 -G era-agent era-agent
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /build/agent /app/agent
+
+# Create state directory
+RUN mkdir -p /var/lib/era-agent && \
+    chown era-agent:era-agent /var/lib/era-agent
+
+# Switch to non-root user
+USER era-agent
+
+# Expose HTTP port
+EXPOSE 8787
+
+# Environment variables
+ENV PORT=8787 \
+    AGENT_MODE=http \
+    AGENT_LOG_LEVEL=info \
+    AGENT_STATE_DIR=/var/lib/era-agent
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8787/health || exit 1
+
+# Start the agent
+CMD ["/app/agent", "serve"]
+```
+
+## Docker Compose
+
+### Basic Setup
+
+Create `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+
+services:
+  era-agent:
+    image: era-agent:latest
+    build: .
+    container_name: era-agent
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - AGENT_LOG_LEVEL=info
+      - AGENT_STATE_DIR=/var/lib/era-agent
+    volumes:
+      - era-agent-state:/var/lib/era-agent
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    privileged: true
+
+volumes:
+  era-agent-state:
+    driver: local
+```
+
+Start services:
+
+```bash
+docker-compose up -d
+```
+
+### With Nginx Reverse Proxy
+
+```yaml
+version: '3.8'
+
+services:
+  era-agent:
+    image: era-agent:latest
+    build: .
+    environment:
+      - PORT=8787
+      - AGENT_LOG_LEVEL=info
+    volumes:
+      - era-agent-state:/var/lib/era-agent
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - era-agent
+    restart: unless-stopped
+    networks:
+      - internal
+
+volumes:
+  era-agent-state:
+
+networks:
+  internal:
+```
+
+Nginx configuration (`nginx.conf`):
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream era_agent {
+        server era-agent:8787;
+    }
+
+    server {
+        listen 80;
+        server_name era-agent.example.com;
+
+        location / {
+            proxy_pass http://era_agent;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_read_timeout 300s;
+        }
+    }
+}
+```
+
+### With Monitoring
+
+```yaml
+version: '3.8'
+
+services:
+  era-agent:
+    image: era-agent:latest
+    build: .
+    ports:
+      - "8787:8787"
+    volumes:
+      - era-agent-state:/var/lib/era-agent
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    privileged: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+
+volumes:
+  era-agent-state:
+  prometheus-data:
+  grafana-data:
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Run with custom configuration
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  -e PORT=8787 \
+  -e AGENT_LOG_LEVEL=debug \
+  -e AGENT_STATE_DIR=/var/lib/era-agent \
+  --privileged \
+  era-agent
+```
+
+### Volume Mounts
+
+Persist state across container restarts:
+
+```bash
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  -v era-agent-state:/var/lib/era-agent \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --privileged \
+  era-agent
+```
+
+### Resource Limits
+
+Limit container resources:
+
+```bash
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  --cpus="2.0" \
+  --memory="2g" \
+  --privileged \
+  era-agent
+```
+
+Docker Compose:
+
+```yaml
+services:
+  era-agent:
+    image: era-agent:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 512M
+```
+
+## Networking
+
+### Host Network Mode
+
+Use host networking for better performance:
+
+```bash
+docker run -d \
+  --name era-agent \
+  --network host \
+  --privileged \
+  era-agent
+```
+
+### Custom Network
+
+Create isolated network:
+
+```bash
+# Create network
+docker network create era-network
+
+# Run container
+docker run -d \
+  --name era-agent \
+  --network era-network \
+  -p 8787:8787 \
+  --privileged \
+  era-agent
+```
+
+## Security
+
+### Read-Only Root Filesystem
+
+```bash
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=100m \
+  -v era-agent-state:/var/lib/era-agent:rw \
+  --privileged \
+  era-agent
+```
+
+### Drop Capabilities
+
+```bash
+docker run -d \
+  --name era-agent \
+  -p 8787:8787 \
+  --cap-drop=ALL \
+  --cap-add=NET_BIND_SERVICE \
+  --privileged \
+  era-agent
+```
+
+### User Namespaces
+
+Enable user namespace remapping in Docker daemon (`/etc/docker/daemon.json`):
+
+```json
+{
+  "userns-remap": "default"
+}
+```
+
+Then restart Docker:
+
+```bash
+sudo systemctl restart docker
+```
+
+## Multi-Stage Builds
+
+Optimize image size with multi-stage builds:
+
+```dockerfile
+# Build stage
+FROM golang:1.21-alpine AS builder
+WORKDIR /build
+COPY . .
+RUN go build -o agent -ldflags="-s -w" .
+
+# Runtime stage
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates docker-cli
+COPY --from=builder /build/agent /app/agent
+WORKDIR /app
+EXPOSE 8787
+CMD ["/app/agent", "serve"]
+```
+
+Benefits:
+- Smaller final image (no build tools)
+- Faster deployments
+- Reduced attack surface
+
+## Registry and Distribution
+
+### Push to Docker Hub
+
+```bash
+# Tag image
+docker tag era-agent:latest yourusername/era-agent:latest
+docker tag era-agent:latest yourusername/era-agent:v1.0.0
+
+# Push to Docker Hub
+docker login
+docker push yourusername/era-agent:latest
+docker push yourusername/era-agent:v1.0.0
+```
+
+### Private Registry
+
+```bash
+# Tag for private registry
+docker tag era-agent:latest registry.example.com/era-agent:latest
+
+# Push to private registry
+docker push registry.example.com/era-agent:latest
+
+# Pull on other machines
+docker pull registry.example.com/era-agent:latest
+```
+
+### GitHub Container Registry
+
+```bash
+# Login to GitHub
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Tag and push
+docker tag era-agent:latest ghcr.io/username/era-agent:latest
+docker push ghcr.io/username/era-agent:latest
+```
+
+## Cloud Deployment
+
+### AWS ECS
+
+Create task definition:
+
+```json
+{
+  "family": "era-agent",
+  "containerDefinitions": [
+    {
+      "name": "era-agent",
+      "image": "yourusername/era-agent:latest",
+      "portMappings": [
+        {
+          "containerPort": 8787,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "PORT", "value": "8787" },
+        { "name": "AGENT_LOG_LEVEL", "value": "info" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/era-agent",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512"
+}
+```
+
+### Google Cloud Run
+
+```bash
+# Build and push to Google Container Registry
+gcloud builds submit --tag gcr.io/PROJECT_ID/era-agent
+
+# Deploy to Cloud Run
+gcloud run deploy era-agent \
+  --image gcr.io/PROJECT_ID/era-agent \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8787
+```
+
+### Azure Container Instances
+
+```bash
+# Create resource group
+az group create --name era-agent-rg --location eastus
+
+# Deploy container
+az container create \
+  --resource-group era-agent-rg \
+  --name era-agent \
+  --image yourusername/era-agent:latest \
+  --dns-name-label era-agent \
+  --ports 8787
+```
+
+### DigitalOcean App Platform
+
+Create `app.yaml`:
+
+```yaml
+name: era-agent
+services:
+  - name: era-agent
+    image:
+      registry_type: DOCKER_HUB
+      registry: yourusername
+      repository: era-agent
+      tag: latest
+    http_port: 8787
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+      - key: AGENT_LOG_LEVEL
+        value: "info"
+```
+
+Deploy:
+
+```bash
+doctl apps create --spec app.yaml
+```
+
+## Kubernetes
+
+### Deployment
+
+Create `kubernetes/deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: era-agent
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: era-agent
+  template:
+    metadata:
+      labels:
+        app: era-agent
+    spec:
+      containers:
+        - name: era-agent
+          image: yourusername/era-agent:latest
+          ports:
+            - containerPort: 8787
+          env:
+            - name: PORT
+              value: "8787"
+            - name: AGENT_LOG_LEVEL
+              value: "info"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8787
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8787
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: era-agent
+spec:
+  selector:
+    app: era-agent
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8787
+  type: LoadBalancer
+```
+
+Deploy:
+
+```bash
+kubectl apply -f kubernetes/deployment.yaml
+```
+
+## Monitoring and Logging
+
+### View Logs
+
+```bash
+# Follow logs
+docker logs -f era-agent
+
+# Last 100 lines
+docker logs --tail 100 era-agent
+
+# Logs since 1 hour ago
+docker logs --since 1h era-agent
+```
+
+### Container Stats
+
+```bash
+# Real-time stats
+docker stats era-agent
+
+# Format output
+docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+```
+
+### Health Checks
+
+```bash
+# Manual health check
+docker exec era-agent wget -q -O- http://localhost:8787/health
+
+# Check container health
+docker inspect --format='{{.State.Health.Status}}' era-agent
+```
+
+## Troubleshooting
+
+### Container Won't Start
+
+```bash
+# Check logs
+docker logs era-agent
+
+# Check events
+docker events --filter container=era-agent
+
+# Run interactively
+docker run -it --rm era-agent /bin/sh
+```
+
+### Permission Issues
+
+```bash
+# Run as root (not recommended for production)
+docker run -d --user root era-agent
+
+# Fix volume permissions
+docker run --rm -v era-agent-state:/data alpine chmod -R 777 /data
+```
+
+### Networking Issues
+
+```bash
+# Check exposed ports
+docker port era-agent
+
+# Inspect network
+docker network inspect bridge
+
+# Test connectivity
+docker exec era-agent ping -c 3 google.com
+```
+
+### Docker Socket Access
+
+If ERA Agent needs Docker access:
+
+```bash
+# Mount Docker socket
+docker run -d \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  --group-add $(getent group docker | cut -d: -f3) \
+  era-agent
+```
+
+## Best Practices
+
+1. **Use specific tags:** Don't rely on `latest`
+2. **Multi-stage builds:** Minimize image size
+3. **Health checks:** Always define healthchecks
+4. **Resource limits:** Set CPU and memory limits
+5. **Secrets management:** Use Docker secrets or environment files
+6. **Logging:** Configure proper log drivers
+7. **Updates:** Regularly update base images
+8. **Scanning:** Scan images for vulnerabilities
+
+## Next Steps
+
+- [HTTP Server Mode](/docs/local/http-server) - API integration
+- [CLI Usage](/docs/local/cli-usage) - Command-line interface
+- [MCP Server](/docs/local/mcp-server) - Claude Desktop integration
+- [API Reference](/docs/api-reference) - Complete API documentation

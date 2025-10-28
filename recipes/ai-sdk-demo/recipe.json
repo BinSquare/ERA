@@ -1,0 +1,16 @@
+{
+  "name": "ai-sdk-demo",
+  "title": "AI SDK with OpenAI",
+  "description": "Demonstrate Vercel AI SDK's generateText with OpenAI models",
+  "language": "node",
+  "entrypoint": "index.js",
+  "env_file": ".env.example",
+  "dependencies": {
+    "npm": ["@ai-sdk/openai", "ai"]
+  },
+  "tags": ["ai-sdk", "openai", "llm", "generation", "vercel"],
+  "env_required": ["OPENAI_API_KEY"],
+  "env_optional": ["PROMPT", "MODEL", "TEMPERATURE", "MAX_TOKENS"],
+  "estimated_runtime": "2-5s",
+  "api_docs": "https://sdk.vercel.ai/docs"
+}

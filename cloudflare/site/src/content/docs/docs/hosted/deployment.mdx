@@ -1,0 +1,535 @@
+---
+title: Deploying to Cloudflare Workers
+description: Deploy your own ERA Agent instance on Cloudflare's global network
+---
+
+Deploy your own ERA Agent instance on Cloudflare Workers to get a dedicated, customizable code execution platform running on the global edge network.
+
+## Why Deploy Your Own?
+
+While you can use the public ERA Agent at `https://era-agent.yawnxyz.workers.dev`, deploying your own instance gives you:
+
+- **🔐 Private Access** - Control who can use your instance
+- **⚙️ Custom Configuration** - Adjust limits, timeouts, and settings
+- **📊 Usage Monitoring** - Track your own metrics and logs
+- **🎯 Custom Domain** - Use your own domain name
+- **💰 Cost Control** - Optimize for your usage patterns
+- **🔒 Data Privacy** - Keep data in your Cloudflare account
+
+## Prerequisites
+
+- **Cloudflare Account** - [Sign up free](https://dash.cloudflare.com/sign-up)
+- **Node.js 18+** - For running Wrangler CLI
+- **npm or yarn** - Package manager
+- **Git** - For cloning the repository
+
+## Quick Deployment
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/era-agent
+cd era-agent/cloudflare
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Wrangler
+
+Login to Cloudflare:
+
+```bash
+npx wrangler login
+```
+
+This will open a browser for you to authenticate.
+
+### 4. Deploy
+
+```bash
+npx wrangler deploy
+```
+
+That's it! Your ERA Agent is now deployed at:
+```
+https://your-worker-name.workers.dev
+```
+
+## Configuration
+
+### Worker Settings
+
+Edit `wrangler.toml` to customize your deployment:
+
+```toml
+name = "my-era-agent"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+node_compat = true
+
+# Environment variables
+[vars]
+AGENT_LOG_LEVEL = "info"
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "ERA_AGENT"
+class_name = "EraAgent"
+
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "SessionDO"
+
+# R2 Storage (for persistent files)
+[[r2_buckets]]
+binding = "SESSIONS_BUCKET"
+bucket_name = "era-sessions"
+
+# Container runtime bindings
+[container_runtime]
+# Configure container execution
+instance_type = "standard-1"
+```
+
+### Custom Domain
+
+Use your own domain instead of `*.workers.dev`:
+
+```bash
+# Add route in wrangler.toml
+[routes]
+pattern = "era.yourdomain.com"
+zone_name = "yourdomain.com"
+
+# Deploy
+npx wrangler deploy
+```
+
+### Resource Limits
+
+Adjust execution limits in `src/index.ts`:
+
+```typescript
+// Default limits
+const DEFAULT_TIMEOUT = 30; // seconds
+const MAX_TIMEOUT = 300;    // 5 minutes
+const DEFAULT_MEMORY = 256; // MiB
+const MAX_MEMORY = 2048;    // 2 GB
+```
+
+### Environment Variables
+
+Set secrets for production:
+
+```bash
+# Set API key (optional)
+npx wrangler secret put API_KEY
+
+# Set custom limits
+npx wrangler secret put MAX_EXECUTION_TIME
+
+# Deploy with new secrets
+npx wrangler deploy
+```
+
+## Authentication
+
+Add authentication to your deployment to restrict access.
+
+### Option 1: API Key Authentication
+
+Add API key check in `src/index.ts`:
+
+```typescript
+// Before handling requests
+const apiKey = request.headers.get('Authorization');
+const expectedKey = env.API_KEY; // Set via wrangler secret
+
+if (apiKey !== `Bearer ${expectedKey}`) {
+  return new Response('Unauthorized', { status: 401 });
+}
+```
+
+Set the API key:
+
+```bash
+npx wrangler secret put API_KEY
+# Enter your secret key when prompted
+
+npx wrangler deploy
+```
+
+Use it:
+
+```bash
+curl -X POST https://your-worker.workers.dev/api/execute \
+  -H "Authorization: Bearer your-secret-key" \
+  -H "Content-Type: application/json" \
+  -d '{"language":"python","code":"print(\"Hello!\")"}'
+```
+
+### Option 2: Cloudflare Access
+
+Protect your Worker with [Cloudflare Access](https://www.cloudflare.com/products/zero-trust/access/):
+
+1. Go to Cloudflare Dashboard → Zero Trust → Access
+2. Create new application
+3. Add your Worker URL: `https://your-worker.workers.dev`
+4. Configure authentication rules (email, SSO, etc.)
+5. Users must authenticate before accessing
+
+### Option 3: IP Allowlist
+
+Restrict access by IP address:
+
+```typescript
+const ALLOWED_IPS = ['203.0.113.0', '198.51.100.0'];
+
+if (!ALLOWED_IPS.includes(request.headers.get('CF-Connecting-IP'))) {
+  return new Response('Forbidden', { status: 403 });
+}
+```
+
+## Storage Setup
+
+### R2 Bucket Creation
+
+ERA Agent uses R2 for persistent file storage:
+
+```bash
+# Create R2 bucket
+npx wrangler r2 bucket create era-sessions
+
+# Verify
+npx wrangler r2 bucket list
+```
+
+Update `wrangler.toml`:
+
+```toml
+[[r2_buckets]]
+binding = "SESSIONS_BUCKET"
+bucket_name = "era-sessions"
+```
+
+### Durable Objects Setup
+
+Durable Objects are automatically created. To manually manage:
+
+```bash
+# List Durable Objects
+npx wrangler durable-objects list
+
+# Get specific instance
+npx wrangler durable-objects get <id>
+```
+
+## Monitoring & Logs
+
+### Real-Time Logs
+
+View live logs from your Worker:
+
+```bash
+# Tail logs
+npx wrangler tail
+
+# Filter logs
+npx wrangler tail --format json
+
+# Filter by status
+npx wrangler tail --status error
+```
+
+### Analytics Dashboard
+
+View analytics in Cloudflare Dashboard:
+
+1. Go to Workers & Pages → Your Worker
+2. Click "Metrics" tab
+3. View:
+   - Requests per second
+   - Success rate
+   - CPU time
+   - Duration metrics
+
+### Custom Logging
+
+Add structured logging:
+
+```typescript
+console.log(JSON.stringify({
+  level: 'info',
+  message: 'Code execution started',
+  session_id: session.id,
+  language: language,
+  timestamp: new Date().toISOString()
+}));
+```
+
+## Performance Optimization
+
+### Caching
+
+Enable caching for static resources:
+
+```typescript
+// Cache responses for repeated requests
+const cache = caches.default;
+const cacheKey = new Request(url, request);
+let response = await cache.match(cacheKey);
+
+if (!response) {
+  response = await handleRequest(request);
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+}
+```
+
+### Cold Start Optimization
+
+Minimize cold start time:
+
+```typescript
+// Preload commonly used modules
+import { loadPythonRuntime } from './runtimes';
+
+// Keep connections warm
+setInterval(() => {
+  // Ping Durable Object
+}, 50000); // 50 seconds
+```
+
+### Resource Limits
+
+Optimize for your workload:
+
+```toml
+[container_runtime]
+# Standard tier: 1 CPU, 256 MB
+instance_type = "standard-1"
+
+# Or upgrade for more resources
+# instance_type = "standard-2"  # 2 CPU, 512 MB
+```
+
+## Cost Management
+
+### Cloudflare Workers Pricing
+
+**Free Tier:**
+- 100,000 requests/day
+- 10 ms CPU time per invocation
+
+**Paid Plan ($5/month):**
+- 10 million requests included
+- Additional: $0.50/million requests
+- CPU time: $0.02/million CPU ms
+
+### R2 Storage Pricing
+
+**Free Tier:**
+- 10 GB storage
+- 1 million Class A operations/month
+- 10 million Class B operations/month
+
+**Beyond Free:**
+- Storage: $0.015/GB/month
+- Class A ops: $4.50/million
+- Class B ops: $0.36/million
+
+### Optimizing Costs
+
+```typescript
+// 1. Set reasonable timeouts
+const MAX_TIMEOUT = 30; // Don't allow excessive CPU time
+
+// 2. Clean up sessions automatically
+const SESSION_TTL = 30 * 60 * 1000; // 30 minutes
+
+// 3. Limit file storage
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+```
+
+## Production Checklist
+
+Before going to production, ensure:
+
+### Security
+- [ ] Add authentication (API keys, Cloudflare Access, or IP allowlist)
+- [ ] Set rate limiting
+- [ ] Configure CORS appropriately
+- [ ] Rotate secrets regularly
+- [ ] Enable HTTPS only
+
+### Configuration
+- [ ] Set appropriate resource limits
+- [ ] Configure timeout values
+- [ ] Set up error monitoring
+- [ ] Configure logging level
+- [ ] Set up alerts
+
+### Storage
+- [ ] Create R2 bucket for persistent files
+- [ ] Configure Durable Objects
+- [ ] Set up backup strategy
+- [ ] Plan for data retention
+
+### Monitoring
+- [ ] Enable Cloudflare Analytics
+- [ ] Set up log aggregation
+- [ ] Configure alerts for errors
+- [ ] Monitor costs
+- [ ] Track usage patterns
+
+## Deployment Strategies
+
+### Development → Staging → Production
+
+Use Wrangler environments:
+
+```toml
+# wrangler.toml
+
+[env.staging]
+name = "era-agent-staging"
+vars = { AGENT_LOG_LEVEL = "debug" }
+
+[env.production]
+name = "era-agent-production"
+vars = { AGENT_LOG_LEVEL = "warn" }
+```
+
+Deploy:
+
+```bash
+# Staging
+npx wrangler deploy --env staging
+
+# Production
+npx wrangler deploy --env production
+```
+
+### CI/CD with GitHub Actions
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./cloudflare
+
+      - name: Deploy to Cloudflare
+        run: npx wrangler deploy
+        working-directory: ./cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+```
+
+### Blue-Green Deployments
+
+```bash
+# Deploy new version to staging
+npx wrangler deploy --env staging
+
+# Test thoroughly
+curl https://era-agent-staging.workers.dev/health
+
+# Promote to production
+npx wrangler deploy --env production
+```
+
+## Troubleshooting
+
+### "Exceeded CPU time"
+
+**Problem:** Code execution taking too long
+
+**Solutions:**
+- Reduce `MAX_TIMEOUT` setting
+- Upgrade to higher tier Worker
+- Optimize code execution
+- Add execution time monitoring
+
+### "Durable Object not found"
+
+**Problem:** Durable Object not initialized
+
+**Solutions:**
+```bash
+# Redeploy to initialize
+npx wrangler deploy
+
+# Check Durable Object bindings
+npx wrangler durable-objects list
+```
+
+### "R2 bucket not accessible"
+
+**Problem:** R2 bucket not created or bound
+
+**Solutions:**
+```bash
+# Create bucket
+npx wrangler r2 bucket create era-sessions
+
+# Verify binding in wrangler.toml
+[[r2_buckets]]
+binding = "SESSIONS_BUCKET"
+bucket_name = "era-sessions"
+
+# Redeploy
+npx wrangler deploy
+```
+
+### Deployment Errors
+
+**Check Wrangler version:**
+```bash
+npx wrangler --version
+npm install -g wrangler@latest
+```
+
+**Check authentication:**
+```bash
+npx wrangler whoami
+npx wrangler login
+```
+
+**Clear cache:**
+```bash
+rm -rf node_modules
+npm install
+npx wrangler deploy
+```
+
+## Next Steps
+
+- **[API Reference](/docs/api-reference)** - Complete API documentation
+- **[MCP Remote Server](/docs/hosted/mcp-remote-server)** - Use as remote MCP
+- **[Session Management](/docs/guides/sessions)** - Advanced session features
+- **[Cloudflare Docs](https://developers.cloudflare.com/workers/)** - Workers documentation
+
+## Support
+
+- 📚 [ERA Agent Docs](/)
+- 💬 [GitHub Issues](https://github.com/BinSquare/ERA/issues)
+- 📖 [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- 🎓 [Cloudflare Community](https://community.cloudflare.com/)

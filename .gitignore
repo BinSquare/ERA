@@ -90,5 +90,6 @@ debug/
 # Python
 .python-version
 
-# Claude
+# Ai tooling
 .claude/
+.qwen/

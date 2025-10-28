@@ -1,0 +1,3 @@
+# Redirect /docs to /docs/quickstart/
+/docs /docs/quickstart/ 301
+/docs/ /docs/quickstart/ 301

@@ -1,0 +1,774 @@
+---
+title: Data & Communication
+description: Complete guide to passing data, using metadata, making HTTP requests, and communicating between sessions
+---
+
+import { Aside, Code } from '@astrojs/starlight/components';
+
+# Data & Communication
+
+ERA Agent provides powerful mechanisms for passing data to your code, storing state between executions, and communicating with external services. This guide covers everything you need to know about data handling.
+
+## Quick Overview
+
+| Feature | Purpose | Stored Where | Persistence |
+|---------|---------|--------------|-------------|
+| **Session Data** | Runtime state, application data | Durable Objects | Survives runs |
+| **Session Metadata** | Labels, tags, configuration | Durable Objects | Survives runs |
+| **Environment Variables** | Runtime configuration | Per-execution | Temporary |
+| **Files** | Code, assets, generated content | R2 Storage | Persistent sessions only |
+
+---
+
+## Session Data
+
+**Session data** is the primary way to persist application state between code executions. Data is automatically injected before each run and extracted after.
+
+### How It Works
+
+1. **Before execution**: Data is written to `.session_data.json` in the VM
+2. **During execution**: Your code reads/writes this file
+3. **After execution**: Updated data is saved back to the session
+
+### Creating Session with Initial Data
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "data-demo",
+    "persistent": true,
+    "data": {
+      "counter": 0,
+      "users": ["alice", "bob"],
+      "config": {
+        "theme": "dark",
+        "max_items": 100
+      }
+    }
+  }'
+```
+
+### Reading Session Data
+
+<Aside type="tip">
+The `.session_data.json` file is automatically created in your VM's working directory before each execution.
+</Aside>
+
+**Python Example:**
+
+```python
+import json
+
+# Read session data
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+counter = data.get('counter', 0)
+users = data.get('users', [])
+
+print(f"Counter: {counter}")
+print(f"Users: {users}")
+```
+
+**JavaScript/Node.js Example:**
+
+```javascript
+const fs = require('fs');
+
+// Read session data
+const data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+
+console.log('Counter:', data.counter);
+console.log('Users:', data.users);
+```
+
+**TypeScript Example:**
+
+```typescript
+import * as fs from 'fs';
+
+interface SessionData {
+  counter: number;
+  users: string[];
+  config: {
+    theme: string;
+    max_items: number;
+  };
+}
+
+// Read session data with types
+const data: SessionData = JSON.parse(
+  fs.readFileSync('.session_data.json', 'utf8')
+);
+
+console.log('Counter:', data.counter);
+console.log('Theme:', data.config.theme);
+```
+
+### Writing Session Data
+
+**Any changes you make to `.session_data.json` are automatically saved after execution:**
+
+**Python Example:**
+
+```python
+import json
+
+# Read current data
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+# Update data
+data['counter'] = data.get('counter', 0) + 1
+data['users'].append('charlie')
+data['last_run'] = '2024-01-15'
+
+# Write back
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f"Counter incremented to: {data['counter']}")
+```
+
+**JavaScript Example:**
+
+```javascript
+const fs = require('fs');
+
+// Read, update, and write
+const data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+
+data.counter = (data.counter || 0) + 1;
+data.users.push('charlie');
+data.last_run = new Date().toISOString();
+
+fs.writeFileSync('.session_data.json', JSON.stringify(data, null, 2));
+
+console.log(`Counter incremented to: ${data.counter}`);
+```
+
+### Retrieving Data After Execution
+
+```bash
+# Run code
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/data-demo/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import json\nwith open(\".session_data.json\", \"r\") as f: data=json.load(f)\ndata[\"counter\"]+=1\nwith open(\".session_data.json\", \"w\") as f: json.dump(data, f)"
+  }' | jq '.data'
+```
+
+**Response includes updated data:**
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "",
+  "session_id": "data-demo",
+  "data": {
+    "counter": 1,
+    "users": ["alice", "bob", "charlie"],
+    "config": {
+      "theme": "dark",
+      "max_items": 100
+    },
+    "last_run": "2024-01-15"
+  }
+}
+```
+
+---
+
+## Complete Data Lifecycle Example
+
+### Building a Counter Service
+
+**1. Create session with initial state:**
+
+```bash
+SESSION_ID="counter-$(date +%s)"
+
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "'$SESSION_ID'",
+    "persistent": true,
+    "data": {
+      "count": 0,
+      "history": []
+    }
+  }'
+```
+
+**2. Increment counter:**
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import json; from datetime import datetime; data = json.load(open(\".session_data.json\")); data[\"count\"] += 1; data[\"history\"].append(datetime.now().isoformat()); json.dump(data, open(\".session_data.json\", \"w\")); print(f\"Count: {data[\"count\"]}\")"
+  }'
+```
+
+**Output:**
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "Count: 1\n",
+  "data": {
+    "count": 1,
+    "history": ["2024-01-15T10:30:00"]
+  }
+}
+```
+
+**3. Run again - state persists:**
+
+```bash
+# Run the same code again
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/$SESSION_ID/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import json; from datetime import datetime; data = json.load(open(\".session_data.json\")); data[\"count\"] += 1; data[\"history\"].append(datetime.now().isoformat()); json.dump(data, open(\".session_data.json\", \"w\")); print(f\"Count: {data[\"count\"]}\")"
+  }'
+```
+
+**Output:**
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "Count: 2\n",
+  "data": {
+    "count": 2,
+    "history": ["2024-01-15T10:30:00", "2024-01-15T10:30:15"]
+  }
+}
+```
+
+---
+
+## Environment Variables
+
+Pass runtime configuration without modifying session data.
+
+### Using Environment Variables
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/my-session/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "import os; print(f\"API Key: {os.environ.get(\"API_KEY\")}\"); print(f\"Debug: {os.environ.get(\"DEBUG\")}\")",
+    "env": {
+      "API_KEY": "sk-test-12345",
+      "DEBUG": "true",
+      "MAX_RETRIES": "3"
+    }
+  }'
+```
+
+### Built-in Environment Variables
+
+ERA Agent automatically provides these environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `ERA_SESSION` | Always "true" | `"true"` |
+| `ERA_SESSION_ID` | Current session ID | `"my-session"` |
+| `ERA_LANGUAGE` | Session language | `"python"` |
+| `ERA_BASE_URL` | API base URL | `"https://era-agent.yawnxyz.workers.dev"` |
+| `ERA_PROXY_URL` | Proxy URL for this session | `"https://era-agent.yawnxyz.workers.dev/proxy/my-session"` |
+
+**Example using ERA variables:**
+
+```python
+import os
+
+session_id = os.environ.get('ERA_SESSION_ID')
+language = os.environ.get('ERA_LANGUAGE')
+base_url = os.environ.get('ERA_BASE_URL')
+
+print(f"Running in session: {session_id}")
+print(f"Language: {language}")
+print(f"API: {base_url}")
+```
+
+---
+
+## Making HTTP Requests
+
+<Aside type="caution">
+HTTP requests are **disabled by default** for security. Set `allowInternetAccess: true` when creating the session.
+</Aside>
+
+### Enable Internet Access
+
+```bash
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "web-scraper",
+    "persistent": true,
+    "allowInternetAccess": true,
+    "setup": {
+      "pip": {
+        "requirements": "requests"
+      }
+    }
+  }'
+```
+
+### Making Requests - Python
+
+```python
+import requests
+import json
+
+# GET request
+response = requests.get('https://api.github.com/users/github')
+print(f"Status: {response.status_code}")
+print(f"User: {response.json()['name']}")
+
+# POST request
+data = {'title': 'Test', 'body': 'Content'}
+response = requests.post('https://jsonplaceholder.typicode.com/posts', json=data)
+print(f"Created: {response.json()['id']}")
+
+# Save to session data
+with open('.session_data.json', 'r') as f:
+    session_data = json.load(f)
+
+session_data['last_fetch'] = response.json()
+
+with open('.session_data.json', 'w') as f:
+    json.dump(session_data, f)
+```
+
+### Making Requests - JavaScript
+
+```javascript
+const axios = require('axios');
+const fs = require('fs');
+
+async function fetchData() {
+  // GET request
+  const response = await axios.get('https://api.github.com/users/github');
+  console.log('User:', response.data.name);
+
+  // POST request
+  const post = await axios.post('https://jsonplaceholder.typicode.com/posts', {
+    title: 'Test',
+    body: 'Content'
+  });
+  console.log('Created:', post.data.id);
+
+  // Save to session data
+  const data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+  data.last_fetch = response.data;
+  fs.writeFileSync('.session_data.json', JSON.stringify(data, null, 2));
+}
+
+fetchData().catch(console.error);
+```
+
+### Making Requests - TypeScript
+
+```typescript
+import axios from 'axios';
+import * as fs from 'fs';
+
+interface GitHubUser {
+  name: string;
+  login: string;
+  public_repos: number;
+}
+
+async function fetchGitHubUser(username: string): Promise<void> {
+  const response = await axios.get<GitHubUser>(
+    `https://api.github.com/users/${username}`
+  );
+
+  console.log('User:', response.data.name);
+  console.log('Repos:', response.data.public_repos);
+
+  // Save to session data
+  const data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+  data.github_data = response.data;
+  data.fetched_at = new Date().toISOString();
+  fs.writeFileSync('.session_data.json', JSON.stringify(data, null, 2));
+}
+
+fetchGitHubUser('github').catch(console.error);
+```
+
+---
+
+## Session Metadata
+
+**Metadata** is for labels, tags, and configuration - not runtime state.
+
+### Metadata vs Data
+
+| Metadata | Data |
+|----------|------|
+| Static configuration | Dynamic application state |
+| Labels and tags | Counters, user data |
+| Rarely changes | Changes every run |
+| Not injected into VM | Injected as `.session_data.json` |
+| API-only access | File-based access |
+
+### Using Metadata
+
+```bash
+# Create with metadata
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "language": "python",
+    "session_id": "tagged-session",
+    "persistent": true,
+    "metadata": {
+      "environment": "production",
+      "team": "data-science",
+      "project": "ml-pipeline",
+      "cost_center": "eng-ml"
+    }
+  }'
+
+# Retrieve metadata
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/tagged-session | jq '.metadata'
+```
+
+**Response:**
+
+```json
+{
+  "environment": "production",
+  "team": "data-science",
+  "project": "ml-pipeline",
+  "cost_center": "eng-ml"
+}
+```
+
+---
+
+## Real-World Examples
+
+### Example 1: API Rate Limiter
+
+Track API call counts and timestamps:
+
+```python
+import json
+import time
+from datetime import datetime
+
+# Load session data
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+# Initialize if needed
+if 'api_calls' not in data:
+    data['api_calls'] = []
+
+# Check rate limit (10 calls per minute)
+now = time.time()
+recent_calls = [c for c in data['api_calls'] if now - c < 60]
+
+if len(recent_calls) >= 10:
+    print("Rate limit exceeded! Try again later.")
+    exit(1)
+
+# Make API call
+import requests
+response = requests.get('https://api.example.com/data')
+
+# Record call
+data['api_calls'].append(now)
+
+# Keep only last 100 calls
+data['api_calls'] = data['api_calls'][-100:]
+
+# Save
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+
+print(f"API call successful. Calls in last minute: {len(recent_calls) + 1}")
+```
+
+### Example 2: Caching Service
+
+```python
+import json
+import time
+import requests
+
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+if 'cache' not in data:
+    data['cache'] = {}
+
+def get_cached_or_fetch(url, ttl=300):
+    now = time.time()
+
+    # Check cache
+    if url in data['cache']:
+        cached = data['cache'][url]
+        if now - cached['timestamp'] < ttl:
+            print(f"Cache hit for {url}")
+            return cached['data']
+
+    # Cache miss - fetch
+    print(f"Cache miss for {url}")
+    response = requests.get(url)
+    result = response.json()
+
+    # Update cache
+    data['cache'][url] = {
+        'data': result,
+        'timestamp': now
+    }
+
+    return result
+
+# Use it
+result = get_cached_or_fetch('https://api.github.com/users/github', ttl=600)
+print(f"User: {result['name']}")
+
+# Save updated cache
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+```
+
+### Example 3: State Machine
+
+```javascript
+const fs = require('fs');
+
+// Read state
+const data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+
+// Initialize state machine
+if (!data.state) {
+  data.state = 'idle';
+  data.history = [];
+}
+
+// State transitions
+const transitions = {
+  'idle': ['processing'],
+  'processing': ['completed', 'failed'],
+  'completed': ['idle'],
+  'failed': ['idle', 'processing']
+};
+
+function transition(newState) {
+  if (!transitions[data.state].includes(newState)) {
+    throw new Error(`Invalid transition: ${data.state} -> ${newState}`);
+  }
+
+  data.history.push({
+    from: data.state,
+    to: newState,
+    timestamp: new Date().toISOString()
+  });
+
+  data.state = newState;
+}
+
+// Process event
+const event = process.env.EVENT || 'start';
+
+if (event === 'start' && data.state === 'idle') {
+  transition('processing');
+  console.log('Started processing');
+} else if (event === 'complete' && data.state === 'processing') {
+  transition('completed');
+  console.log('Processing completed');
+} else if (event === 'fail' && data.state === 'processing') {
+  transition('failed');
+  console.log('Processing failed');
+} else if (event === 'reset') {
+  transition('idle');
+  console.log('Reset to idle');
+}
+
+// Save state
+fs.writeFileSync('.session_data.json', JSON.stringify(data, null, 2));
+console.log(`Current state: ${data.state}`);
+```
+
+**Usage:**
+
+```bash
+# Start processing
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/state-machine/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "...", "env": {"EVENT": "start"}}'
+
+# Complete
+curl -X POST https://era-agent.yawnxyz.workers.dev/api/sessions/state-machine/run \
+  -H "Content-Type: application/json" \
+  -d '{"code": "...", "env": {"EVENT": "complete"}}'
+```
+
+---
+
+## Best Practices
+
+### 1. Choose the Right Storage
+
+```bash
+# ✅ Good: Runtime state in data
+"data": {
+  "counter": 42,
+  "cache": {...},
+  "user_sessions": [...]
+}
+
+# ✅ Good: Static config in metadata
+"metadata": {
+  "team": "eng",
+  "environment": "prod",
+  "version": "1.2.3"
+}
+
+# ❌ Bad: Large files in data (use R2 files instead)
+"data": {
+  "large_dataset": "..." // Too large!
+}
+```
+
+### 2. Validate Data Structure
+
+```python
+import json
+
+with open('.session_data.json', 'r') as f:
+    data = json.load(f)
+
+# Always provide defaults
+counter = data.get('counter', 0)
+users = data.get('users', [])
+
+# Validate types
+if not isinstance(counter, int):
+    counter = 0
+
+if not isinstance(users, list):
+    users = []
+```
+
+### 3. Handle Missing Data
+
+```javascript
+const fs = require('fs');
+
+let data = {};
+
+try {
+  data = JSON.parse(fs.readFileSync('.session_data.json', 'utf8'));
+} catch (error) {
+  console.log('No session data, using defaults');
+  data = {
+    counter: 0,
+    initialized: new Date().toISOString()
+  };
+}
+
+// ... use data
+```
+
+### 4. Keep Data Size Reasonable
+
+```python
+# ✅ Good: Bounded data
+data['recent_logs'] = data.get('recent_logs', [])[-100:]
+
+# ❌ Bad: Unbounded growth
+data['logs'].append(new_log)  # Will grow forever!
+```
+
+### 5. Use Structured Data
+
+```typescript
+interface SessionData {
+  counter: number;
+  users: string[];
+  config: {
+    max_items: number;
+    theme: string;
+  };
+  last_run?: string;
+}
+
+// Type-safe access
+const data: SessionData = JSON.parse(
+  fs.readFileSync('.session_data.json', 'utf8')
+);
+```
+
+---
+
+## Troubleshooting
+
+### Data Not Persisting
+
+**Problem:** Data resets after each run
+
+**Solution:** Ensure you're writing to `.session_data.json`:
+
+```python
+# ❌ Wrong: Setting local variable
+data['counter'] = 42
+
+# ✅ Correct: Writing to file
+with open('.session_data.json', 'w') as f:
+    json.dump(data, f)
+```
+
+### JSON Parse Errors
+
+**Problem:** `JSON.parse()` or `json.load()` fails
+
+**Solution:** Handle empty or corrupt data:
+
+```javascript
+let data = {};
+try {
+  const content = fs.readFileSync('.session_data.json', 'utf8');
+  data = JSON.parse(content);
+} catch (error) {
+  console.warn('Failed to parse session data, using defaults');
+  data = {initialized: new Date().toISOString()};
+}
+```
+
+### HTTP Requests Fail
+
+**Problem:** Network requests timeout or fail
+
+**Solution:** Ensure internet access is enabled:
+
+```bash
+# Check session settings
+curl https://era-agent.yawnxyz.workers.dev/api/sessions/my-session | jq '.allowInternetAccess'
+
+# If false, recreate session with allowInternetAccess: true
+```
+
+---
+
+## Next Steps
+
+- Learn about [Code Storage](/docs/guides/code-management) for managing reusable code
+- Explore [Callbacks & Webhooks](/docs/guides/callbacks-webhooks) for async communication
+- See [Multi-File Projects](/docs/guides/multi-file-projects) for complex applications
+- Check [Timeout Configuration](/docs/guides/timeout-configuration) for long-running operations
