@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,10 @@ const (
 	vmStatusReady                    = "ready"
 	vmStatusRunning                  = "running"
 	vmStatusStopped                  = "stopped"
+
+	// Platform-specific requirements for krunvm on macOS
+	macOSKrunvmVolume = "/Volumes/krunvm"
+	macOSKrunvmRoot   = "/Volumes/krunvm/root"
 )
 
 var (
@@ -673,9 +678,78 @@ func guestVolumeSharingEnabled() bool {
 	return enabled
 }
 
+// validateMacOSKrunvmSetup checks if krunvm's required volume exists on macOS
+func validateMacOSKrunvmSetup() error {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+
+	// Check if case-sensitive volume exists
+	if _, err := os.Stat(macOSKrunvmVolume); os.IsNotExist(err) {
+		return fmt.Errorf(
+			"krunvm requires a case-sensitive APFS volume at %s.\n"+
+				"Create it with: diskutil apfs addVolume disk3 \"Case-sensitive APFS\" krunvm\n"+
+				"Or run: ./scripts/macos/setup.sh\n"+
+				"See: https://sinrega.org/running-microvms-on-m1/",
+			macOSKrunvmVolume,
+		)
+	}
+
+	// Ensure krunvm root directory exists
+	rootDirs := []string{
+		filepath.Join(macOSKrunvmRoot, "mounts"),
+		filepath.Join(macOSKrunvmRoot, "vfs"),
+		filepath.Join(macOSKrunvmRoot, "runroot"),
+	}
+
+	for _, dir := range rootDirs {
+		if err := ensureDir(dir); err != nil {
+			return fmt.Errorf("failed to create krunvm root directory %s: %w", dir, err)
+		}
+	}
+
+	return nil
+}
+
+// isCaseSensitive checks if a path is on a case-sensitive filesystem
+func isCaseSensitive(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+
+	tmpDir, err := os.MkdirTemp(path, ".casecheck-*")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(tmpDir)
+
+	upper := filepath.Join(tmpDir, "TEST")
+	lower := filepath.Join(tmpDir, "test")
+
+	if err := os.WriteFile(upper, []byte("A"), 0644); err != nil {
+		return false
+	}
+
+	if err := os.WriteFile(lower, []byte("B"), 0644); err == nil {
+		return true // Could create both files = case-sensitive
+	}
+
+	return false
+}
+
 func computeStateRoot() string {
 	if override := strings.TrimSpace(os.Getenv("AGENT_STATE_DIR")); override != "" {
 		return override
+	}
+
+	// On macOS, prefer home directory over system paths
+	if runtime.GOOS == "darwin" {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			candidate := filepath.Join(homeDir, "agentVM")
+			if tryEnsureDir(candidate) {
+				return candidate
+			}
+		}
 	}
 
 	if tryEnsureDir(defaultSystemStateRoot) {

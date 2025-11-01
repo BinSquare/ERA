@@ -2,6 +2,17 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "--env" ]]; then
+	# Just output environment variables for sourcing
+	if [[ -f "${HOME}/agentVM/.env" ]]; then
+		cat "${HOME}/agentVM/.env"
+	else
+		echo "# Run setup first: ./scripts/macos/setup.sh" >&2
+		exit 1
+	fi
+	exit 0
+fi
+
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 	cat <<'EOF'
 macOS bootstrap helper for the agent CLI.
@@ -12,7 +23,7 @@ Usage:
 Steps performed:
   - Verifies that a case-sensitive APFS volume is available to satisfy krunvm's requirements.
   - Installs krunvm and buildah via Homebrew when available.
-  - Prepares a writable agent state directory under the chosen volume.
+  - Prepares agent state directory (default: ~/agentVM) separate from krunvm volume.
 
 If no mountpoint is supplied, you will be prompted. A sensible default is /Volumes/krunvm.
 EOF
@@ -197,17 +208,42 @@ fi
 
 echo "✔ Case-sensitive volume detected at ${mountpoint}"
 
-state_dir="${mountpoint}/agent-state"
+# Create minimal krunvm root structure
+krunvm_root="${mountpoint}/root"
+mkdir -p "${krunvm_root}"/{mounts,vfs,runroot}
+echo "✔ Created krunvm root directories"
+
+# Agent state goes to user's home directory by default
+default_agent_state="${HOME}/agentVM"
+read -r -p "Agent state directory [${default_agent_state}]: " agent_state_input
+state_dir="${agent_state_input:-$default_agent_state}"
+
+# Expand ~ if present
+state_dir="${state_dir/#\~/$HOME}"
+
 krunvm_dir="${state_dir}/krunvm"
-containers_dir="${state_dir}/containers"
-containers_storage_dir="${containers_dir}/storage"
-containers_runroot_dir="${containers_dir}/runroot"
-containers_policy="${containers_dir}/policy.json"
-containers_registries="${containers_dir}/registries.conf"
+containers_storage_dir="${state_dir}/containers/storage"
+containers_runroot_dir="${state_dir}/containers/runroot"
 
 mkdir -p "${krunvm_dir}" "${containers_storage_dir}" "${containers_runroot_dir}"
 
-cat >"${containers_dir}/storage.conf" <<EOF
+# Create container config files directly in Homebrew location (no symlinks)
+# This is more reliable than symlinks which can break when paths change
+containers_etc="/opt/homebrew/etc/containers"
+mkdir -p "${containers_etc}"
+
+echo "Creating container configuration files in ${containers_etc}..."
+
+# Remove old symlinks if they exist
+for config_file in registries.conf policy.json storage.conf; do
+	if [[ -L "${containers_etc}/${config_file}" ]]; then
+		echo "  Removing old symlink: ${config_file}"
+		sudo rm "${containers_etc}/${config_file}"
+	fi
+done
+
+# Create storage.conf pointing to user's state directory
+sudo tee "${containers_etc}/storage.conf" > /dev/null <<EOF
 [storage]
 driver = "vfs"
 graphroot = "${containers_storage_dir}"
@@ -215,7 +251,8 @@ runroot = "${containers_runroot_dir}"
 rootless_storage_path = "${containers_storage_dir}"
 EOF
 
-cat >"${containers_policy}" <<'EOF'
+# Create policy.json
+sudo tee "${containers_etc}/policy.json" > /dev/null <<'EOF'
 {
   "default": [
     {
@@ -234,7 +271,8 @@ cat >"${containers_policy}" <<'EOF'
 }
 EOF
 
-cat >"${containers_registries}" <<'EOF'
+# Create registries.conf
+sudo tee "${containers_etc}/registries.conf" > /dev/null <<'EOF'
 unqualified-search-registries = ["docker.io"]
 
 [[registry]]
@@ -243,6 +281,8 @@ location = "registry-1.docker.io"
 blocked = false
 insecure = false
 EOF
+
+echo "✔ Container configuration created"
 
 if command -v brew >/dev/null 2>&1; then
 	echo "Installing/upgrading krunvm and buildah via Homebrew..."
@@ -267,4 +307,46 @@ Install them manually, e.g.:
 EOF
 fi
 
-cat <<EOF\n\nSetup complete.\n\nRecommended environment overrides:\n\n  export AGENT_STATE_DIR=\"${state_dir}\"\n  export KRUNVM_DATA_DIR=\"${krunvm_dir}\"\n  export CONTAINERS_STORAGE_CONF=\"${containers_dir}/storage.conf\"\n  export CONTAINERS_STORAGE_CONFIG=\"${containers_dir}/storage.conf\"\n  export CONTAINERS_POLICY=\"${containers_policy}\"\n  export CONTAINERS_REGISTRIES_CONF=\"${containers_dir}/registries.conf\"\n\nif [[ -n \"${brew_prefix:-}\" ]]; then\n  echo \"  export DYLD_LIBRARY_PATH=\\\"${brew_prefix}/lib:\\\$DYLD_LIBRARY_PATH\\\"\"\nfi\n\nThe agent automatically derives KRUNVM_DATA_DIR from AGENT_STATE_DIR, but exporting it explicitly helps when using buildah/krunvm directly.\nEOF
+# Save environment variables for easy loading
+cat > "${state_dir}/.env" <<EOF
+export AGENT_STATE_DIR="${state_dir}"
+export KRUNVM_DATA_DIR="${krunvm_dir}"
+export AGENT_ENABLE_GUEST_VOLUMES=1
+EOF
+
+if [[ -n "${brew_prefix:-}" ]]; then
+  echo "export DYLD_LIBRARY_PATH=\"${brew_prefix}/lib:\$DYLD_LIBRARY_PATH\"" >> "${state_dir}/.env"
+fi
+
+chmod +x "${state_dir}/.env"
+
+cat <<EOF
+
+Setup complete!
+
+Container configuration files are in /opt/homebrew/etc/containers/
+Container storage is in ${state_dir}/containers/
+
+IMPORTANT: Add these to your ~/.zshrc or ~/.bashrc:
+
+  export AGENT_STATE_DIR="${state_dir}"
+  export KRUNVM_DATA_DIR="${krunvm_dir}"
+  export AGENT_ENABLE_GUEST_VOLUMES=1
+EOF
+
+if [[ -n "${brew_prefix:-}" ]]; then
+  echo "  export DYLD_LIBRARY_PATH=\"${brew_prefix}/lib:\$DYLD_LIBRARY_PATH\""
+fi
+
+cat <<EOF
+
+To use immediately in this session:
+  source ${state_dir}/.env
+
+Or add to your shell profile:
+  cat ${state_dir}/.env >> ~/.zshrc  # or ~/.bashrc
+
+The case-sensitive volume at /Volumes/krunvm is used by krunvm for virtio-fs.
+Your agent state and VMs are stored in ${state_dir}.
+
+EOF

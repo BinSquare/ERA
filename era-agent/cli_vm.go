@@ -51,6 +51,16 @@ func (c *CLI) executeVM(ctx context.Context, args []string) error {
 }
 
 func (c *CLI) handleVMCreate(ctx context.Context, args []string) error {
+	// Validate platform setup early
+	if err := validateMacOSKrunvmSetup(); err != nil {
+		return fmt.Errorf(
+			"macOS setup incomplete:\n%w\n\n"+
+				"Run: ./scripts/macos/setup.sh\n"+
+				"Then: source ~/agentVM/.env",
+			err,
+		)
+	}
+
 	fs := flag.NewFlagSet("agent vm create", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -98,6 +108,16 @@ func (c *CLI) handleVMCreate(ctx context.Context, args []string) error {
 }
 
 func (c *CLI) handleVMRun(ctx context.Context, args []string) error {
+	// Validate platform setup early
+	if err := validateMacOSKrunvmSetup(); err != nil {
+		return fmt.Errorf(
+			"macOS setup incomplete:\n%w\n\n"+
+				"Run: ./scripts/macos/setup.sh\n"+
+				"Then: source ~/agentVM/.env",
+			err,
+		)
+	}
+
 	fs := flag.NewFlagSet("agent vm run", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -157,6 +177,16 @@ func (c *CLI) handleVMRun(ctx context.Context, args []string) error {
 }
 
 func (c *CLI) handleVMExec(ctx context.Context, args []string) error {
+	// Validate platform setup early
+	if err := validateMacOSKrunvmSetup(); err != nil {
+		return fmt.Errorf(
+			"macOS setup incomplete:\n%w\n\n"+
+				"Run: ./scripts/macos/setup.sh\n"+
+				"Then: source ~/agentVM/.env",
+			err,
+		)
+	}
+
 	fs := flag.NewFlagSet("agent vm exec", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
@@ -275,6 +305,16 @@ func (c *CLI) handleVMExec(ctx context.Context, args []string) error {
 }
 
 func (c *CLI) handleVMShell(ctx context.Context, args []string) error {
+	// Validate platform setup early
+	if err := validateMacOSKrunvmSetup(); err != nil {
+		return fmt.Errorf(
+			"macOS setup incomplete:\n%w\n\n"+
+				"Run: ./scripts/macos/setup.sh\n"+
+				"Then: source ~/agentVM/.env",
+			err,
+		)
+	}
+
 	fs := flag.NewFlagSet("agent vm shell", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 

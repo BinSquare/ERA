@@ -55,10 +55,7 @@ test: agent
 
 image-python:
 	@set -euo pipefail; \
-	STATE_DIR="$(AGENT_STATE_DIR)"; \
-	if [ -z "$STATE_DIR" ]; then \
-		STATE_DIR="/Volumes/krunvm/agent-state"; \
-	fi; \
+	STATE_DIR="$${AGENT_STATE_DIR:-$$HOME/agentVM}"; \
 	KRUNVM_DIR="$STATE_DIR/krunvm"; \
 	CONTAINERS_DIR="$STATE_DIR/containers"; \
 	GRAPHROOT="$CONTAINERS_DIR/storage"; \

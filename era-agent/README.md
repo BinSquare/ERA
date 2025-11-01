@@ -5,30 +5,42 @@ Minimal scaffold for a secure code-execution runner with a flat Go CLI and suppo
 ## Quick Start
 
 ### Prerequisites
+
 - macOS: Homebrew (`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
 - Linux: Package manager (apt, yum, etc.)
 
 ### Installation (macOS)
+
 ```bash
 # 1. Install dependencies
 brew install krunvm buildah
 
-# 2. Setup case-sensitive volume and state directory
+# 2. Run setup script (creates case-sensitive volume + agent directories)
+cd era-agent
 ./scripts/macos/setup.sh
 
-# 3. Follow the script's output to set environment variables
-export AGENT_STATE_DIR="/Volumes/krunvm/agent-state"  # example from setup script
-export KRUNVM_DATA_DIR="/Volumes/krunvm/agent-state/krunvm"
-export CONTAINERS_STORAGE_CONF="/Volumes/krunvm/agent-state/containers/storage.conf"
+# The script will:
+# - Create /Volumes/krunvm (case-sensitive APFS) for krunvm
+# - Set up ~/agentVM for your VM state and data
+# - Generate environment variables
+
+# 3. Load environment variables
+source ~/agentVM/.env
+
+# Or permanently add to your shell profile:
+cat ~/agentVM/.env >> ~/.zshrc  # or ~/.bashrc
 
 # 4. Build the agent
 make
 
 # 5. Test with a simple command
-./agent vm temp --language python --cmd "python -c 'print(\"Hello, World!\")'"
+./agent vm temp --language python --cmd "print('Hello, World!')"
 ```
 
+**Architecture Note**: On macOS, krunvm requires `/Volumes/krunvm` (case-sensitive APFS) for its internal virtio-fs operations. Your agent state, VMs, and data live separately in `~/agentVM` (or `$AGENT_STATE_DIR`). See [this guide](https://sinrega.org/running-microvms-on-m1/) for details.
+
 ### Installation (Linux)
+
 ```bash
 # Install dependencies
 # For Ubuntu/Debian: sudo apt-get install buildah krunvm
@@ -44,34 +56,88 @@ sudo ./agent vm temp --language python --cmd "python -c 'print(\"Hello, World!\"
 ## Platform Setup Details
 
 ### macOS Setup
-- Run `scripts/macos/setup.sh` to bootstrap dependencies, validate (or create) a case-sensitive volume, and prepare an agent state directory (the script may prompt for your password to run `diskutil`). The script will also detect your Homebrew installation and recommend the correct value for the `DYLD_LIBRARY_PATH` environment variable, which may be required for `krunvm` to find its dynamic libraries.
 
-- If you prefer to create the dedicated volume manually, open a separate terminal and run (with `sudo` as required):
-  ```
-  diskutil apfs addVolume disk3 "Case-sensitive APFS" krunvm
-  ```
-  (replace `disk3` with the identifier reported by `diskutil list`). The operation is non-destructive, does not require `sudo`, and shares space with the source container volume.
+krunvm on macOS has two storage requirements:
 
-- When prompted by the setup script, accept the default mount point (`/Volumes/krunvm`) or provide your own. Afterwards, export the environment variables printed by the script (at minimum `AGENT_STATE_DIR`, `KRUNVM_DATA_DIR`, and `CONTAINERS_STORAGE_CONF`) before invoking `agent` or running `krunvm`/`buildah` directly. The helper now prepares a matching container-storage configuration under the case-sensitive volume so the CLI can run without extra manual steps.
-  - The script also writes `policy.json`/`registries.conf` under the same directory so Buildah doesn't look for root-owned files in `/etc/containers`. Export the variables it prints (`CONTAINERS_POLICY`, `CONTAINERS_REGISTRIES_CONF`) if you invoke Buildah manually.
+1. **Case-sensitive APFS volume** (`/Volumes/krunvm`) - Required by krunvm for virtio-fs. This is created once and typically stays empty except for krunvm's internal mount points.
+
+2. **Agent state directory** (`~/agentVM` by default) - Your VM metadata, input/output files, persistent storage, and container images.
+
+#### Automated Setup
+
+```bash
+./scripts/macos/setup.sh
+```
+
+This will:
+
+- Detect or create the case-sensitive APFS volume
+- Set up your agent state directory (default: `~/agentVM`)
+- Generate environment configuration at `~/agentVM/.env`
+- Install/upgrade krunvm and buildah via Homebrew
+
+#### Manual Setup
+
+If you prefer manual setup:
+
+```bash
+# 1. Create case-sensitive volume
+diskutil apfs addVolume disk3 "Case-sensitive APFS" krunvm
+
+# 2. Create krunvm root structure
+sudo mkdir -p /Volumes/krunvm/root/{mounts,vfs,runroot}
+sudo chown -R $(whoami):staff /Volumes/krunvm
+
+# 3. Set up agent state directory
+mkdir -p ~/agentVM/{krunvm,containers/{storage,runroot},vms,persist}
+
+# 4. Create container storage config
+cat > ~/agentVM/containers/storage.conf <<EOF
+[storage]
+driver = "vfs"
+graphroot = "$HOME/agentVM/containers/storage"
+runroot = "$HOME/agentVM/containers/runroot"
+rootless_storage_path = "$HOME/agentVM/containers/storage"
+EOF
+
+# 5. Export environment variables (add to ~/.zshrc)
+export AGENT_STATE_DIR="$HOME/agentVM"
+export AGENT_ENABLE_GUEST_VOLUMES=1
+export CONTAINERS_STORAGE_CONF="$HOME/agentVM/containers/storage.conf"
+```
+
+#### Troubleshooting
+
+If you get "Error setting VM mapped volumes":
+
+- Verify `/Volumes/krunvm` exists: `ls -la /Volumes/krunvm`
+- Check it's case-sensitive: `diskutil info /Volumes/krunvm | grep -i "case-sensitive"`
+- Ensure environment variables are set: `echo $AGENT_STATE_DIR`
+- Try: `source ~/agentVM/.env` if you ran the setup script
+
+For more information, see this [guide on running microVMs on M1/M2](https://sinrega.org/running-microvms-on-m1/).
 
 ### Linux Setup
+
 - Install `krunvm` and `buildah` using your package manager (the specific installation method may vary)
 - Ensure the system is properly configured to run microVMs (may require kernel modules or specific privileges)
 - Consider setting `AGENT_STATE_DIR` to a writable location if running as non-root
 
 ## Runtime Requirements
+
 - `krunvm` must be installed and available on `$PATH` (Homebrew: `brew install krunvm`; see upstream docs for other platforms).
 - `buildah` must also be present because `krunvm` shells out to it for OCI image handling.
 - On macOS, `krunvm` requires a case-sensitive APFS volume; see the macOS setup notes above.
 
 ## Build
+
 ```
 make          # builds the agent CLI
 make clean    # removes build artifacts (Go cache)
 ```
 
 ## Configuration
+
 - `AGENT_STATE_DIR` overrides the state directory (`/var/lib/agent` when writable, else `${XDG_CONFIG_HOME}/agent` or `~/.agent`). This is the primary configuration you need to set on macOS.
 - `AGENT_LOG_LEVEL` or `--log-level` (debug|info|warn|error) controls log verbosity.
 - `AGENT_LOG_FILE` or `--log-file` mirrors CLI output to a persistent log file (created if absent).
@@ -80,6 +146,7 @@ make clean    # removes build artifacts (Go cache)
 - The macOS helper writes compatible `policy.json`/`registries.conf`; they're automatically picked up when `CONTAINERS_POLICY` and `CONTAINERS_REGISTRIES_CONF` are exported.
 
 ## Guest Images
+
 - By default the CLI pulls public base images (`docker.io/library/python:3.11-slim`, `docker.io/library/node:20-slim`, `docker.io/library/ruby:3.2-slim`, or `docker.io/library/golang:1.22-bookworm`). Override the root filesystem with `--image` if you need a custom build.
 - A minimal Python image recipe lives in `scripts/images/python-hello/Containerfile` if you want to publish your own tag:
   ```
@@ -88,6 +155,7 @@ make clean    # removes build artifacts (Go cache)
   The make target prepares the container-storage config and required environment variables automatically; it also forces a `linux/amd64` build so the artifact is compatible with krunvm. Override `IMAGES_REGISTRY` or `IMAGES_DATE` at invocation time if you want a different tag (e.g. `IMAGES_REGISTRY=myrepo IMAGES_DATE=20251023 make image-python`).
 
 ## CLI Surface
+
 ```
 agent vm create --language <python|javascript|node|ruby|golang> [--image <override>] --cpu --mem --network <none|allow_all> [--persist]
 agent vm run --vm <id> --cmd "python main.py" [--file ./main.py] [--timeout 30]
@@ -105,6 +173,7 @@ agent vm clean [--vm <id> ... | --all] [--keep-persist]
 - `agent vm temp` creates a temporary VM, runs your command, then automatically cleans it up.
 
 ## Sample Commands
+
 ```shell
 # Create microVMs with different language runtimes
 agent vm create --language python --cpu 1 --mem 256 --network allow_all
@@ -136,6 +205,7 @@ agent vm clean --all
 ## Cleanup and Uninstallation
 
 ### Cleanup Runtime Data
+
 ```bash
 # Stop all VMs
 ./agent vm stop --all
@@ -149,6 +219,7 @@ rm -rf "$AGENT_STATE_DIR"
 ```
 
 ### Uninstall Agent
+
 ```bash
 # Remove the binary
 rm ./agent
@@ -161,33 +232,39 @@ brew uninstall krunvm buildah
 ```
 
 ### Reset Environment
+
 If you set environment variables permanently in your shell profile (`~/.bashrc`, `~/.zshrc`, etc.), remove them:
+
 ```bash
 unset AGENT_STATE_DIR
-unset KRUNVM_DATA_DIR 
+unset KRUNVM_DATA_DIR
 unset CONTAINERS_STORAGE_CONF
 unset CONTAINERS_POLICY
 unset CONTAINERS_REGISTRIES_CONF
 ```
 
 ## State Persistence
+
 - VM metadata is durably tracked via BoltDB at `/var/lib/agent/agent.db` (override with `AGENT_STATE_DIR`).
 - Storage roots are created under `/var/lib/agent/{vms,persist}` with per-VM subdirectories.
 - BoltDB is vendored under `vendor/go.etcd.io/bbolt`; run `go mod vendor` after dependency changes to keep it up to date.
 
 ## KrunVM Bridge
+
 - `launcher_krunvm.go` shells out to `krunvm create/start/delete`, binding the agent's storage layout into the guest via `--volume`.
 - `KRUNVM_DATA_DIR` is automatically pointed at `<state-root>/krunvm`; override `AGENT_STATE_DIR` if you need a different writable location.
 
 ## Troubleshooting
 
 ### Common Issues
+
 - **"no such file or directory" on macOS**: Make sure you've created a case-sensitive APFS volume and set `AGENT_STATE_DIR`
 - **Permission denied**: Ensure the state directory is writable by your user
 - **Command not found (krunvm/buildah)**: Install dependencies with `brew install krunvm buildah`
 - **"failed to create temporary VM"**: Check that your environment variables are set correctly
 
 ### Verification Commands
+
 ```bash
 # Check if dependencies are available
 which krunvm
@@ -205,6 +282,7 @@ echo "KRUNVM_DATA_DIR: $KRUNVM_DATA_DIR"
 ```
 
 ## Layout
+
 - `main.go`, `*.go` — host CLI, storage plumbing, krunvm integration, and JSON logging.
 - `launcher_krunvm.go` — thin wrapper that shells out to `krunvm`.
 - `launcher_libkrun.go` — libkrun implementation (when built with libkrun support).

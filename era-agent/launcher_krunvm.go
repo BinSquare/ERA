@@ -38,6 +38,11 @@ type krunVMLauncher struct {
 }
 
 func (l *krunVMLauncher) Launch(ctx context.Context, record VMRecord) error {
+	// Validate macOS-specific requirements
+	if err := validateMacOSKrunvmSetup(); err != nil {
+		return fmt.Errorf("macOS setup validation failed: %w", err)
+	}
+
 	args := []string{
 		"create",
 		"--name", record.ID,
@@ -401,15 +406,32 @@ func (e *commandError) Error() string {
 	var builder strings.Builder
 	builder.WriteString("krunvm command failed: ")
 	builder.WriteString(strings.Join(e.args, " "))
+
 	if e.err != nil {
 		builder.WriteString(": ")
 		builder.WriteString(e.err.Error())
 	}
-	if strings.TrimSpace(e.stderr) != "" {
+
+	stderr := strings.TrimSpace(e.stderr)
+	if stderr != "" {
 		builder.WriteString(" (stderr: ")
-		builder.WriteString(strings.TrimSpace(e.stderr))
+		builder.WriteString(stderr)
 		builder.WriteString(")")
+
+		// Detect common macOS issues
+		if runtime.GOOS == "darwin" {
+			if strings.Contains(stderr, "mkdir /Volumes/krunvm") ||
+				strings.Contains(stderr, "permission denied") {
+				builder.WriteString("\n\nHINT: krunvm requires /Volumes/krunvm (case-sensitive APFS).")
+				builder.WriteString("\nRun: ./scripts/macos/setup.sh")
+			}
+			if strings.Contains(stderr, "Error setting VM mapped volumes") {
+				builder.WriteString("\n\nHINT: Ensure AGENT_ENABLE_GUEST_VOLUMES=1 is set.")
+				builder.WriteString("\nRun: source ~/agentVM/.env")
+			}
+		}
 	}
+
 	return builder.String()
 }
 
