@@ -5,6 +5,7 @@ Securely run any code, in any language, with no repercussions.
 ERA is an open-source project providing fast and secure runtime environments with persistent storage for running your AI-agents. Want to self-host? Get started with our documentation.
 
 ## 🎥 Demo Video
+[![Demo Video](https://img.youtube.com/vi/Si4evw3pglY/0.jpg)](https://www.youtube.com/watch?v=Si4evw3pglY)
 
 A demo video showing how to install and use the CLI tool is available in the [era-agent directory](era-agent/README.md). This video covers:
 
