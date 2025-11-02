@@ -267,4 +267,26 @@ Install them manually, e.g.:
 EOF
 fi
 
-cat <<EOF\n\nSetup complete.\n\nRecommended environment overrides:\n\n  export AGENT_STATE_DIR=\"${state_dir}\"\n  export KRUNVM_DATA_DIR=\"${krunvm_dir}\"\n  export CONTAINERS_STORAGE_CONF=\"${containers_dir}/storage.conf\"\n  export CONTAINERS_STORAGE_CONFIG=\"${containers_dir}/storage.conf\"\n  export CONTAINERS_POLICY=\"${containers_policy}\"\n  export CONTAINERS_REGISTRIES_CONF=\"${containers_dir}/registries.conf\"\n\nif [[ -n \"${brew_prefix:-}\" ]]; then\n  echo \"  export DYLD_LIBRARY_PATH=\\\"${brew_prefix}/lib:\\\$DYLD_LIBRARY_PATH\\\"\"\nfi\n\nThe agent automatically derives KRUNVM_DATA_DIR from AGENT_STATE_DIR, but exporting it explicitly helps when using buildah/krunvm directly.\nEOF
+cat <<EOF
+
+Setup complete.
+
+Recommended environment overrides:
+
+  export AGENT_STATE_DIR="${state_dir}"
+  export KRUNVM_DATA_DIR="${krunvm_dir}"
+  export CONTAINERS_STORAGE_CONF="${containers_dir}/storage.conf"
+  export CONTAINERS_STORAGE_CONFIG="${containers_dir}/storage.conf"
+  export CONTAINERS_POLICY="${containers_policy}"
+  export CONTAINERS_REGISTRIES_CONF="${containers_dir}/registries.conf"
+
+EOF
+if [[ -n "${brew_prefix:-}" ]]; then
+	cat <<EOF
+  export DYLD_LIBRARY_PATH="${brew_prefix}/lib:\$DYLD_LIBRARY_PATH"
+EOF
+fi
+cat <<'EOF'
+
+The agent automatically derives KRUNVM_DATA_DIR from AGENT_STATE_DIR, but exporting it explicitly helps when using buildah/krunvm directly.
+EOF
