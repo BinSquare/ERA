@@ -27,63 +27,60 @@ for dep in krunvm buildah; do
 done
 
 if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
-    echo "❌ Missing dependencies: ${MISSING_DEPS[*]}"
-    echo "Install with: brew install ${MISSING_DEPS[*]}"
-    echo "For full functionality, please install these dependencies."
+    echo "❌ Missing required dependencies: ${MISSING_DEPS[*]}"
     echo
-    read -r -p "Would you like to install them now? [y/N]: " response
-    if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-        brew install "${MISSING_DEPS[@]}"
-    else
-        echo "⚠️  Warning: ERA Agent will have limited functionality without these dependencies."
-    fi
-else
-    echo "✅ All dependencies found: krunvm, buildah"
+    echo "Install them with:"
+    echo "  brew install ${MISSING_DEPS[*]}"
+    echo
+    echo "For Linux, install via your package manager:"
+    echo "  Ubuntu/Debian: sudo apt-get install krunvm buildah"
+    echo "  CentOS/RHEL: sudo yum install krunvm buildah"
+    exit 1
 fi
 
-# macOS-specific checks
-if [[ "$(uname -s)" == "Darwin" ]]; then
+echo "✅ All dependencies found"
+
+# Check if we're on macOS (required for krunvm setup)
+if [[ "$OSTYPE" == "darwin"* ]]; then
     echo
-    echo "macOS Setup"
-    echo "-----------"
-    echo "krunvm requires a case-sensitive APFS volume on macOS."
-    echo 
+    echo "macOS detected. Setting up krunvm case-sensitive volume..."
     
-    # Check if we already have a case-sensitive volume set up
-    if [[ -n "${AGENT_STATE_DIR:-}" ]] && [[ -d "${AGENT_STATE_DIR}" ]]; then
-        echo "✅ AGENT_STATE_DIR is already set to: ${AGENT_STATE_DIR}"
+    # Check if the volume exists
+    if ! mount | grep -q "/Volumes/krunvm"; then
+        echo "❌ Case-sensitive volume /Volumes/krunvm not found"
+        echo
+        echo "You need to create a case-sensitive APFS volume for krunvm."
+        echo "Run the macOS setup script:"
+        echo "  $(brew --prefix era-agent)/libexec/setup/setup.sh"
+        exit 1
     else
-        echo "You'll need to set up a case-sensitive volume and environment variables."
-        echo
+        echo "✅ Case-sensitive volume found"
         
-        # Guide for case-sensitive volume setup
-        echo "Option 1: Use the existing setup script (requires admin privileges)"
-        echo "  sudo /path/to/era-agent-source/scripts/macos/setup.sh"
-        echo
-        echo "Option 2: Manual setup (see ERA Agent documentation)"
-        echo "  You'll need to set these environment variables:"
-        echo "  - AGENT_STATE_DIR (e.g., /Volumes/krunvm/agent-state)"
-        echo "  - KRUNVM_DATA_DIR (usually same as AGENT_STATE_DIR/krunvm)"
-        echo "  - CONTAINERS_STORAGE_CONF (for container operations)"
-        echo
+        # Check if environment variables are set
+        if [[ -z "${AGENT_STATE_DIR:-}" ]]; then
+            echo
+            echo "Environment variables not set. Please add these to your shell profile:"
+            echo
+            echo "export AGENT_STATE_DIR=\"/Volumes/krunvm/agent-state\""
+            echo "export KRUNVM_DATA_DIR=\"/Volumes/krunvm/agent-state/krunvm\""
+            echo "export CONTAINERS_STORAGE_CONF=\"/Volumes/krunvm/agent-state/containers/storage.conf\""
+            echo
+            echo "Then run: source ~/.zshrc  # or ~/.bash_profile"
+        else
+            echo "✅ Environment variables appear to be set"
+        fi
     fi
 else
-    echo "Linux detected - no special volume requirements"
+    echo "Linux detected. Ensure krunvm and buildah are properly configured."
+    echo "You may need to update your PATH if needed."
 fi
 
 echo
-echo "Setup Complete!"
-echo "==============="
-echo "You can now use ERA Agent:"
+echo "🎉 ERA Agent setup complete!"
 echo
-echo "  # Run as API server"
-echo "  agent server --addr :8080"
+echo "To start using ERA Agent:"
+echo "  agent serve"
 echo
-echo "  # Run temporary execution"  
-echo "  agent vm temp --language python --cmd 'python -c \"print(\\\"Hello World\\\")\"'"
+echo "To test with a simple command:"
+echo "  agent vm temp --language python --cmd \"python -c 'print(\\\"Hello, World!\\\")'\""
 echo
-echo "For Node.js SDK usage, install the package:"
-echo "  npm install @era/agent-sdk"
-echo
-echo "Then connect to your server instance:"
-echo "  const agent = new ERAAgent({ baseUrl: 'http://localhost:8080' });"
