@@ -31,6 +31,16 @@ agent: $(GO_SOURCES)
 	mkdir -p .cache/go-build
 	GOCACHE=$(PWD)/.cache/go-build go build -o $(BIN) .
 
+install: agent
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 $(BIN) $(DESTDIR)$(BINDIR)/$(BIN)
+	@echo "Installed $(BIN) to $(DESTDIR)$(BINDIR)"
+	@echo "Dependencies needed: krunvm buildah"
+
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/$(BIN)
+	@echo "Uninstalled $(BIN) from $(DESTDIR)$(BINDIR)"
+
 fmt:
 	gofmt -w $(GO_SOURCES)
 

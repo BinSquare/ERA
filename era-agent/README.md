@@ -8,6 +8,37 @@ Minimal scaffold for a secure code-execution runner with a flat Go CLI and suppo
 - macOS: Homebrew (`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
 - Linux: Package manager (apt, yum, etc.)
 
+### installation options
+
+#### option 1: homebrew (recommended)
+```bash
+# 1. install the tap
+brew tap your-username/era-agent
+
+# 2. install era agent
+brew install era-agent
+
+# 3. install dependencies
+brew install krunvm buildah
+
+# 4. follow platform-specific setup (see below)
+```
+
+#### option 2: from source
+```bash
+# 1. install dependencies
+brew install krunvm buildah  # on macos
+
+# 2. clone the repository
+git clone https://github.com/your-username/era-agent.git
+cd era-agent
+
+# 3. build the agent
+make
+
+# 4. follow platform-specific setup (see below)
+```
+
 ### Installation (macOS)
 ```bash
 # 1. Install dependencies
@@ -41,9 +72,19 @@ make
 sudo ./agent vm temp --language python --cmd "python -c 'print(\"Hello, World!\")'"
 ```
 
-## Platform Setup Details
+## platform setup details
 
-### macOS Setup
+### homebrew installation setup
+if you installed era agent via homebrew, use the setup script from the installed location:
+```bash
+# for macos users with homebrew installation
+$(brew --prefix era-agent)/libexec/setup/setup.sh
+
+# or run the setup script directly after installation
+$(brew --prefix)/bin/era-agent-setup  # if setup script is linked separately
+```
+
+### macos setup
 - Run `scripts/macos/setup.sh` to bootstrap dependencies, validate (or create) a case-sensitive volume, and prepare an agent state directory (the script may prompt for your password to run `diskutil`). The script will also detect your Homebrew installation and recommend the correct value for the `DYLD_LIBRARY_PATH` environment variable, which may be required for `krunvm` to find its dynamic libraries.
 
 - If you prefer to create the dedicated volume manually, open a separate terminal and run (with `sudo` as required):
@@ -216,3 +257,8 @@ echo "KRUNVM_DATA_DIR: $KRUNVM_DATA_DIR"
 - `sdk/` — client SDKs for various languages (Node.js, etc.).
 - `vendor/` — vendored Go modules, including BoltDB for durable state.
 - `Makefile` — helper targets for building the Go binary.
+
+## Release Automation
+
+- Creating a release is automated via `.github/workflows/release.yml`. Push a tag named `vX.Y.Z` and the workflow runs on `ubuntu-latest`, builds the agent to verify the code, packages the repository as `era-agent-vX.Y.Z.tar.gz`, computes its SHA256, and creates a GitHub release with both the archive and the `.sha256` file attached.
+- After the release completes, update `homebrew/era-agent.rb` (and the tap copy under `Formula/era-agent.rb`) with the new `url`/`sha256` values that point to the generated tarball so Homebrew can install the new version.

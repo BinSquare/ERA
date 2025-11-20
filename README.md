@@ -1,8 +1,42 @@
-# ERA - ERA of Runtime for Agents
+# ERA Agent - Local sandbox for running ai generated code.
 
-Securely run any code, in any language, with no repercussions.
+Run untrusted or AI-generated code locally inside krunvm-backed microVMs.
 
-ERA is an open-source project providing fast and secure runtime environments with persistent storage for running your AI-agents. Want to self-host? Get started with our documentation.
+There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
+
+## Quick Start
+
+### Prerequisites
+
+- macOS 13+/Linux with hardware virtualization enabled
+- Homebrew (on mac) and a Go 1.21 toolchain
+- `krunvm` and `buildah`
+
+### Install (Homebrew)
+
+```bash
+brew tap your-username/era-agent
+brew install era-agent
+brew install krunvm buildah
+```
+
+Run the post-install helper to prepare the case-sensitive volume/state dir on macOS:
+
+```bash
+$(brew --prefix era-agent)/libexec/setup/setup.sh
+```
+
+### Install (From Source)
+
+```bash
+git clone https://github.com/your-username/era-agent.git
+cd era-agent
+brew install krunvm buildah   # or use your distro packages
+make agent
+./agent vm temp --language python --cmd "python -c 'print(\"Hello\")'"
+```
+
+Full platform-specific steps (macOS volume setup, Linux env vars, troubleshooting) live in [era-agent/README.md](era-agent/README.md).
 
 ## 🎥 Demo Video
 [![Demo Video](https://img.youtube.com/vi/Si4evw3pglY/0.jpg)](https://www.youtube.com/watch?v=Si4evw3pglY)
@@ -14,175 +48,59 @@ A demo video showing how to install and use the CLI tool is available in the [er
 - Running code and agents through commands or scripts
 - Uploading and downloading files to/from a VM
 
-## 📁 Project Structure
-
-```
-ERA/
-├── era-agent/          # Go-based VM orchestration service
-│   ├── agent           # Compiled binary
-│   ├── api_server.go   # HTTP API server
-│   └── *.go            # Go source files
-│
-├── cloudflare/         # Cloudflare Worker deployment
-│   ├── src/            # Worker TypeScript/JavaScript code
-│   ├── wrangler.toml   # Cloudflare configuration
-│   └── README.md       # Deployment documentation
-│
-├── docs/               # Additional documentation
-├── examples/           # Sample Python & JavaScript code
-├── recipes/            # Ready-to-run code examples
-├── tests/              # Test scripts
-└── skill-layer/        # Skill-based agent system
-```
-
-## 🎯 Architecture
-
-This project maintains a **clean separation between the core service and deployment layer**:
-
-**era-agent (Go)** - Core VM orchestration service
-
-- Deployment-agnostic VM primitives
-- VM lifecycle management (create, run, stop, clean)
-- Multi-language support (Python, Node.js, TypeScript, Go, Deno)
-- HTTP API server
-- Can run standalone: Docker, K8s, bare metal, or any cloud
-
-**cloudflare (TypeScript Worker)** - Deployment & orchestration layer
-
-- Routes requests to era-agent container
-- Session management with Durable Objects
-- File persistence via R2 storage
-- Automatic package installation
-- No external registry needed (Cloudflare builds & hosts)
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Cloudflare account** (free tier works)
-- **Node.js** 18+ installed
-- **Docker Desktop** (for local development)
-- **Go** 1.21+ (optional, for building era-agent locally)
-
-### Deploy to Cloudflare
+## Core Commands
 
 ```bash
-# 1. Build the Go agent
+# create a long-running VM
+agent vm create --language python --cpu 1 --mem 256 --network allow_all
+
+# run something inside it
+agent vm exec --vm <id> --cmd "python -c 'print(\"hi\")'"
+
+# ephemeral one-off execution
+agent vm temp --language javascript --cmd "node -e 'console.log(42)'"
+
+# inspect / cleanup
+agent vm list
+agent vm stop --all
+agent vm clean --all
+```
+
+Supported `--language` values: `python`, `javascript`/`node`/`typescript`, `go`, `ruby`. Override the base image with `--image` if you need a custom runtime.
+
+## ⚙ Configuration Highlights
+
+- `AGENT_STATE_DIR`: writable directory for VM metadata, krunvm state, and Buildah storage. The macOS setup script prints the correct exports.
+- `AGENT_LOG_LEVEL` (`debug|info|warn|error`) and `AGENT_LOG_FILE`: control logging.
+- `AGENT_ENABLE_GUEST_VOLUMES=1`: re-enable `/in`, `/out`, `/persist` mounts for advanced workflows.
+
+See [era-agent/README.md](era-agent/README.md#configuration) for every tunable.
+
+##  Testing Locally
+
+```bash
 cd era-agent
 make agent
-
-# 2. Deploy to Cloudflare
-cd ../cloudflare
-npm install
-npx wrangler login
-npx wrangler r2 bucket create era-sessions
-npx wrangler deploy
+./agent vm temp --language python --cmd "python -c 'print(\"Smoke test\")'"
 ```
 
-**No Docker Hub needed!** Cloudflare builds from your Dockerfile and pushes to their registry automatically.
+Integration helpers and sample recipes live under `examples/`, `recipes/`, and `docs/`.
 
-See [cloudflare/README.md](cloudflare/README.md) for detailed deployment instructions.
+##  Need the Hosted API?
 
-### Quick Test
+To deploy ERA as a Cloudflare Worker with Durable Object-backed sessions and HTTP APIs:
 
-```bash
-# Health check
-curl https://era-agent.YOUR_SUBDOMAIN.workers.dev/health
+- Follow [cloudflare/README.md](cloudflare/README.md) for setup, local Wrangler dev, and deployment.
+- The Worker reuses the same Go agent primitives but adds session orchestration, package caching, and REST endpoints.
 
-# Execute code
-curl -X POST https://era-agent.YOUR_SUBDOMAIN.workers.dev/api/execute \
-  -H "Content-Type: application/json" \
-  -d '{"code": "print(2 + 2)", "language": "python"}'
-```
+## Additional Docs
 
-## 🔄 Development Workflow
-
-**Local Development:**
-
-- Test the Go agent locally: See [era-agent/README.md](era-agent/README.md)
-- Test the Worker locally: `cd cloudflare && npx wrangler dev`
-
-**Deployment:**
-
-- Update Go code: Rebuild with `make agent`, then redeploy Worker
-- Update Worker code: Just run `npx wrangler deploy`
-
-See [cloudflare/README.md](cloudflare/README.md) for full development workflow.
-
-## 📚 API Overview
-
-### Execution Endpoints
-
-- `POST /api/execute` - Execute code directly (ephemeral, auto-cleanup)
-- `POST /api/sessions` - Create persistent session
-- `POST /api/sessions/{id}/run` - Run code in session
-
-### Session Management
-
-- `GET /api/sessions` - List all sessions
-- `GET /api/sessions/{id}` - Get session details
-- `GET /api/sessions/{id}/files` - List session files
-- `DELETE /api/sessions/{id}` - Delete session
-
-### Health & VM Management
-
-- `GET /health` - Health check
-- `POST /api/vm` - Create VM (low-level)
-- `GET /api/vms` - List all VMs
-
-For complete API documentation, see:
-
-- [cloudflare/README.md](cloudflare/README.md) - Session API & examples
-- [era-agent/README.md](era-agent/README.md) - VM management & CLI
-- [docs/QUICKSTART_HTTP.md](docs/QUICKSTART_HTTP.md) - HTTP server guide
-
-## 📖 Documentation
-
-- **[era-agent/README.md](era-agent/README.md)** - Go agent CLI & local development
-- **[cloudflare/README.md](cloudflare/README.md)** - Cloudflare deployment & session API
-- **[cloudflare/SETUP.md](cloudflare/SETUP.md)** - Package installation system
-- **[examples/README.md](examples/README.md)** - Code examples (Python & JavaScript)
-- **[recipes/README.md](recipes/README.md)** - Ready-to-run recipe examples
-- **[docs/](docs/)** - Additional guides (MCP, recipes, storage, etc.)
-
-## 🛠 Key Features
-
-- **Multi-language Support**: Python, Node.js, TypeScript, Go, Deno
-  - Full standard libraries and modern language features
-  - See [examples/](examples/) for code samples
-- **Automatic Package Installation**: Install npm/pip packages automatically on session creation
-  - Async setup with status polling
-  - Packages persist via R2 storage
-  - See [cloudflare/SETUP.md](cloudflare/SETUP.md) for details
-- **Persistent Sessions**: Long-running workflows with file and data persistence
-  - File storage via R2 bucket
-  - Lightweight data storage in Durable Objects
-  - Custom session IDs for easy management
-- **Isolated Execution**: Each VM runs in a sandboxed environment
-- **Global Deployment**: Runs on Cloudflare's edge network
-- **HTTP API**: RESTful interface for all operations
-
-## 🎯 Use Cases
-
-- **API-based code execution**: Run user-submitted scripts safely
-- **Data processing pipelines**: Persistent sessions for multi-step workflows
-- **Educational platforms**: Sandboxed code execution for learners
-- **CI/CD testing**: Execute test suites in isolated environments
-- **AI/LLM integrations**: Run code generated by AI models safely
-- **Webhooks & callbacks**: Execute code triggered by external events
-- **Multi-tenant sandboxing**: Isolated execution for multiple users
-
-## 🤝 Contributing
-
-When making changes:
-
-1. Keep era-agent independent and testable
-2. Update relevant documentation
-3. Test locally before deploying to Cloudflare
-4. Follow existing code patterns
-
-For more details, see the documentation in each subdirectory.
+- [era-agent/README.md](era-agent/README.md) – detailed CLI usage, setup scripts, troubleshooting.
+- [cloudflare/README.md](cloudflare/README.md) – Worker/API deployment guide.
+- [docs/](docs/) – HTTP quickstart, storage notes, MCP adapters.
+- [recipes/README.md](recipes/README.md) – ready-to-run workflows.
+- [examples/README.md](examples/README.md) – language samples.
 
 ## 📄 License
 
-See LICENSE file in project root.
+Apache 2.0
