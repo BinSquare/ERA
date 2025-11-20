@@ -26,9 +26,11 @@ jobs:
           cache-dependency-path: era-agent/go.sum
 
       - name: Verify build
+        working-directory: era-agent
         run: make agent
 
       - name: Clean build artifacts
+        working-directory: era-agent
         run: make clean
 
       - name: Create source archive
