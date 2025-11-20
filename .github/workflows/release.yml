@@ -5,18 +5,27 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag (e.g. v1.2.3) to package'
+        required: true
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      CHECKOUT_REF: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ env.CHECKOUT_REF }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -36,7 +45,7 @@ jobs:
       - name: Create source archive
         id: archive
         run: |
-          tag=${GITHUB_REF#refs/tags/}
+          tag=${RELEASE_TAG}
           archive=release/era-agent-${tag}.tar.gz
           mkdir -p release
           tar \
@@ -55,7 +64,7 @@ jobs:
       - name: Publish GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ env.RELEASE_TAG }}
           ARCHIVE_SHA: ${{ steps.archive.outputs.sha }}
         run: |
           set -euo pipefail
