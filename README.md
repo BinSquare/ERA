@@ -1,6 +1,6 @@
-# ERA Agent - Local sandbox for running ai generated code.
+# ERA Agent - Sandbox to run ai generated code
 
-Run untrusted or AI-generated code locally inside krunvm-backed microVMs.
+Run untrusted or AI-generated code locally inside krunvm-backed microVMs for speed and safety.
 
 There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
 
