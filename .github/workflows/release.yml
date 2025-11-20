@@ -54,15 +54,11 @@ jobs:
           ARCHIVE_SHA: ${{ steps.archive.outputs.sha }}
         run: |
           set -euo pipefail
-          notes=$(cat <<EOF
-## Release assets
-
-- Source archive: \`era-agent-${TAG_NAME}.tar.gz\`
-- SHA256: \`${ARCHIVE_SHA}\`
-EOF
-)
+          notes_file=release/notes.txt
+          printf '## Release assets\n\n- Source archive: `era-agent-%s.tar.gz`\n- SHA256: `%s`\n' \
+            "${TAG_NAME}" "${ARCHIVE_SHA}" > "${notes_file}"
           gh release create "${TAG_NAME}" \
             "release/era-agent-${TAG_NAME}.tar.gz" \
             "release/era-agent-${TAG_NAME}.sha256" \
             --title "${TAG_NAME}" \
-            --notes "${notes}"
+            --notes-file "${notes_file}"
