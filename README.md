@@ -1,8 +1,10 @@
 # ERA Agent - Sandbox to run ai generated code
 
-Run untrusted or AI-generated code locally inside krunvm-backed microVMs for speed and safety.
+Run untrusted or AI-generated code locally inside microVMs that behave like containers for great devX, 200ms launch time, and better security.
 
 There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
+
+[![Publish Release](https://github.com/BinSquare/ERA/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/BinSquare/ERA/actions/workflows/release.yml)
 
 ## Quick Start
 
@@ -39,6 +41,7 @@ make agent
 Full platform-specific steps (macOS volume setup, Linux env vars, troubleshooting) live in [era-agent/README.md](era-agent/README.md).
 
 ## 🎥 Demo Video
+
 [![Demo Video](https://img.youtube.com/vi/Si4evw3pglY/0.jpg)](https://www.youtube.com/watch?v=Si4evw3pglY)
 
 A demo video showing how to install and use the CLI tool is available in the [era-agent directory](era-agent/README.md). This video covers:
@@ -76,7 +79,7 @@ Supported `--language` values: `python`, `javascript`/`node`/`typescript`, `go`,
 
 See [era-agent/README.md](era-agent/README.md#configuration) for every tunable.
 
-##  Testing Locally
+## Testing Locally
 
 ```bash
 cd era-agent
@@ -86,7 +89,7 @@ make agent
 
 Integration helpers and sample recipes live under `examples/`, `recipes/`, and `docs/`.
 
-##  Need the Hosted API?
+## Need the Hosted API?
 
 To deploy ERA as a Cloudflare Worker with Durable Object-backed sessions and HTTP APIs:
 
