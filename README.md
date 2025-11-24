@@ -1,4 +1,4 @@
-# ERA Agent - Sandbox to run ai generated code
+# ERA Agent - Sandbox to run AI generated code
 
 Run untrusted or AI-generated code locally inside microVMs that behave like containers for great devX, 200ms launch time, and better security.
 
@@ -17,8 +17,8 @@ There's a fully managed cloud layer, globally deployed Worker/API, jump to [clou
 ### Install (Homebrew)
 
 ```bash
-brew tap your-username/era-agent
-brew install era-agent
+brew tap binsquare/era-agent-cli
+brew install era-agent-cli
 brew install krunvm buildah
 ```
 
