@@ -5,6 +5,9 @@ Run untrusted or AI-generated code locally inside microVMs that behave like cont
 There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
 
 [![Publish Release](https://github.com/BinSquare/ERA/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/BinSquare/ERA/actions/workflows/release.yml)
+[![Homebrew Tap](https://img.shields.io/homebrew/v/binsquare/era-agent-cli/era-agent?label=homebrew&logo=homebrew)](https://github.com/BinSquare/homebrew-era-agent)
+[![Go Version](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go)](https://go.dev/doc/devel/release)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Quick Start
 
@@ -45,8 +48,11 @@ make
 ### Installation (macOS)
 ```bash
 brew tap binsquare/era-agent-cli
-brew install era-agent-cli
+brew install binsquare/era-agent-cli/era-agent
 brew install krunvm buildah
+
+# the CLI is installed as `agent` on your PATH
+agent vm exec --help
 ```
 
 Run the post-install helper to prepare the case-sensitive volume/state dir on macOS:
