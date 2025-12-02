@@ -4,8 +4,6 @@ Run untrusted or AI-generated code locally inside microVMs that behave like cont
 
 There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
 
-[![Publish Release](https://github.com/BinSquare/ERA/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/BinSquare/ERA/actions/workflows/release.yml)
-[![Homebrew Tap](https://img.shields.io/homebrew/v/binsquare/era-agent-cli/era-agent?label=homebrew&logo=homebrew)](https://github.com/BinSquare/homebrew-era-agent)
 [![Go Version](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -35,14 +33,12 @@ flowchart LR
         Worker --> API
     end
 
-    CLI <-->|Session control| API
-    Worker -->|Dispatch jobs / fetch artifacts| VM
+    Worker -->|Dispatch jobs / fetch artifacts
 ```
 
 **What runs where**
 
-- `agent` CLI, Buildah, and krunvm all run on your local machine inside a case-sensitive volume for fast iteration.
-- Each `agent vm *` command spins up an isolated microVM that executes AI-generated or user code with constrained resources.
+- `agent` CLI, Buildah, and krunvm all run on your local machine inside a case-sensitive volume.
 - The optional Cloudflare Worker tier manages remote sessions, HTTP APIs, and queueing while delegating actual execution back to your local runner or other attached agents.
 
 ## Quick Start
@@ -181,7 +177,7 @@ agent vm clean --all
 
 Supported `--language` values: `python`, `javascript`/`node`/`typescript`, `go`, `ruby`. Override the base image with `--image` if you need a custom runtime.
 
-## ⚙ Configuration Highlights
+## Configurations
 
 - `AGENT_STATE_DIR`: writable directory for VM metadata, krunvm state, and Buildah storage. The macOS setup script prints the correct exports.
 - `AGENT_LOG_LEVEL` (`debug|info|warn|error`) and `AGENT_LOG_FILE`: control logging.
