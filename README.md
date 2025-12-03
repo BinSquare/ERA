@@ -2,44 +2,15 @@
 
 Run untrusted or AI-generated code locally inside microVMs that behave like containers for great devX, 200ms launch time, and better security.
 
-There's a fully managed cloud layer, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
+There's a managed cloud layer through cloudflare, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
 
 [![Go Version](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-## Architecture at a Glance
-
-ERA keeps the developer workstation in control while letting you opt into a hosted control plane when you need remote orchestration.
-
-```mermaid
-flowchart LR
-    subgraph Local["Local Runner (macOS / Linux)"]
-        direction TB
-        Repo["Git / local source"]
-        CLI["agent CLI (Go binary)"]
-        Storage["Case-sensitive volume\n(AGENT_STATE_DIR, Buildah, krunvm)"]
-        VM["MicroVMs via krunvm\n(buildah-backed images)"]
-
-        Repo --> CLI
-        CLI --> VM
-        CLI --> Storage
-        Storage --- VM
-    end
-
-    subgraph Remote["Cloudflare Worker/API (optional)"]
-        direction TB
-        Worker["ERA Worker + Durable Objects"]
-        API["REST + WebSocket endpoints"]
-        Worker --> API
-    end
-
-    Worker -->|Dispatch jobs / fetch artifacts
-```
-
 **What runs where**
 
 - `agent` CLI, Buildah, and krunvm all run on your local machine inside a case-sensitive volume.
-- The optional Cloudflare Worker tier manages remote sessions, HTTP APIs, and queueing while delegating actual execution back to your local runner or other attached agents.
+- The optional Cloudflare Worker side manages remote sessions, HTTP APIs, and queueing while delegating actual execution back to your local runner or other attached agents.
 
 ## Quick Start
 
@@ -146,7 +117,7 @@ make clean    # removes build artifacts (Go cache)
 
 Full platform-specific steps (macOS volume setup, Linux env vars, troubleshooting) live in [era-agent/README.md](era-agent/README.md).
 
-## 🎥 Demo Video
+## Demo Video
 
 [![Demo Video](https://img.youtube.com/vi/Si4evw3pglY/0.jpg)](https://www.youtube.com/watch?v=Si4evw3pglY)
 
