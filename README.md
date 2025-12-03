@@ -1,6 +1,6 @@
-# ERA Agent - Sandbox to run AI generated code
+# ERA - Sandbox to run AI generated code.
 
-Run untrusted or AI-generated code locally inside microVMs that behave like containers for great devX, 200ms launch time, and better security.
+Run untrusted or AI-generated code locally with the security guarantees of microVM and ease of use from containers.
 
 There's a managed cloud layer through cloudflare, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
 
@@ -10,7 +10,7 @@ There's a managed cloud layer through cloudflare, globally deployed Worker/API, 
 **What runs where**
 
 - `agent` CLI, Buildah, and krunvm all run on your local machine inside a case-sensitive volume.
-- The optional Cloudflare Worker side manages remote sessions, HTTP APIs, and queueing while delegating actual execution back to your local runner or other attached agents.
+- [Experimental] The optional Cloudflare Worker package allows you to package and execute code on cloudflare's remote sandbox.
 
 ## Quick Start
 
