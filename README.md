@@ -23,6 +23,7 @@ This project is early stage, experimental. We will be changing and breaking thin
 ```bash
 # 1. install the tap
 brew tap binsquare/era-agent-cli
+brew tap slp/krun
 
 # 2. install era agent
 brew install binsquare/era-agent-cli/era-agent
