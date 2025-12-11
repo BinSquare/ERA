@@ -1,8 +1,10 @@
-# ERA - Sandbox to run AI generated code.
+# ERA - Sandbox to run AI generated code. 
 
 Run untrusted or AI-generated code locally with the security guarantees of microVM and ease of use from containers.
 
 There's a managed cloud layer through cloudflare, globally deployed Worker/API, jump to [cloudflare/README.md](cloudflare/README.md).
+
+This project is early stage, experimental. We will be changing and breaking things temporarily as we port towards rust. Expect bugs, please report them.
 
 [![Go Version](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
