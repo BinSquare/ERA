@@ -6,6 +6,9 @@ There's a managed cloud layer through cloudflare, globally deployed Worker/API, 
 
 This project is early stage, experimental. We will be changing and breaking things temporarily as we port towards rust. Expect bugs, please report them.
 
+Join our Discord! --> [![Join our Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/rGeu7XkbbF)
+
+
 [![Go Version](https://img.shields.io/badge/Go-1.21-00ADD8?logo=go)](https://go.dev/doc/devel/release)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
