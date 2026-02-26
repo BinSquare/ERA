@@ -1,3 +1,7 @@
+# **DEPRECATED:** Please visit [smol machines - smolvm](https://github.com/smol-machines/smolvm) for all further updates and developments.
+
+----
+
 # ERA - Sandbox to run AI generated code. 
 
 Run untrusted or AI-generated code locally with the security guarantees of microVM and ease of use from containers.
